@@ -18,6 +18,7 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -36,16 +37,48 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useEntity } from '@/lib/entity-context'
 import { useUser } from '@/lib/user-context'
 
-const NAV = [
-  { title: 'Home', icon: HomeIcon, to: '/dashboard' },
+type NavItem = {
+  title: string
+  icon: typeof HomeIcon
+  to: string
+}
+
+const HOME: NavItem = { title: 'Home', icon: HomeIcon, to: '/dashboard' }
+
+const OPERATIONS: ReadonlyArray<NavItem> = [
+  { title: 'Transactions', icon: ArrowLeftRightIcon, to: '/transactions' },
+  { title: 'Payments', icon: WalletIcon, to: '/payments' },
+]
+
+const ADMIN: ReadonlyArray<NavItem> = [
   { title: 'Internal Accounts', icon: LandmarkIcon, to: '/internal-accounts' },
   { title: 'API Keys', icon: KeyRoundIcon, to: '/api-keys' },
   { title: 'Webhooks', icon: WebhookIcon, to: '/webhooks' },
-  { title: 'Transactions', icon: ArrowLeftRightIcon, to: '/transactions' },
-  { title: 'Payments', icon: WalletIcon, to: '/payments' },
   { title: 'Users', icon: UserRoundIcon, to: '/users' },
   { title: 'Activity', icon: ActivityIcon, to: '/activity' },
-] as const
+]
+
+function NavLink({
+  item,
+  pathname,
+}: {
+  item: NavItem
+  pathname: string
+}) {
+  const isActive =
+    pathname === item.to ||
+    (item.to !== '/dashboard' && pathname.startsWith(item.to))
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
+        <Link to={item.to}>
+          <item.icon />
+          <span>{item.title}</span>
+        </Link>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  )
+}
 
 export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
@@ -129,25 +162,29 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {NAV.map((item) => {
-                const isActive =
-                  pathname === item.to ||
-                  (item.to !== '/dashboard' && pathname.startsWith(item.to))
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive}
-                      tooltip={item.title}
-                    >
-                      <Link to={item.to}>
-                        <item.icon />
-                        <span>{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                )
-              })}
+              <NavLink item={HOME} pathname={pathname} />
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Operations</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {OPERATIONS.map((item) => (
+                <NavLink key={item.title} item={item} pathname={pathname} />
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Admin</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {ADMIN.map((item) => (
+                <NavLink key={item.title} item={item} pathname={pathname} />
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
