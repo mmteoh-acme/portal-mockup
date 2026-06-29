@@ -9,6 +9,9 @@ import {
   MoreHorizontalIcon,
   AlertCircleIcon,
   RotateCcwIcon,
+  ClockIcon,
+  PaperclipIcon,
+  XIcon,
 } from 'lucide-react'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { Card, CardContent } from '@/components/ui/card'
@@ -229,6 +232,17 @@ function PaymentsMain() {
           Monitor payment status across all rails. Failed payments that need
           ops attention are surfaced first.
         </p>
+      </div>
+
+      {/* Cut-off time notice */}
+      <div className="flex items-start gap-2.5 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+        <ClockIcon className="mt-0.5 size-4 shrink-0 text-amber-600" />
+        <div>
+          <span className="font-medium">Payment cut-off times today:</span>{' '}
+          DBS SGD — <span className="font-mono">17:00 SGT</span> · DBS USD —{' '}
+          <span className="font-mono">11:30 SGT</span> · SCB — <span className="font-mono">15:30 SGT</span>.{' '}
+          Payments submitted after cut-off will be scheduled to the next business day.
+        </div>
       </div>
 
       {/* Filter chips */}
@@ -1163,6 +1177,8 @@ function NewRefundFromTxn({ txn }: { txn: Txn | null }) {
   const [address, setAddress] = React.useState('')
   const [city, setCity] = React.useState('')
   const [country, setCountry] = React.useState('')
+  const [attachedFiles, setAttachedFiles] = React.useState<File[]>([])
+  const fileInputRef = React.useRef<HTMLInputElement>(null)
 
   const goBack = () =>
     navigate({
@@ -1422,6 +1438,74 @@ function NewRefundFromTxn({ txn }: { txn: Txn | null }) {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardContent className="space-y-4 px-6 py-5">
+          <div className="space-y-1">
+            <div className="text-[0.7rem] font-medium uppercase tracking-wider text-muted-foreground">
+              Supporting documents
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Attach bank statements or other evidence. Uploaded files become
+              part of the audit trail for this refund.
+            </p>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept=".pdf,.png,.jpg,.jpeg,.csv,.xlsx"
+            className="hidden"
+            onChange={(e) => {
+              const incoming = Array.from(e.target.files ?? [])
+              setAttachedFiles((prev) => {
+                const names = new Set(prev.map((f) => f.name))
+                return [...prev, ...incoming.filter((f) => !names.has(f.name))]
+              })
+              e.target.value = ''
+            }}
+          />
+          {attachedFiles.length > 0 && (
+            <div className="space-y-1.5">
+              {attachedFiles.map((f) => (
+                <div
+                  key={f.name}
+                  className="flex items-center gap-2 rounded border bg-muted/40 px-3 py-2"
+                >
+                  <PaperclipIcon className="size-3.5 shrink-0 text-muted-foreground" />
+                  <span className="min-w-0 flex-1 truncate font-mono text-xs">
+                    {f.name}
+                  </span>
+                  <span className="shrink-0 font-mono text-[0.65rem] text-muted-foreground">
+                    {(f.size / 1024).toFixed(0)} KB
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setAttachedFiles((prev) =>
+                        prev.filter((x) => x.name !== f.name),
+                      )
+                    }
+                    className="ml-1 rounded p-0.5 hover:bg-muted"
+                    aria-label={`Remove ${f.name}`}
+                  >
+                    <XIcon className="size-3 text-muted-foreground" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <PaperclipIcon className="size-3.5" />
+            Attach file
+          </Button>
+        </CardContent>
+      </Card>
+
       <div className="rounded-md border border-dashed bg-muted/30 p-3 text-xs text-muted-foreground">
         <span className="font-mono uppercase tracking-wider text-[0.65rem]">
           Maker-checker preview
@@ -1430,7 +1514,7 @@ function NewRefundFromTxn({ txn }: { txn: Txn | null }) {
           Submitted by{' '}
           <span className="font-medium text-foreground">{user.name}</span>{' '}
           → awaiting approval from a checker. Logged automatically as a refund
-          payment.
+          payment{attachedFiles.length > 0 ? ` with ${attachedFiles.length} document${attachedFiles.length > 1 ? 's' : ''} attached` : ''}.
         </div>
       </div>
 
