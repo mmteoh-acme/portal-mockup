@@ -96,7 +96,6 @@ const REFUND_REASONS = [
 type RefundReason = (typeof REFUND_REASONS)[number]
 
 type FilterKey =
-  | 'attention'
   | 'pending'
   | 'failed'
   | 'completed'
@@ -137,6 +136,181 @@ export function PaymentsPage() {
 }
 
 // ---------------------------------------------------------------------------
+// Create payment dialog
+// ---------------------------------------------------------------------------
+
+const PAYMENT_TYPES = ['FAST', 'SWIFT', 'SEPA', 'ACH', 'FPS', 'INTERNAL'] as const
+const CURRENCIES = ['SGD', 'USD', 'EUR', 'GBP', 'HKD'] as const
+
+function NewPaymentDialog() {
+  const { user } = useUser()
+  const [open, setOpen] = React.useState(false)
+  const [linkedId, setLinkedId] = React.useState('')
+  const [receiverName, setReceiverName] = React.useState('')
+  const [receiverBic, setReceiverBic] = React.useState('')
+  const [receiverAccount, setReceiverAccount] = React.useState('')
+  const [receiverRouting, setReceiverRouting] = React.useState('')
+  const [amount, setAmount] = React.useState('')
+  const [currency, setCurrency] = React.useState<string>('SGD')
+  const [paymentType, setPaymentType] = React.useState<string>('FAST')
+  const [notes, setNotes] = React.useState('')
+
+  const canSubmit = receiverName.trim() !== '' && amount.trim() !== '' && receiverAccount.trim() !== ''
+
+  function reset() {
+    setLinkedId('')
+    setReceiverName('')
+    setReceiverBic('')
+    setReceiverAccount('')
+    setReceiverRouting('')
+    setAmount('')
+    setCurrency('SGD')
+    setPaymentType('FAST')
+    setNotes('')
+  }
+
+  function submit() {
+    toast.success('Payment submitted for approval', {
+      description: `${receiverName} · ${amount} ${currency} — awaiting checker approval.`,
+    })
+    setOpen(false)
+    reset()
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset() }}>
+      <DialogTrigger asChild>
+        <Button size="sm" className="gap-1.5">
+          <PlusIcon className="size-3.5" />
+          Create payment
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Create payment</DialogTitle>
+          <DialogDescription>
+            Submit a new outbound payment for maker-checker approval.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-1">
+          <div className="space-y-1.5">
+            <Label htmlFor="np-linked-id">Link to transaction / payment ID</Label>
+            <Input
+              id="np-linked-id"
+              value={linkedId}
+              onChange={(e) => setLinkedId(e.target.value)}
+              placeholder="Txn_01J9KA2M3X4P5 or PMT-..."
+              className="font-mono"
+            />
+            <p className="text-[0.7rem] text-muted-foreground">Optional — attach this payment to an existing transaction or payment record.</p>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="np-rcv-name">Receiver name</Label>
+            <Input
+              id="np-rcv-name"
+              value={receiverName}
+              onChange={(e) => setReceiverName(e.target.value)}
+              placeholder="Beneficiary account name"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="np-rcv-bic">Receiver bank BIC</Label>
+              <Input
+                id="np-rcv-bic"
+                value={receiverBic}
+                onChange={(e) => setReceiverBic(e.target.value)}
+                placeholder="DBSSSGSGXXX"
+                className="font-mono"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="np-rcv-acct">Account number</Label>
+              <Input
+                id="np-rcv-acct"
+                value={receiverAccount}
+                onChange={(e) => setReceiverAccount(e.target.value)}
+                placeholder="0123456789"
+                className="font-mono"
+              />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="np-rcv-routing">Local routing identifier</Label>
+            <Input
+              id="np-rcv-routing"
+              value={receiverRouting}
+              onChange={(e) => setReceiverRouting(e.target.value)}
+              placeholder="004"
+              className="font-mono"
+            />
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="col-span-1 space-y-1.5">
+              <Label>Amount</Label>
+              <Input
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0.00"
+                className="font-mono"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Currency</Label>
+              <Select value={currency} onValueChange={setCurrency}>
+                <SelectTrigger className="font-mono">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CURRENCIES.map((c) => (
+                    <SelectItem key={c} value={c} className="font-mono">{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Type</Label>
+              <Select value={paymentType} onValueChange={setPaymentType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAYMENT_TYPES.map((t) => (
+                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="np-notes">Notes</Label>
+            <Textarea
+              id="np-notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Optional context for the checker"
+              rows={2}
+            />
+          </div>
+          <div className="rounded-md border border-dashed bg-muted/30 p-3 text-xs text-muted-foreground">
+            <span className="text-[0.65rem] uppercase tracking-wider font-medium">Maker-checker preview</span>
+            <div className="mt-1">
+              Submitted by{' '}
+              <span className="font-medium text-foreground">{user.name}</span> →
+              awaiting approval from a checker.
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => { setOpen(false); reset() }}>Cancel</Button>
+          <Button disabled={!canSubmit} onClick={submit}>Submit for approval</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Main payments view (filter chips + table + detail sheet + pending refunds)
 // ---------------------------------------------------------------------------
 
@@ -145,7 +319,7 @@ function PaymentsMain() {
   const submittedRetries = useSubmittedRetries()
   const { user } = useUser()
   const navigate = useNavigate()
-  const [filter, setFilter] = React.useState<FilterKey>('attention')
+  const [filter, setFilter] = React.useState<FilterKey>('all')
   const [page, setPage] = React.useState(1)
   const [selected, setSelected] = React.useState<Payment | null>(null)
   const [refundOpen, setRefundOpen] = React.useState(false)
@@ -182,12 +356,10 @@ function PaymentsMain() {
   )
 
   const counts = React.useMemo(() => {
-    const attention = combined.filter(paymentRequiresAttention).length
     const pending = combined.filter((p) => p.status === 'PENDING').length
     const failed = combined.filter((p) => p.status === 'FAILED').length
     const completed = combined.filter((p) => p.status === 'COMPLETED').length
     return {
-      attention,
       pending,
       failed,
       completed,
@@ -197,8 +369,6 @@ function PaymentsMain() {
 
   const filtered = React.useMemo(() => {
     switch (filter) {
-      case 'attention':
-        return combined.filter(paymentRequiresAttention)
       case 'pending':
         return combined.filter((p) => p.status === 'PENDING')
       case 'failed':
@@ -225,8 +395,9 @@ function PaymentsMain() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Payments</h1>
+        <NewPaymentDialog />
       </div>
 
       {/* Filter select */}
@@ -236,7 +407,6 @@ function PaymentsMain() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="attention">Requires attention ({counts.attention})</SelectItem>
             <SelectItem value="pending">Pending ({counts.pending})</SelectItem>
             <SelectItem value="failed">Failed ({counts.failed})</SelectItem>
             <SelectItem value="completed">Completed ({counts.completed})</SelectItem>
@@ -315,15 +485,7 @@ function PaymentsMain() {
                         <Mono>{p.id}</Mono>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1.5">
-                          {statusPill}
-                          {attention && (
-                            <AlertCircleIcon
-                              className="size-3.5 text-rose-600"
-                              aria-label="Requires attention"
-                            />
-                          )}
-                        </div>
+                        {statusPill}
                       </TableCell>
                       <TableCell className="text-xs uppercase tracking-wider text-muted-foreground whitespace-nowrap">
                         {p.type}
@@ -430,7 +592,7 @@ function PaymentsMain() {
                                 View details
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                disabled={!attention}
+                                disabled={p.status !== 'FAILED'}
                                 onClick={() => {
                                   navigate({
                                     to: '/payments',
@@ -1621,6 +1783,8 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
   )
   const [amount, setAmount] = React.useState(payment?.amount ?? '')
   const [notes, setNotes] = React.useState('')
+  const [attachedFiles, setAttachedFiles] = React.useState<File[]>([])
+  const fileInputRef = React.useRef<HTMLInputElement>(null)
 
   if (!payment || payment.status !== 'FAILED') {
     return (
@@ -1785,9 +1949,6 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
               Fields
             </div>
           </div>
-          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-            Fields pre-filled from the original payment. Contact Acme Ops to modify routing details before retrying.
-          </p>
           <div className="space-y-1.5">
             <Label htmlFor="rcv-name">Receiver name</Label>
             <Input
@@ -1858,6 +2019,73 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
               rows={3}
             />
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="space-y-4 px-6 py-5">
+          <div className="space-y-1">
+            <div className="text-[0.7rem] font-medium uppercase tracking-wider text-muted-foreground">
+              Add Attachments
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Attach supporting evidence for this retry. Files become part of the audit trail.
+            </p>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept=".pdf,.png,.jpg,.jpeg,.csv,.xlsx"
+            className="hidden"
+            onChange={(e) => {
+              const incoming = Array.from(e.target.files ?? [])
+              setAttachedFiles((prev) => {
+                const names = new Set(prev.map((f) => f.name))
+                return [...prev, ...incoming.filter((f) => !names.has(f.name))]
+              })
+              e.target.value = ''
+            }}
+          />
+          {attachedFiles.length > 0 && (
+            <div className="space-y-1.5">
+              {attachedFiles.map((f) => (
+                <div
+                  key={f.name}
+                  className="flex items-center gap-2 rounded border bg-muted/40 px-3 py-2"
+                >
+                  <PaperclipIcon className="size-3.5 shrink-0 text-muted-foreground" />
+                  <span className="min-w-0 flex-1 truncate font-mono text-xs">
+                    {f.name}
+                  </span>
+                  <span className="shrink-0 text-[0.65rem] text-muted-foreground">
+                    {(f.size / 1024).toFixed(0)} KB
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setAttachedFiles((prev) =>
+                        prev.filter((x) => x.name !== f.name),
+                      )
+                    }
+                    className="ml-1 rounded p-0.5 hover:bg-muted"
+                    aria-label={`Remove ${f.name}`}
+                  >
+                    <XIcon className="size-3 text-muted-foreground" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <PaperclipIcon className="size-3.5" />
+            Attach file
+          </Button>
         </CardContent>
       </Card>
 
