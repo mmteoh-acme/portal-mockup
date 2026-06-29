@@ -195,7 +195,7 @@ export function ApiKeysPage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">API Keys</h1>
+          <h1 className="text-2xl font-bold tracking-tight">API Keys</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Manage machine-to-machine API keys for your organization. At most 15
             keys per organization.

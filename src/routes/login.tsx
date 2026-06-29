@@ -21,7 +21,7 @@ export function LoginPage() {
         <div className="flex flex-1 items-center justify-center">
           <div className="w-full max-w-sm">
             <div className="mb-8">
-              <h1 className="text-2xl font-semibold tracking-tight">
+              <h1 className="text-2xl font-bold tracking-tight">
                 Sign in to your account
               </h1>
               <p className="mt-2 text-sm text-muted-foreground">
@@ -76,7 +76,7 @@ export function LoginPage() {
             <p className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
               Acme External Portal
             </p>
-            <h2 className="mt-3 text-3xl font-semibold tracking-tight">
+            <h2 className="mt-3 text-3xl font-bold tracking-tight">
               Self-serve ops for deposits, withdrawals, refunds, and
               reconciliation.
             </h2>

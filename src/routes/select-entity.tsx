@@ -26,7 +26,7 @@ export function SelectEntityPage() {
             Acme External Portal
           </span>
         </div>
-        <h1 className="mt-6 text-2xl font-semibold tracking-tight">
+        <h1 className="mt-6 text-2xl font-bold tracking-tight">
           Select an entity
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">

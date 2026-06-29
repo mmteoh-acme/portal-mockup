@@ -34,6 +34,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { cn } from '@/lib/utils'
 import { useEntity } from '@/lib/entity-context'
 import { useUser } from '@/lib/user-context'
 
@@ -70,8 +71,20 @@ function NavLink({
     (item.to !== '/dashboard' && pathname.startsWith(item.to))
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
-        <Link to={item.to}>
+      <SidebarMenuButton
+        asChild
+        isActive={isActive}
+        tooltip={item.title}
+        className={cn(
+          'h-10 rounded-lg px-3 text-[0.95rem] font-normal text-muted-foreground transition-colors',
+          'hover:bg-muted hover:text-foreground',
+          '[&>svg]:size-[18px] [&>svg]:shrink-0 [&>svg]:stroke-[1.5] [&>svg]:text-muted-foreground',
+          'data-[active=true]:bg-[#EEF2FF] data-[active=true]:font-medium data-[active=true]:text-[#1447E6]',
+          'data-[active=true]:[&>svg]:text-[#1447E6]',
+          'data-[active=true]:hover:bg-[#EEF2FF] data-[active=true]:hover:text-[#1447E6]',
+        )}
+      >
+        <Link to={item.to} className="gap-3">
           <item.icon />
           <span>{item.title}</span>
         </Link>

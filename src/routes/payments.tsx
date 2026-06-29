@@ -227,7 +227,7 @@ function PaymentsMain() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Payments</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Payments</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Monitor payment status across all rails. Failed payments that need
           ops attention are surfaced first.
@@ -1243,7 +1243,7 @@ function NewRefundFromTxn({ txn }: { txn: Txn | null }) {
         </button>
         <div className="flex items-center gap-2">
           <Undo2Icon className="size-5 text-muted-foreground" />
-          <h1 className="text-2xl font-semibold tracking-tight">
+          <h1 className="text-2xl font-bold tracking-tight">
             New refund payment
           </h1>
         </div>
@@ -1716,7 +1716,7 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
           </button>
           <div className="flex items-center gap-2">
             <RotateCcwIcon className="size-5 text-muted-foreground" />
-            <h1 className="text-2xl font-semibold tracking-tight">
+            <h1 className="text-2xl font-bold tracking-tight">
               Retry payment
             </h1>
           </div>
@@ -1788,7 +1788,7 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
         </button>
         <div className="flex items-center gap-2">
           <RotateCcwIcon className="size-5 text-muted-foreground" />
-          <h1 className="text-2xl font-semibold tracking-tight">
+          <h1 className="text-2xl font-bold tracking-tight">
             Retry payment
           </h1>
         </div>
