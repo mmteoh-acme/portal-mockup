@@ -158,6 +158,17 @@ export function PaymentsPage() {
 const PAYMENT_TYPES = ['FAST', 'SWIFT', 'SEPA', 'ACH', 'FPS', 'INTERNAL'] as const
 const CURRENCIES = ['SGD', 'USD', 'EUR', 'GBP', 'HKD'] as const
 
+const BANK_FILTER_OPTIONS = [
+  { value: 'DBS', label: 'DBS', accountIds: ['intacc_0KT8ZSCRKXP0O', 'intacc_0KT8ZSDEKXCAN'] },
+  { value: 'CIMB', label: 'CIMB', accountIds: ['intacc_0KERZSCDKXV0O'] },
+] as const
+
+const ACCOUNT_FILTER_OPTIONS = [
+  { value: 'intacc_0KT8ZSCRKXP0O', label: 'DBS — Operating (intacc_0KT8ZSCRKXP0O)' },
+  { value: 'intacc_0KT8ZSDEKXCAN', label: 'DBS — Client Money (intacc_0KT8ZSDEKXCAN)' },
+  { value: 'intacc_0KERZSCDKXV0O', label: 'CIMB — Settlement (intacc_0KERZSCDKXV0O)' },
+] as const
+
 function NewPaymentButton() {
   const navigate = useNavigate()
   return (
@@ -247,8 +258,8 @@ function PaymentsMain() {
       case 'completed': rows = rows.filter((p) => p.status === 'COMPLETED'); break
     }
     if (filterCurrency) rows = rows.filter((p) => p.currency === filterCurrency)
-    if (filterBank) rows = rows.filter((p) => p.receiverBank?.toLowerCase().includes(filterBank.toLowerCase()) || p.type?.toLowerCase().includes(filterBank.toLowerCase()))
-    if (filterAccount) rows = rows.filter((p) => p.receiverBankAccountNumber?.includes(filterAccount) || p.senderAccountId?.includes(filterAccount))
+    if (filterBank) rows = rows.filter((p) => BANK_FILTER_OPTIONS.find(b => b.value === filterBank)?.accountIds.includes(p.senderAccountId as 'intacc_0KT8ZSCRKXP0O' | 'intacc_0KT8ZSDEKXCAN' | 'intacc_0KERZSCDKXV0O'))
+    if (filterAccount) rows = rows.filter((p) => p.senderAccountId === filterAccount)
     if (filterDateFrom) {
       const from = new Date(filterDateFrom)
       rows = rows.filter((p) => {
@@ -315,24 +326,31 @@ function PaymentsMain() {
           </Select>
         </div>
         <div className="flex flex-col gap-1">
-          <span className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">Bank / Type</span>
-          <Input
-            size={1}
-            placeholder="e.g. FAST, DBS"
-            value={filterBank}
-            onChange={(e) => setFilterBank(e.target.value)}
-            className="h-8 w-36 text-sm"
-          />
+          <span className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">Bank</span>
+          <Select value={filterBank || '__all'} onValueChange={(v) => setFilterBank(v === '__all' ? '' : v)}>
+            <SelectTrigger size="sm" className="h-8 w-32 font-normal">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all">All banks</SelectItem>
+              <SelectItem value="DBS">DBS</SelectItem>
+              <SelectItem value="CIMB">CIMB</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="flex flex-col gap-1">
           <span className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">Account</span>
-          <Input
-            size={1}
-            placeholder="Account no."
-            value={filterAccount}
-            onChange={(e) => setFilterAccount(e.target.value)}
-            className="h-8 w-36 text-sm font-mono"
-          />
+          <Select value={filterAccount || '__all'} onValueChange={(v) => setFilterAccount(v === '__all' ? '' : v)}>
+            <SelectTrigger size="sm" className="h-8 w-64 font-normal font-mono text-xs">
+              <SelectValue placeholder="All accounts" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all">All accounts</SelectItem>
+              <SelectItem value="intacc_0KT8ZSCRKXP0O" className="font-mono text-xs">DBS — Operating · intacc_0KT8ZSCRKXP0O</SelectItem>
+              <SelectItem value="intacc_0KT8ZSDEKXCAN" className="font-mono text-xs">DBS — Client Money · intacc_0KT8ZSDEKXCAN</SelectItem>
+              <SelectItem value="intacc_0KERZSCDKXV0O" className="font-mono text-xs">CIMB — Settlement · intacc_0KERZSCDKXV0O</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="flex flex-col gap-1">
           <span className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">Date from</span>
@@ -1394,7 +1412,7 @@ function NewRefundFromTxn({ txn }: { txn: Txn | null }) {
         <CardContent className="space-y-5 px-6 py-5">
           <div className="space-y-1">
             <div className="text-[0.7rem] font-medium uppercase tracking-wider text-muted-foreground">
-              Beneficiary details
+              Receiver details
             </div>
             <p className="text-xs text-muted-foreground">
               Receiver name was pre-filled from the source transaction. BIC and
@@ -1469,7 +1487,7 @@ function NewRefundFromTxn({ txn }: { txn: Txn | null }) {
         <CardContent className="space-y-4 px-6 py-5">
           <div className="space-y-1">
             <div className="text-[0.7rem] font-medium uppercase tracking-wider text-muted-foreground">
-              Supporting documents
+              Add Attachments
             </div>
             <p className="text-xs text-muted-foreground">
               Attach bank statements or other evidence. Uploaded files become

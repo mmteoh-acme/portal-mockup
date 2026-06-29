@@ -220,6 +220,7 @@ export function InternalAccountsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
+                  <TableHead>Internal account ID</TableHead>
                   <TableHead>Mode</TableHead>
                   <TableHead>Account #</TableHead>
                   <TableHead>SWIFT/BIC</TableHead>
@@ -236,6 +237,9 @@ export function InternalAccountsPage() {
                     onClick={() => setOpenAccount(a)}
                   >
                     <TableCell className="font-medium">{a.name}</TableCell>
+                    <TableCell>
+                      <span className="font-mono text-xs text-muted-foreground">{a.id}</span>
+                    </TableCell>
                     <TableCell>
                       <ModePill mode={a.mode} />
                     </TableCell>

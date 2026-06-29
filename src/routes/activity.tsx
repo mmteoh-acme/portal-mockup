@@ -11,6 +11,7 @@ import {
   CheckCircle2Icon,
   XCircleIcon,
   LogInIcon,
+  ChevronDownIcon,
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -21,7 +22,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Mono } from '@/components/mono'
 import { useEntity } from '@/lib/entity-context'
 
 type EventCategory =
@@ -230,6 +230,7 @@ export function ActivityPage() {
   const { entity } = useEntity()
   const [categoryFilter, setCategoryFilter] =
     React.useState<CategoryFilter>('all')
+  const [expandedId, setExpandedId] = React.useState<string | null>(null)
 
   if (!entity) return null
 
@@ -288,51 +289,50 @@ export function ActivityPage() {
             {filtered.map((evt) => {
               const Icon = CATEGORY_ICONS[evt.category]
               const outcome = OUTCOME_BADGE[evt.outcome]
+              const isExpanded = expandedId === evt.id
               return (
-                <div
-                  key={evt.id}
-                  className="flex items-start gap-4 px-5 py-4 hover:bg-muted/30 transition-colors"
-                >
-                  <div
-                    className={`mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md ${CATEGORY_COLORS[evt.category]}`}
+                <div key={evt.id} className="divide-y">
+                  {/* Summary row — always visible */}
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-4 px-5 py-3 text-left hover:bg-muted/30 transition-colors"
+                    onClick={() => setExpandedId(isExpanded ? null : evt.id)}
                   >
-                    <Icon className="size-3.5" />
-                  </div>
-                  <div className="min-w-0 flex-1 space-y-0.5">
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                    <div className={`flex size-7 shrink-0 items-center justify-center rounded-md ${CATEGORY_COLORS[evt.category]}`}>
+                      <Icon className="size-3.5" />
+                    </div>
+                    <div className="min-w-0 flex-1 flex items-center gap-2">
                       <span className="text-sm font-medium">{evt.action}</span>
                       <OutcomePill className={outcome.className}>
-                        {outcome.label === 'Success' ? (
-                          <CheckCircle2Icon className="size-3" />
-                        ) : outcome.label === 'Rejected' ? (
-                          <XCircleIcon className="size-3" />
-                        ) : null}
+                        {outcome.label === 'Success' ? <CheckCircle2Icon className="size-3" /> : outcome.label === 'Rejected' ? <XCircleIcon className="size-3" /> : null}
                         {outcome.label}
                       </OutcomePill>
                     </div>
-                    <div className="truncate text-[0.7rem] text-muted-foreground">
-                      {evt.target}
+                    <div className="shrink-0 text-[0.65rem] text-muted-foreground whitespace-nowrap">{evt.timestamp}</div>
+                    <ChevronDownIcon className={`size-3.5 shrink-0 text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                  </button>
+                  {/* Expanded detail */}
+                  {isExpanded && (
+                    <div className="bg-muted/20 px-5 py-4 space-y-2 text-sm border-b">
+                      <div className="flex flex-wrap gap-x-6 gap-y-1.5">
+                        <div>
+                          <span className="text-[0.65rem] uppercase tracking-wider text-muted-foreground mr-1.5">Actor</span>
+                          <span className="font-medium">{evt.actor}</span>
+                          <span className="ml-1 text-[0.65rem] uppercase tracking-wider text-muted-foreground">· {evt.actorRole}</span>
+                        </div>
+                        <div>
+                          <span className="text-[0.65rem] uppercase tracking-wider text-muted-foreground mr-1.5">Target</span>
+                          <span className="font-mono text-xs">{evt.target}</span>
+                        </div>
+                        {evt.ip && (
+                          <div>
+                            <span className="text-[0.65rem] uppercase tracking-wider text-muted-foreground mr-1.5">IP</span>
+                            <span className="font-mono text-xs">{evt.ip}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3 pt-0.5">
-                      <span className="text-xs text-muted-foreground">
-                        <span className="font-medium text-foreground">
-                          {evt.actor}
-                        </span>{' '}
-                        ·{' '}
-                        <span className="text-[0.65rem] uppercase tracking-wider">
-                          {evt.actorRole}
-                        </span>
-                      </span>
-                      {evt.ip && (
-                        <Mono className="text-[0.65rem] text-muted-foreground/70">
-                          {evt.ip}
-                        </Mono>
-                      )}
-                    </div>
-                  </div>
-                  <div className="shrink-0 text-[0.65rem] text-muted-foreground whitespace-nowrap">
-                    {evt.timestamp}
-                  </div>
+                  )}
                 </div>
               )
             })}
