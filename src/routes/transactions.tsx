@@ -6,11 +6,10 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   MoreHorizontalIcon,
-  Undo2Icon,
+  FolderPlusIcon,
   DownloadIcon,
 } from 'lucide-react'
 import { parse as parseDate } from 'date-fns'
-import { useNavigate } from '@tanstack/react-router'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -50,8 +49,10 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
+import { toast } from 'sonner'
 import { Mono, MonoLabel, StatusPill } from '@/components/mono'
 import { useEntity } from '@/lib/entity-context'
+import { addUnprocessedDeposit } from '@/lib/unprocessed-deposits-store'
 import {
   entityAccounts,
   entityTransactions,
@@ -71,8 +72,8 @@ const CSV_HEADERS = [
   'Currency',
   'Transaction date',
   'Internal account ID',
-  'Sender name',
-  'Sender bank',
+  'Counterparty',
+  'Counterparty bank',
   'Customer reference',
   'Bank reference',
   'Additional info',
@@ -159,7 +160,6 @@ function inRange(dateStr: string, range: DateRange | undefined): boolean {
 
 export function TransactionsPage() {
   const { entity } = useEntity()
-  const navigate = useNavigate()
 
   const rows = React.useMemo<Txn[]>(
     () => (entity ? entityTransactions(entity) : []),
@@ -319,7 +319,7 @@ export function TransactionsPage() {
             <Input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Search by txn id, sender name, customer ref, bank ref, intacc, remittance…"
+              placeholder="Search by txn id, counterparty, customer ref, bank ref, intacc, remittance…"
               className="pl-9"
             />
           </div>
@@ -502,7 +502,7 @@ export function TransactionsPage() {
                     Transaction date
                   </TableHead>
                   <TableHead className="w-36 text-[0.7rem] uppercase tracking-wider">
-                    Sender name
+                    Counterparty
                   </TableHead>
                   <TableHead className="w-36 text-[0.7rem] uppercase tracking-wider">
                     Customer reference
@@ -605,16 +605,28 @@ export function TransactionsPage() {
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
-                            onSelect={() =>
-                              navigate({
-                                to: '/payments',
-                                search: { action: 'new-refund', txnId: t.id },
+                            onSelect={() => {
+                              const added = addUnprocessedDeposit({
+                                originalTxnId: t.id,
+                                customer: t.senderName,
+                                amount: `${t.currency} ${t.amount}`,
+                                reason: 'Flagged from transactions',
+                                date: t.transactionDate,
                               })
-                            }
+                              if (added) {
+                                toast.success('Added to unprocessed deposits', {
+                                  description: `${t.id} is now awaiting refund on the Payments page.`,
+                                })
+                              } else {
+                                toast.info('Already in unprocessed deposits', {
+                                  description: `${t.id} is already awaiting refund.`,
+                                })
+                              }
+                            }}
                             disabled={t.direction !== 'CREDIT'}
                           >
-                            <Undo2Icon className="size-3.5" />
-                            Refund payment
+                            <FolderPlusIcon className="size-3.5" />
+                            Add to unprocessed deposits
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -699,12 +711,20 @@ export function TransactionsPage() {
                 <Field label="Transaction type">
                   <StatusPill status={openTxn.transactionType} />
                 </Field>
-                <Field label="Sender name">
+                <Field
+                  label={
+                    openTxn.direction === 'DEBIT' ? 'Receiver name' : 'Sender name'
+                  }
+                >
                   <span className="text-sm font-medium">
                     {openTxn.senderName || '—'}
                   </span>
                 </Field>
-                <Field label="Sender bank">
+                <Field
+                  label={
+                    openTxn.direction === 'DEBIT' ? 'Receiver bank' : 'Sender bank'
+                  }
+                >
                   <span className="text-sm">{openTxn.senderBank || '—'}</span>
                 </Field>
                 <Field label="Customer reference">

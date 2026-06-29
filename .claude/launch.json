@@ -5,7 +5,7 @@
       "name": "portal-mockup",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["dev"],
-      "port": 3001
+      "port": 3004
     }
   ]
 }

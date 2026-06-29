@@ -74,6 +74,7 @@ import {
   useSubmittedRetries,
   type SubmittedRetry,
 } from '@/lib/retries-store'
+import { useUnprocessedDeposits } from '@/lib/unprocessed-deposits-store'
 import {
   allPayments,
   entityTransactions,
@@ -206,6 +207,11 @@ function PaymentsMain() {
   const [refundOpen, setRefundOpen] = React.useState(false)
   const [refundRow, setRefundRow] = React.useState<UnprocessedRefund | null>(
     null,
+  )
+  const storeDeposits = useUnprocessedDeposits()
+  const allUnprocessed = React.useMemo(
+    () => [...storeDeposits, ...unprocessedRefunds],
+    [storeDeposits],
   )
 
   // Lookup map: payment row id -> underlying refund (for refund-specific UI).
@@ -629,12 +635,12 @@ function PaymentsMain() {
       </Card>
 
       {/* Unprocessed deposits awaiting refund (carry-over from old Refunds tab) */}
-      {unprocessedRefunds.length > 0 && (
+      {allUnprocessed.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div>
               <div className="text-[0.7rem] font-medium uppercase tracking-wider text-muted-foreground">
-                Unprocessed deposits awaiting refund ({unprocessedRefunds.length})
+                Unprocessed deposits awaiting refund ({allUnprocessed.length})
               </div>
               <p className="mt-1 text-sm text-muted-foreground">
                 Beneficiary details missing. Enter bene details to submit a
@@ -685,7 +691,7 @@ function PaymentsMain() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {unprocessedRefunds.map((r) => (
+                  {allUnprocessed.map((r) => (
                     <TableRow key={r.originalTxnId}>
                       <TableCell>
                         <Mono>{r.originalTxnId}</Mono>
@@ -1808,7 +1814,7 @@ function NewPaymentPage() {
             <Input
               value={linkedId}
               onChange={(e) => setLinkedId(e.target.value)}
-              placeholder="Txn_01J9KA2M3X4P5 or pymt_..."
+              placeholder="txn_01J9KA2M3X4P5 or pymt_..."
               className="h-8 max-w-xs font-mono text-sm"
             />
           </ContextRow>

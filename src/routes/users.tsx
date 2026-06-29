@@ -1,6 +1,5 @@
 import {
   UserRoundPlusIcon,
-  ShieldCheckIcon,
   ChevronDownIcon,
   CheckIcon,
 } from 'lucide-react'
@@ -36,15 +35,6 @@ type TeamMember = {
   entityAccess: string[]
   approvalLimit: string | null
   lastActive: string
-}
-
-const ROLE_DESCRIPTIONS: Record<PortalRole, string> = {
-  ADMIN: 'Full access — users, API keys, webhooks, all operations',
-  MAKER: 'Submit refunds and payment retries for approval',
-  CHECKER: 'Approve or reject maker-submitted requests',
-  VIEWER: 'Read-only access to transactions and payments',
-  AUDITOR:
-    'Read-only access with downloadable proofs — for annual audits',
 }
 
 const ROLE_COLORS: Record<PortalRole, string> = {
@@ -151,28 +141,6 @@ export function UsersPage() {
           Invite user
         </Button>
       </div>
-
-      {/* Role reference card */}
-      <Card className="bg-muted/30">
-        <CardContent className="px-5 py-4">
-          <div className="flex items-center gap-2 mb-3">
-            <ShieldCheckIcon className="size-4 text-muted-foreground" />
-            <span className="text-[0.7rem] font-medium uppercase tracking-wider text-muted-foreground">
-              Role definitions
-            </span>
-          </div>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {(Object.keys(ROLE_DESCRIPTIONS) as PortalRole[]).map((role) => (
-              <div key={role} className="flex items-start gap-2">
-                <RolePill role={role} />
-                <span className="text-xs text-muted-foreground leading-relaxed">
-                  {ROLE_DESCRIPTIONS[role]}
-                </span>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Members table */}
       <Card>
