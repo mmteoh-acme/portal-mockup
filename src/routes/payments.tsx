@@ -163,11 +163,9 @@ const BANK_FILTER_OPTIONS = [
   { value: 'CIMB', label: 'CIMB', accountIds: ['intacc_0KERZSCDKXV0O'] },
 ] as const
 
-const ACCOUNT_FILTER_OPTIONS = [
-  { value: 'intacc_0KT8ZSCRKXP0O', label: 'DBS — Operating (intacc_0KT8ZSCRKXP0O)' },
-  { value: 'intacc_0KT8ZSDEKXCAN', label: 'DBS — Client Money (intacc_0KT8ZSDEKXCAN)' },
-  { value: 'intacc_0KERZSCDKXV0O', label: 'CIMB — Settlement (intacc_0KERZSCDKXV0O)' },
-] as const
+// Kept for reference in SelectItems below
+const _ACCOUNT_FILTER_IDS = ['intacc_0KT8ZSCRKXP0O', 'intacc_0KT8ZSDEKXCAN', 'intacc_0KERZSCDKXV0O']
+void _ACCOUNT_FILTER_IDS
 
 function NewPaymentButton() {
   const navigate = useNavigate()
@@ -258,7 +256,10 @@ function PaymentsMain() {
       case 'completed': rows = rows.filter((p) => p.status === 'COMPLETED'); break
     }
     if (filterCurrency) rows = rows.filter((p) => p.currency === filterCurrency)
-    if (filterBank) rows = rows.filter((p) => BANK_FILTER_OPTIONS.find(b => b.value === filterBank)?.accountIds.includes(p.senderAccountId as 'intacc_0KT8ZSCRKXP0O' | 'intacc_0KT8ZSDEKXCAN' | 'intacc_0KERZSCDKXV0O'))
+    if (filterBank) {
+      const ids = BANK_FILTER_OPTIONS.find(b => b.value === filterBank)?.accountIds as readonly string[] | undefined
+      rows = rows.filter((p) => ids?.includes(p.senderAccountId))
+    }
     if (filterAccount) rows = rows.filter((p) => p.senderAccountId === filterAccount)
     if (filterDateFrom) {
       const from = new Date(filterDateFrom)
