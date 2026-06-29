@@ -36,9 +36,6 @@ export function WebhooksPage() {
                   URL
                 </TableHead>
                 <TableHead className="text-[0.7rem] uppercase tracking-wider">
-                  Events
-                </TableHead>
-                <TableHead className="text-[0.7rem] uppercase tracking-wider">
                   Status
                 </TableHead>
                 <TableHead className="text-[0.7rem] uppercase tracking-wider">
@@ -51,9 +48,6 @@ export function WebhooksPage() {
                 <TableRow key={w.id}>
                   <TableCell>
                     <Mono>{w.url}</Mono>
-                  </TableCell>
-                  <TableCell className="text-xs">
-                    {w.events}
                   </TableCell>
                   <TableCell>
                     <StatusPill status={w.status} />

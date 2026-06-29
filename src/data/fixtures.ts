@@ -340,7 +340,7 @@ export const webhooks = [
     id: 'wh_01',
     url: 'https://ops.acme.com/webhooks/payments',
     events: 'payment.*, refund.*',
-    status: 'Healthy',
+    status: 'Degraded',
     lastDelivery: '3 min ago',
   },
   {
