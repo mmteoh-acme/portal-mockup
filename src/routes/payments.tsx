@@ -103,6 +103,18 @@ type FilterKey =
 
 const PAGE_SIZE = 20
 
+// Parse "17 May, 2026, 02:04" or "1 Jun, 2026, 09:12" into a Date
+function parsePaymentDate(s: string): Date | null {
+  if (!s) return null
+  const match = s.match(/(\d+)\s+(\w+),\s+(\d{4})/)
+  if (!match) return null
+  const [, day, mon, year] = match
+  const months: Record<string, number> = { Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11 }
+  const m = months[mon]
+  if (m === undefined) return null
+  return new Date(Number(year), m, Number(day))
+}
+
 function todayDisplay(): string {
   const d = new Date('2026-06-01T00:00:00')
   return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`
@@ -132,6 +144,10 @@ export function PaymentsPage() {
     return <NewRetryFromPayment payment={p} />
   }
 
+  if (search?.action === 'new-payment') {
+    return <NewPaymentPage />
+  }
+
   return <PaymentsMain />
 }
 
@@ -142,171 +158,22 @@ export function PaymentsPage() {
 const PAYMENT_TYPES = ['FAST', 'SWIFT', 'SEPA', 'ACH', 'FPS', 'INTERNAL'] as const
 const CURRENCIES = ['SGD', 'USD', 'EUR', 'GBP', 'HKD'] as const
 
-function NewPaymentDialog() {
-  const { user } = useUser()
-  const [open, setOpen] = React.useState(false)
-  const [linkedId, setLinkedId] = React.useState('')
-  const [receiverName, setReceiverName] = React.useState('')
-  const [receiverBic, setReceiverBic] = React.useState('')
-  const [receiverAccount, setReceiverAccount] = React.useState('')
-  const [receiverRouting, setReceiverRouting] = React.useState('')
-  const [amount, setAmount] = React.useState('')
-  const [currency, setCurrency] = React.useState<string>('SGD')
-  const [paymentType, setPaymentType] = React.useState<string>('FAST')
-  const [notes, setNotes] = React.useState('')
-
-  const canSubmit = receiverName.trim() !== '' && amount.trim() !== '' && receiverAccount.trim() !== ''
-
-  function reset() {
-    setLinkedId('')
-    setReceiverName('')
-    setReceiverBic('')
-    setReceiverAccount('')
-    setReceiverRouting('')
-    setAmount('')
-    setCurrency('SGD')
-    setPaymentType('FAST')
-    setNotes('')
-  }
-
-  function submit() {
-    toast.success('Payment submitted for approval', {
-      description: `${receiverName} · ${amount} ${currency} — awaiting checker approval.`,
-    })
-    setOpen(false)
-    reset()
-  }
-
+function NewPaymentButton() {
+  const navigate = useNavigate()
   return (
-    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset() }}>
-      <DialogTrigger asChild>
-        <Button size="sm" className="gap-1.5">
-          <PlusIcon className="size-3.5" />
-          Create payment
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Create payment</DialogTitle>
-          <DialogDescription>
-            Submit a new outbound payment for maker-checker approval.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4 py-1">
-          <div className="space-y-1.5">
-            <Label htmlFor="np-linked-id">Link to transaction / payment ID</Label>
-            <Input
-              id="np-linked-id"
-              value={linkedId}
-              onChange={(e) => setLinkedId(e.target.value)}
-              placeholder="Txn_01J9KA2M3X4P5 or PMT-..."
-              className="font-mono"
-            />
-            <p className="text-[0.7rem] text-muted-foreground">Optional — attach this payment to an existing transaction or payment record.</p>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="np-rcv-name">Receiver name</Label>
-            <Input
-              id="np-rcv-name"
-              value={receiverName}
-              onChange={(e) => setReceiverName(e.target.value)}
-              placeholder="Beneficiary account name"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="np-rcv-bic">Receiver bank BIC</Label>
-              <Input
-                id="np-rcv-bic"
-                value={receiverBic}
-                onChange={(e) => setReceiverBic(e.target.value)}
-                placeholder="DBSSSGSGXXX"
-                className="font-mono"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="np-rcv-acct">Account number</Label>
-              <Input
-                id="np-rcv-acct"
-                value={receiverAccount}
-                onChange={(e) => setReceiverAccount(e.target.value)}
-                placeholder="0123456789"
-                className="font-mono"
-              />
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="np-rcv-routing">Local routing identifier</Label>
-            <Input
-              id="np-rcv-routing"
-              value={receiverRouting}
-              onChange={(e) => setReceiverRouting(e.target.value)}
-              placeholder="004"
-              className="font-mono"
-            />
-          </div>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="col-span-1 space-y-1.5">
-              <Label>Amount</Label>
-              <Input
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="0.00"
-                className="font-mono"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Currency</Label>
-              <Select value={currency} onValueChange={setCurrency}>
-                <SelectTrigger className="font-mono">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CURRENCIES.map((c) => (
-                    <SelectItem key={c} value={c} className="font-mono">{c}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Type</Label>
-              <Select value={paymentType} onValueChange={setPaymentType}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PAYMENT_TYPES.map((t) => (
-                    <SelectItem key={t} value={t}>{t}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="np-notes">Notes</Label>
-            <Textarea
-              id="np-notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Optional context for the checker"
-              rows={2}
-            />
-          </div>
-          <div className="rounded-md border border-dashed bg-muted/30 p-3 text-xs text-muted-foreground">
-            <span className="text-[0.65rem] uppercase tracking-wider font-medium">Maker-checker preview</span>
-            <div className="mt-1">
-              Submitted by{' '}
-              <span className="font-medium text-foreground">{user.name}</span> →
-              awaiting approval from a checker.
-            </div>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => { setOpen(false); reset() }}>Cancel</Button>
-          <Button disabled={!canSubmit} onClick={submit}>Submit for approval</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <Button
+      size="sm"
+      className="gap-1.5"
+      onClick={() =>
+        navigate({
+          to: '/payments',
+          search: { action: 'new-payment', txnId: undefined, paymentId: undefined },
+        })
+      }
+    >
+      <PlusIcon className="size-3.5" />
+      Create payment
+    </Button>
   )
 }
 
@@ -320,6 +187,11 @@ function PaymentsMain() {
   const { user } = useUser()
   const navigate = useNavigate()
   const [filter, setFilter] = React.useState<FilterKey>('all')
+  const [filterCurrency, setFilterCurrency] = React.useState('')
+  const [filterBank, setFilterBank] = React.useState('')
+  const [filterAccount, setFilterAccount] = React.useState('')
+  const [filterDateFrom, setFilterDateFrom] = React.useState('')
+  const [filterDateTo, setFilterDateTo] = React.useState('')
   const [page, setPage] = React.useState(1)
   const [selected, setSelected] = React.useState<Payment | null>(null)
   const [refundOpen, setRefundOpen] = React.useState(false)
@@ -368,22 +240,36 @@ function PaymentsMain() {
   }, [combined])
 
   const filtered = React.useMemo(() => {
+    let rows = combined
     switch (filter) {
-      case 'pending':
-        return combined.filter((p) => p.status === 'PENDING')
-      case 'failed':
-        return combined.filter((p) => p.status === 'FAILED')
-      case 'completed':
-        return combined.filter((p) => p.status === 'COMPLETED')
-      case 'all':
-      default:
-        return combined
+      case 'pending': rows = rows.filter((p) => p.status === 'PENDING'); break
+      case 'failed':  rows = rows.filter((p) => p.status === 'FAILED'); break
+      case 'completed': rows = rows.filter((p) => p.status === 'COMPLETED'); break
     }
-  }, [combined, filter])
+    if (filterCurrency) rows = rows.filter((p) => p.currency === filterCurrency)
+    if (filterBank) rows = rows.filter((p) => p.receiverBank?.toLowerCase().includes(filterBank.toLowerCase()) || p.type?.toLowerCase().includes(filterBank.toLowerCase()))
+    if (filterAccount) rows = rows.filter((p) => p.receiverBankAccountNumber?.includes(filterAccount) || p.senderAccountId?.includes(filterAccount))
+    if (filterDateFrom) {
+      const from = new Date(filterDateFrom)
+      rows = rows.filter((p) => {
+        const d = parsePaymentDate(p.createdAt)
+        return d ? d >= from : true
+      })
+    }
+    if (filterDateTo) {
+      const to = new Date(filterDateTo)
+      to.setHours(23, 59, 59, 999)
+      rows = rows.filter((p) => {
+        const d = parsePaymentDate(p.createdAt)
+        return d ? d <= to : true
+      })
+    }
+    return rows
+  }, [combined, filter, filterCurrency, filterBank, filterAccount, filterDateFrom, filterDateTo])
 
   React.useEffect(() => {
     setPage(1)
-  }, [filter])
+  }, [filter, filterCurrency, filterBank, filterAccount, filterDateFrom, filterDateTo])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   React.useEffect(() => {
@@ -397,22 +283,83 @@ function PaymentsMain() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Payments</h1>
-        <NewPaymentDialog />
+        <NewPaymentButton />
       </div>
 
-      {/* Filter select */}
-      <div className="flex flex-wrap items-center gap-2">
-        <Select value={filter} onValueChange={(v) => setFilter(v as FilterKey)}>
-          <SelectTrigger size="sm" className="h-8 w-48 font-normal">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="pending">Pending ({counts.pending})</SelectItem>
-            <SelectItem value="failed">Failed ({counts.failed})</SelectItem>
-            <SelectItem value="completed">Completed ({counts.completed})</SelectItem>
-            <SelectItem value="all">All ({counts.all})</SelectItem>
-          </SelectContent>
-        </Select>
+      {/* Filters */}
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="flex flex-col gap-1">
+          <span className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">Status</span>
+          <Select value={filter} onValueChange={(v) => setFilter(v as FilterKey)}>
+            <SelectTrigger size="sm" className="h-8 w-40 font-normal">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="pending">Pending ({counts.pending})</SelectItem>
+              <SelectItem value="failed">Failed ({counts.failed})</SelectItem>
+              <SelectItem value="completed">Completed ({counts.completed})</SelectItem>
+              <SelectItem value="all">All ({counts.all})</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-1">
+          <span className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">Currency</span>
+          <Select value={filterCurrency || '__all'} onValueChange={(v) => setFilterCurrency(v === '__all' ? '' : v)}>
+            <SelectTrigger size="sm" className="h-8 w-28 font-normal">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all">All</SelectItem>
+              {CURRENCIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-1">
+          <span className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">Bank / Type</span>
+          <Input
+            size={1}
+            placeholder="e.g. FAST, DBS"
+            value={filterBank}
+            onChange={(e) => setFilterBank(e.target.value)}
+            className="h-8 w-36 text-sm"
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <span className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">Account</span>
+          <Input
+            size={1}
+            placeholder="Account no."
+            value={filterAccount}
+            onChange={(e) => setFilterAccount(e.target.value)}
+            className="h-8 w-36 text-sm font-mono"
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <span className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">Date from</span>
+          <Input
+            type="date"
+            value={filterDateFrom}
+            onChange={(e) => setFilterDateFrom(e.target.value)}
+            className="h-8 w-36 text-sm"
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <span className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">Date to</span>
+          <Input
+            type="date"
+            value={filterDateTo}
+            onChange={(e) => setFilterDateTo(e.target.value)}
+            className="h-8 w-36 text-sm"
+          />
+        </div>
+        {(filterCurrency || filterBank || filterAccount || filterDateFrom || filterDateTo) && (
+          <button
+            onClick={() => { setFilterCurrency(''); setFilterBank(''); setFilterAccount(''); setFilterDateFrom(''); setFilterDateTo('') }}
+            className="h-8 self-end text-xs text-muted-foreground hover:text-foreground"
+          >
+            Clear filters
+          </button>
+        )}
       </div>
 
       {/* Main table */}
@@ -1752,6 +1699,286 @@ function NewRefundDialog({
 }
 
 // ---------------------------------------------------------------------------
+// New payment (full page, ?action=new-payment)
+// ---------------------------------------------------------------------------
+
+function NewPaymentPage() {
+  const navigate = useNavigate()
+  const { user } = useUser()
+
+  const [linkedId, setLinkedId] = React.useState('')
+  const [receiverName, setReceiverName] = React.useState('')
+  const [receiverBic, setReceiverBic] = React.useState('')
+  const [receiverAccount, setReceiverAccount] = React.useState('')
+  const [receiverRouting, setReceiverRouting] = React.useState('')
+  const [amount, setAmount] = React.useState('')
+  const [currency, setCurrency] = React.useState<string>('SGD')
+  const [paymentType, setPaymentType] = React.useState<string>('FAST')
+  const [notes, setNotes] = React.useState('')
+  const [attachedFiles, setAttachedFiles] = React.useState<File[]>([])
+  const fileInputRef = React.useRef<HTMLInputElement>(null)
+
+  const goBack = () =>
+    navigate({
+      to: '/payments',
+      search: { action: undefined, txnId: undefined, paymentId: undefined },
+    })
+
+  const canSubmit =
+    receiverName.trim() !== '' &&
+    amount.trim() !== '' &&
+    receiverAccount.trim() !== '' &&
+    receiverBic.trim() !== ''
+
+  const submit = () => {
+    toast.success('Payment submitted for approval', {
+      description: `${receiverName} · ${amount} ${currency} — awaiting checker approval.`,
+    })
+    goBack()
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <button
+          onClick={goBack}
+          className="mb-3 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeftIcon className="size-3.5" /> Back to Payments
+        </button>
+        <div className="flex items-center gap-2">
+          <PlusIcon className="size-5 text-muted-foreground" />
+          <h1 className="text-2xl font-bold tracking-tight">Create payment</h1>
+        </div>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Submit a new outbound payment. Goes through maker-checker before Acme executes.
+        </p>
+      </div>
+
+      {user.role === 'CHECKER' && (
+        <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2.5 text-xs text-amber-800">
+          <AlertCircleIcon className="mt-0.5 size-4 shrink-0" />
+          <span>
+            You're acting as a{' '}
+            <span className="uppercase tracking-wider font-medium">CHECKER</span>.
+            Switch to{' '}
+            <span className="uppercase tracking-wider font-medium">MAKER</span>{' '}
+            from the profile menu to submit a new payment.
+          </span>
+        </div>
+      )}
+
+      <Card>
+        <CardContent className="space-y-3 px-6 py-5">
+          <div className="text-[0.7rem] font-medium uppercase tracking-wider text-muted-foreground">
+            Request context
+          </div>
+          <ContextRow label="Requester">
+            <span className="text-sm">
+              {user.name}{' '}
+              <span className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">
+                · {user.role}
+              </span>{' '}
+              — Acme Operations Team
+            </span>
+          </ContextRow>
+          <ContextRow label="Date of request">
+            <span className="text-sm">{todayDisplay()}</span>
+          </ContextRow>
+          <ContextRow label="Link to transaction / payment ID">
+            <Input
+              value={linkedId}
+              onChange={(e) => setLinkedId(e.target.value)}
+              placeholder="Txn_01J9KA2M3X4P5 or pymt_..."
+              className="h-8 max-w-xs font-mono text-sm"
+            />
+          </ContextRow>
+          <p className="text-[0.7rem] text-muted-foreground">
+            Optional — attach this payment to an existing transaction or payment record.
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="space-y-5 px-6 py-5">
+          <div className="text-[0.7rem] font-medium uppercase tracking-wider text-muted-foreground">
+            Payment details
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-1.5">
+              <Label>Amount</Label>
+              <Input
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0.00"
+                className="font-mono"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Currency</Label>
+              <Select value={currency} onValueChange={setCurrency}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CURRENCIES.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Payment type</Label>
+              <Select value={paymentType} onValueChange={setPaymentType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAYMENT_TYPES.map((t) => (
+                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Notes</Label>
+            <Textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Optional context for the checker"
+              rows={3}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="space-y-5 px-6 py-5">
+          <div className="text-[0.7rem] font-medium uppercase tracking-wider text-muted-foreground">
+            Receiver details
+          </div>
+          <div className="space-y-1.5">
+            <Label>Receiver name</Label>
+            <Input
+              value={receiverName}
+              onChange={(e) => setReceiverName(e.target.value)}
+              placeholder="Beneficiary account name"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label>Receiver bank BIC</Label>
+              <Input
+                value={receiverBic}
+                onChange={(e) => setReceiverBic(e.target.value)}
+                placeholder="DBSSSGSGXXX"
+                className="font-mono"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Account number</Label>
+              <Input
+                value={receiverAccount}
+                onChange={(e) => setReceiverAccount(e.target.value)}
+                placeholder="0123456789"
+                className="font-mono"
+              />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Local routing identifier</Label>
+            <Input
+              value={receiverRouting}
+              onChange={(e) => setReceiverRouting(e.target.value)}
+              placeholder="004"
+              className="font-mono"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="space-y-4 px-6 py-5">
+          <div className="space-y-1">
+            <div className="text-[0.7rem] font-medium uppercase tracking-wider text-muted-foreground">
+              Add Attachments
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Attach supporting documents. Files become part of the audit trail.
+            </p>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept=".pdf,.png,.jpg,.jpeg,.csv,.xlsx"
+            className="hidden"
+            onChange={(e) => {
+              const incoming = Array.from(e.target.files ?? [])
+              setAttachedFiles((prev) => {
+                const names = new Set(prev.map((f) => f.name))
+                return [...prev, ...incoming.filter((f) => !names.has(f.name))]
+              })
+              e.target.value = ''
+            }}
+          />
+          {attachedFiles.length > 0 && (
+            <div className="space-y-1.5">
+              {attachedFiles.map((f) => (
+                <div
+                  key={f.name}
+                  className="flex items-center gap-2 rounded border bg-muted/40 px-3 py-2"
+                >
+                  <PaperclipIcon className="size-3.5 shrink-0 text-muted-foreground" />
+                  <span className="min-w-0 flex-1 truncate font-mono text-xs">{f.name}</span>
+                  <span className="shrink-0 text-[0.65rem] text-muted-foreground">
+                    {(f.size / 1024).toFixed(0)} KB
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setAttachedFiles((prev) => prev.filter((x) => x.name !== f.name))}
+                    className="ml-1 rounded p-0.5 hover:bg-muted"
+                    aria-label={`Remove ${f.name}`}
+                  >
+                    <XIcon className="size-3 text-muted-foreground" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <PaperclipIcon className="size-3.5" />
+            Attach file
+          </Button>
+        </CardContent>
+      </Card>
+
+      <div className="rounded-md border border-dashed bg-muted/30 p-3 text-xs text-muted-foreground">
+        <span className="text-[0.65rem] uppercase tracking-wider font-medium">
+          Maker-checker preview
+        </span>
+        <div className="mt-1">
+          Submitted by{' '}
+          <span className="font-medium text-foreground">{user.name}</span> →
+          awaiting approval from a checker. Logged as a new outbound payment.
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-2">
+        <Button variant="outline" onClick={goBack}>Cancel</Button>
+        <Button disabled={!canSubmit} onClick={submit}>Submit for approval</Button>
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // New retry from payment (separate code path via ?action=retry-payment&paymentId=)
 // ---------------------------------------------------------------------------
 
@@ -1769,6 +1996,7 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
       },
     })
 
+  const [retryMode, setRetryMode] = React.useState<'original' | 'recreate'>('original')
   const [receiverName, setReceiverName] = React.useState(
     payment?.receiverName ?? '',
   )
@@ -1782,6 +2010,8 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
     payment?.receiverLocalRoutingIdentifier ?? '',
   )
   const [amount, setAmount] = React.useState(payment?.amount ?? '')
+  const [currency, setCurrency] = React.useState(payment?.currency ?? 'SGD')
+  const [paymentType, setPaymentType] = React.useState(payment?.type ?? 'FAST')
   const [notes, setNotes] = React.useState('')
   const [attachedFiles, setAttachedFiles] = React.useState<File[]>([])
   const fileInputRef = React.useRef<HTMLInputElement>(null)
@@ -1819,12 +2049,15 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
     )
   }
 
-  const canSubmit =
-    amount.trim().length > 0 &&
-    receiverName.trim().length > 0 &&
-    receiverBic.trim().length > 0 &&
-    receiverAccount.trim().length > 0 &&
-    receiverRouting.trim().length > 0
+  const canSubmit = retryMode === 'original'
+    ? true
+    : (
+      amount.trim().length > 0 &&
+      receiverName.trim().length > 0 &&
+      receiverBic.trim().length > 0 &&
+      receiverAccount.trim().length > 0 &&
+      receiverRouting.trim().length > 0
+    )
 
   const submit = () => {
     const now = new Date()
@@ -1837,16 +2070,24 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
     const submittedAt = `${month} ${day}, ${year} at ${hh}:${mm} ${ampm}`
     const retryId = `rty_${Math.random().toString(36).slice(2, 14).toUpperCase()}`
 
+    const finalName = retryMode === 'original' ? payment.receiverName : receiverName
+    const finalBic = retryMode === 'original' ? payment.receiverBank : receiverBic
+    const finalAcct = retryMode === 'original' ? payment.receiverBankAccountNumber : receiverAccount
+    const finalRouting = retryMode === 'original' ? payment.receiverLocalRoutingIdentifier : receiverRouting
+    const finalAmount = retryMode === 'original' ? payment.amount : amount
+    const finalCurrency = retryMode === 'original' ? payment.currency : currency
+    const finalType = retryMode === 'original' ? payment.type : paymentType
+
     addRetry({
       id: retryId,
       originalPaymentId: payment.id,
-      amount,
-      currency: payment.currency,
-      receiverName,
-      receiverBankBic: receiverBic,
-      receiverAccountNumber: receiverAccount,
-      receiverLocalRoutingIdentifier: receiverRouting,
-      type: payment.type,
+      amount: finalAmount,
+      currency: finalCurrency,
+      receiverName: finalName,
+      receiverBankBic: finalBic,
+      receiverAccountNumber: finalAcct,
+      receiverLocalRoutingIdentifier: finalRouting,
+      type: finalType,
       notes,
       requester: user.name,
       submittedAt,
@@ -1944,71 +2185,136 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
 
       <Card>
         <CardContent className="space-y-5 px-6 py-5">
-          <div className="space-y-1">
-            <div className="text-[0.7rem] font-medium uppercase tracking-wider text-muted-foreground">
-              Fields
-            </div>
+          <div className="text-[0.7rem] font-medium uppercase tracking-wider text-muted-foreground">
+            Retry options
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="rcv-name">Receiver name</Label>
-            <Input
-              id="rcv-name"
-              value={receiverName}
-              onChange={(e) => setReceiverName(e.target.value)}
-              placeholder="Beneficiary account name"
-              disabled
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setRetryMode('original')}
+              className={cn(
+                'rounded-md border px-4 py-3 text-left transition-colors',
+                retryMode === 'original'
+                  ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                  : 'border-border hover:bg-muted/50',
+              )}
+            >
+              <div className="text-sm font-medium">Use original details</div>
+              <div className="mt-0.5 text-xs text-muted-foreground">
+                Resubmit with the same routing and receiver details from the failed payment.
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setRetryMode('recreate')}
+              className={cn(
+                'rounded-md border px-4 py-3 text-left transition-colors',
+                retryMode === 'recreate'
+                  ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                  : 'border-border hover:bg-muted/50',
+              )}
+            >
+              <div className="text-sm font-medium">Recreate new payment</div>
+              <div className="mt-0.5 text-xs text-muted-foreground">
+                Edit receiver, routing, amount, or type before resubmitting.
+              </div>
+            </button>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="rcv-bic">Receiver bank BIC</Label>
-              <Input
-                id="rcv-bic"
-                value={receiverBic}
-                onChange={(e) => setReceiverBic(e.target.value)}
-                placeholder="DBSSSGSGXXX"
-                className="font-mono"
-                disabled
-              />
+
+          {retryMode === 'original' ? (
+            <div className="space-y-3 rounded-md border bg-muted/20 px-4 py-3">
+              <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                <div className="text-muted-foreground">Receiver name</div>
+                <div className="font-medium">{payment.receiverName || '—'}</div>
+                <div className="text-muted-foreground">Account number</div>
+                <div className="font-mono text-[0.78rem]">{payment.receiverBankAccountNumber || '—'}</div>
+                <div className="text-muted-foreground">Bank BIC</div>
+                <div className="font-mono text-[0.78rem]">{payment.receiverBank || '—'}</div>
+                <div className="text-muted-foreground">Routing ID</div>
+                <div className="font-mono text-[0.78rem]">{payment.receiverLocalRoutingIdentifier || '—'}</div>
+                <div className="text-muted-foreground">Amount</div>
+                <div className="font-mono text-[0.78rem]">{payment.amount} {payment.currency}</div>
+                <div className="text-muted-foreground">Type</div>
+                <div className="text-xs uppercase tracking-wider">{payment.type}</div>
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="rcv-acct">Receiver account number</Label>
-              <Input
-                id="rcv-acct"
-                value={receiverAccount}
-                onChange={(e) => setReceiverAccount(e.target.value)}
-                placeholder="0123456789"
-                className="font-mono"
-                disabled
-              />
+          ) : (
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="rcv-name">Receiver name</Label>
+                <Input
+                  id="rcv-name"
+                  value={receiverName}
+                  onChange={(e) => setReceiverName(e.target.value)}
+                  placeholder="Beneficiary account name"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="rcv-bic">Receiver bank BIC</Label>
+                  <Input
+                    id="rcv-bic"
+                    value={receiverBic}
+                    onChange={(e) => setReceiverBic(e.target.value)}
+                    placeholder="DBSSSGSGXXX"
+                    className="font-mono"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="rcv-acct">Account number</Label>
+                  <Input
+                    id="rcv-acct"
+                    value={receiverAccount}
+                    onChange={(e) => setReceiverAccount(e.target.value)}
+                    placeholder="0123456789"
+                    className="font-mono"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="rcv-routing">Local routing identifier</Label>
+                  <Input
+                    id="rcv-routing"
+                    value={receiverRouting}
+                    onChange={(e) => setReceiverRouting(e.target.value)}
+                    placeholder="004"
+                    className="font-mono"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Amount</Label>
+                  <Input
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="0.00"
+                    className="font-mono"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>Currency</Label>
+                  <Select value={currency} onValueChange={setCurrency}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {CURRENCIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Payment type</Label>
+                  <Select value={paymentType} onValueChange={setPaymentType}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {PAYMENT_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="rcv-routing">Local routing identifier</Label>
-              <Input
-                id="rcv-routing"
-                value={receiverRouting}
-                onChange={(e) => setReceiverRouting(e.target.value)}
-                placeholder="004"
-                className="font-mono"
-                disabled
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="rty-amount">
-                Amount ({payment.currency})
-              </Label>
-              <Input
-                id="rty-amount"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="0.00"
-                className="font-mono"
-                disabled
-              />
-            </div>
-          </div>
+          )}
+
           <div className="space-y-1.5">
             <Label htmlFor="rty-notes">Notes</Label>
             <Textarea
@@ -2096,8 +2402,8 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
         <div className="mt-1">
           Submitted by{' '}
           <span className="font-medium text-foreground">{user.name}</span> →
-          awaiting approval from a checker. Logged automatically as a retry
-          payment.
+          awaiting approval from a checker. Logged as a{' '}
+          {retryMode === 'original' ? 'retry with original details' : 'retry with updated details'}.
         </div>
       </div>
 
