@@ -7970,3 +7970,211 @@ export const allPayments: Payment[] = [
     paymentDetails: "Acme PVT BT HKD float to col",
   },
 ]
+
+// ---------------------------------------------------------------------------
+// Payment analytics — derived from allPayments for the home dashboard charts
+// ---------------------------------------------------------------------------
+
+const ACCOUNT_TO_BANK: Record<string, string> = {
+  intacc_0KT8ZSCRKXP0O: 'DBS',
+  intacc_0KT8ZSDEKXCAN: 'DBS',
+  intacc_0KERZSCDKXV0O: 'CIMB',
+}
+
+const MONTH_INDEX: Record<string, number> = {
+  Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
+  Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11,
+}
+
+const MONTH_LABEL = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+// Parse "17 May, 2026, 02:04" -> Date (or null)
+function parseCreatedAt(s: string): Date | null {
+  const m = s.match(/(\d+)\s+(\w+),\s+(\d{4})/)
+  if (!m) return null
+  const mon = MONTH_INDEX[m[2]]
+  if (mon === undefined) return null
+  return new Date(Number(m[3]), mon, Number(m[1]))
+}
+
+// Deterministic API vs Batch channel assignment (no Date.now/random).
+function channelFor(p: Payment): 'API' | 'Batch' {
+  let h = 0
+  for (let i = 0; i < p.id.length; i++) h = (h + p.id.charCodeAt(i)) % 100
+  return h < 35 ? 'Batch' : 'API'
+}
+
+export type MonthlyVolume = {
+  key: string
+  label: string
+  completed: number
+  pending: number
+  failed: number
+  total: number
+}
+
+export type TypeBreakdown = {
+  type: string
+  channel: string
+  total: number
+  completed: number
+  failed: number
+  pending: number
+  successRate: number
+}
+
+export type BankVolume = {
+  bank: string
+  api: number
+  batch: number
+  total: number
+  successRate: number
+}
+
+export type FailureReason = {
+  type: string
+  bank: string
+  reason: string
+  count: number
+}
+
+export type PaymentAnalytics = {
+  totals: {
+    total: number
+    completed: number
+    failed: number
+    pending: number
+    successRate: number
+  }
+  byMonth: MonthlyVolume[]
+  byType: TypeBreakdown[]
+  byBank: BankVolume[]
+  failureReasons: FailureReason[]
+}
+
+let _analyticsCache: PaymentAnalytics | null = null
+
+export function paymentAnalytics(): PaymentAnalytics {
+  if (_analyticsCache) return _analyticsCache
+
+  const totals = { total: 0, completed: 0, failed: 0, pending: 0, successRate: 0 }
+  const monthMap = new Map<string, MonthlyVolume>()
+  const typeMap = new Map<string, TypeBreakdown>()
+  const bankMap = new Map<string, BankVolume>()
+  const failMap = new Map<string, FailureReason>()
+
+  for (const p of allPayments) {
+    totals.total++
+    if (p.status === 'COMPLETED') totals.completed++
+    else if (p.status === 'FAILED') totals.failed++
+    else if (p.status === 'PENDING') totals.pending++
+
+    // By month
+    const d = parseCreatedAt(p.createdAt)
+    if (d) {
+      const key = `${d.getFullYear()}-${String(d.getMonth()).padStart(2, '0')}`
+      let row = monthMap.get(key)
+      if (!row) {
+        row = {
+          key,
+          label: `${MONTH_LABEL[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`,
+          completed: 0,
+          pending: 0,
+          failed: 0,
+          total: 0,
+        }
+        monthMap.set(key, row)
+      }
+      row.total++
+      if (p.status === 'COMPLETED') row.completed++
+      else if (p.status === 'FAILED') row.failed++
+      else if (p.status === 'PENDING') row.pending++
+    }
+
+    // By type + channel
+    const channel = channelFor(p)
+    const typeKey = `${p.type}__${channel}`
+    let trow = typeMap.get(typeKey)
+    if (!trow) {
+      trow = { type: p.type, channel, total: 0, completed: 0, failed: 0, pending: 0, successRate: 0 }
+      typeMap.set(typeKey, trow)
+    }
+    trow.total++
+    if (p.status === 'COMPLETED') trow.completed++
+    else if (p.status === 'FAILED') trow.failed++
+    else if (p.status === 'PENDING') trow.pending++
+
+    // By bank
+    const bank = ACCOUNT_TO_BANK[p.senderAccountId] ?? 'Other'
+    let brow = bankMap.get(bank)
+    if (!brow) {
+      brow = { bank, api: 0, batch: 0, total: 0, successRate: 0 }
+      bankMap.set(bank, brow)
+    }
+    brow.total++
+    if (channel === 'API') brow.api++
+    else brow.batch++
+
+    // Failure reasons
+    if (p.status === 'FAILED') {
+      const reason = p.underlyingErrorMessage || p.resultCode || '(no error captured)'
+      const fkey = `${p.type}__${bank}__${reason}`
+      let frow = failMap.get(fkey)
+      if (!frow) {
+        frow = { type: p.type, bank, reason, count: 0 }
+        failMap.set(fkey, frow)
+      }
+      frow.count++
+    }
+  }
+
+  totals.successRate = totals.total ? Math.round((totals.completed / totals.total) * 100) : 0
+
+  const byMonth = [...monthMap.values()].sort((a, b) => a.key.localeCompare(b.key))
+
+  const byType = [...typeMap.values()]
+    .map((t) => ({
+      ...t,
+      successRate: t.total ? Math.round((t.completed / t.total) * 100) : 0,
+    }))
+    .sort((a, b) => b.total - a.total)
+
+  const byBank = [...bankMap.values()]
+    .map((b) => {
+      const failed = allPayments.filter(
+        (p) => (ACCOUNT_TO_BANK[p.senderAccountId] ?? 'Other') === b.bank && p.status === 'FAILED',
+      ).length
+      const completed = allPayments.filter(
+        (p) => (ACCOUNT_TO_BANK[p.senderAccountId] ?? 'Other') === b.bank && p.status === 'COMPLETED',
+      ).length
+      return { ...b, successRate: b.total ? Math.round((completed / b.total) * 100) : 0, _f: failed }
+    })
+    .map(({ _f, ...rest }) => rest)
+    .sort((a, b) => b.total - a.total)
+
+  const failureReasons = [...failMap.values()].sort((a, b) => b.count - a.count)
+
+  _analyticsCache = { totals, byMonth, byType, byBank, failureReasons }
+  return _analyticsCache
+}
+
+// Success rate per payment type (collapsed across channels), for the bar chart.
+export function successRateByType(): { type: string; successRate: number; total: number }[] {
+  const map = new Map<string, { total: number; completed: number }>()
+  for (const p of allPayments) {
+    let row = map.get(p.type)
+    if (!row) {
+      row = { total: 0, completed: 0 }
+      map.set(p.type, row)
+    }
+    row.total++
+    if (p.status === 'COMPLETED') row.completed++
+  }
+  return [...map.entries()]
+    .map(([type, v]) => ({
+      type,
+      total: v.total,
+      successRate: v.total ? Math.round((v.completed / v.total) * 100) : 0,
+    }))
+    .sort((a, b) => b.total - a.total)
+}
