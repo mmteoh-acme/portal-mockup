@@ -22,7 +22,7 @@ export function SelectEntityPage() {
           <div className="flex aspect-square size-7 items-center justify-center rounded-md bg-primary font-mono text-xs font-semibold text-primary-foreground">
             A
           </div>
-          <span className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
+          <span className="text-xs uppercase tracking-wider text-muted-foreground">
             Acme External Portal
           </span>
         </div>
@@ -55,11 +55,11 @@ export function SelectEntityPage() {
                     <div className="mt-1 flex items-center gap-3">
                       <MonoLabel>{e.location}</MonoLabel>
                       {isEmpty ? (
-                        <span className="font-mono text-[0.7rem] uppercase tracking-wider text-amber-700">
+                        <span className="text-[0.7rem] uppercase tracking-wider text-amber-700">
                           No accounts yet
                         </span>
                       ) : (
-                        <span className="font-mono text-[0.7rem] uppercase tracking-wider text-muted-foreground">
+                        <span className="text-[0.7rem] uppercase tracking-wider text-muted-foreground">
                           {e.banks.length} bank{e.banks.length === 1 ? '' : 's'}
                           {' · '}
                           {accounts.length} account

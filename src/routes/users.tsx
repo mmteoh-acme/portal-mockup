@@ -180,22 +180,22 @@ export function UsersPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="font-mono text-[0.7rem] uppercase tracking-wider">
+                <TableHead className="text-[0.7rem] uppercase tracking-wider">
                   User
                 </TableHead>
-                <TableHead className="font-mono text-[0.7rem] uppercase tracking-wider">
+                <TableHead className="text-[0.7rem] uppercase tracking-wider">
                   Role
                 </TableHead>
-                <TableHead className="font-mono text-[0.7rem] uppercase tracking-wider">
+                <TableHead className="text-[0.7rem] uppercase tracking-wider">
                   Entity access
                 </TableHead>
-                <TableHead className="font-mono text-[0.7rem] uppercase tracking-wider">
+                <TableHead className="text-[0.7rem] uppercase tracking-wider">
                   Approval limit
                 </TableHead>
-                <TableHead className="font-mono text-[0.7rem] uppercase tracking-wider">
+                <TableHead className="text-[0.7rem] uppercase tracking-wider">
                   Status
                 </TableHead>
-                <TableHead className="font-mono text-[0.7rem] uppercase tracking-wider">
+                <TableHead className="text-[0.7rem] uppercase tracking-wider">
                   Last active
                 </TableHead>
                 <TableHead className="w-12" />
@@ -217,7 +217,7 @@ export function UsersPage() {
                       </Avatar>
                       <div>
                         <div className="text-sm font-medium">{m.name}</div>
-                        <div className="font-mono text-[0.65rem] text-muted-foreground">
+                        <div className="text-[0.65rem] text-muted-foreground">
                           {m.email}
                         </div>
                       </div>
@@ -231,7 +231,7 @@ export function UsersPage() {
                       {m.entityAccess.map((e) => (
                         <span
                           key={e}
-                          className="inline-flex items-center rounded border bg-muted px-1.5 py-0.5 font-mono text-[0.65rem] text-muted-foreground"
+                          className="inline-flex items-center rounded border bg-muted px-1.5 py-0.5 text-[0.65rem] text-muted-foreground"
                         >
                           {e}
                         </span>
@@ -242,12 +242,12 @@ export function UsersPage() {
                     {m.approvalLimit ? (
                       <div className="flex items-center gap-1.5">
                         <CheckIcon className="size-3.5 text-emerald-600" />
-                        <span className="font-mono text-xs text-muted-foreground">
+                        <span className="text-xs text-muted-foreground">
                           {m.approvalLimit}
                         </span>
                       </div>
                     ) : m.role === 'CHECKER' ? (
-                      <span className="font-mono text-xs text-muted-foreground">
+                      <span className="text-xs text-muted-foreground">
                         Unlimited
                       </span>
                     ) : (
@@ -257,7 +257,7 @@ export function UsersPage() {
                   <TableCell>
                     <StatusPill status={m.status} />
                   </TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
+                  <TableCell className="text-xs text-muted-foreground">
                     {m.lastActive}
                   </TableCell>
                   <TableCell>
@@ -303,7 +303,7 @@ export function UsersPage() {
 function RolePill({ role }: { role: PortalRole }) {
   return (
     <span
-      className={`inline-flex items-center rounded border px-1.5 py-0.5 font-mono text-[0.65rem] font-medium uppercase tracking-wider ${ROLE_COLORS[role]}`}
+      className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[0.65rem] font-medium uppercase tracking-wider ${ROLE_COLORS[role]}`}
     >
       {role}
     </span>
@@ -313,7 +313,7 @@ function RolePill({ role }: { role: PortalRole }) {
 function StatusPill({ status }: { status: UserStatus }) {
   return (
     <span
-      className={`inline-flex items-center rounded border px-1.5 py-0.5 font-mono text-[0.65rem] font-medium uppercase tracking-wider ${STATUS_COLORS[status]}`}
+      className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[0.65rem] font-medium uppercase tracking-wider ${STATUS_COLORS[status]}`}
     >
       {status}
     </span>

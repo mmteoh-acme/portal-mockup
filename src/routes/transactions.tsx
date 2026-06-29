@@ -310,7 +310,7 @@ export function TransactionsPage() {
           <DownloadIcon className="size-3.5" />
           Download CSV
           {filtered.length > 0 && (
-            <span className="font-mono text-[0.65rem] text-muted-foreground">
+            <span className="text-[0.65rem] text-muted-foreground">
               ({filtered.length})
             </span>
           )}
@@ -337,10 +337,10 @@ export function TransactionsPage() {
                   className="h-8 gap-2 font-normal"
                 >
                   <CalendarIcon className="size-3.5" />
-                  <span className="font-mono text-[0.7rem] uppercase tracking-wider text-muted-foreground">
+                  <span className="text-[0.7rem] uppercase tracking-wider text-muted-foreground">
                     Transaction date:
                   </span>
-                  <span className="font-mono text-xs">{dateLabel}</span>
+                  <span className="text-xs">{dateLabel}</span>
                 </Button>
               </PopoverTrigger>
               <PopoverContent align="start" className="w-auto p-0">
@@ -399,7 +399,7 @@ export function TransactionsPage() {
                   size="sm"
                   className="h-8 gap-2 font-normal"
                 >
-                  <span className="font-mono text-[0.7rem] uppercase tracking-wider text-muted-foreground">
+                  <span className="text-[0.7rem] uppercase tracking-wider text-muted-foreground">
                     Bank:
                   </span>
                   <span>{bankLabel}</span>
@@ -407,7 +407,7 @@ export function TransactionsPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-56">
-                <DropdownMenuLabel className="font-mono text-[0.65rem] uppercase tracking-wider text-muted-foreground">
+                <DropdownMenuLabel className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">
                   Filter by bank
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
@@ -433,7 +433,7 @@ export function TransactionsPage() {
 
             <Select value={accountId} onValueChange={setAccountId}>
               <SelectTrigger size="sm" className="h-8 gap-2 font-normal">
-                <span className="font-mono text-[0.7rem] uppercase tracking-wider text-muted-foreground">
+                <span className="text-[0.7rem] uppercase tracking-wider text-muted-foreground">
                   Account:
                 </span>
                 <SelectValue />
@@ -453,7 +453,7 @@ export function TransactionsPage() {
               onValueChange={(v) => setDirection(v as DirectionFilter)}
             >
               <SelectTrigger size="sm" className="h-8 gap-2 font-normal">
-                <span className="font-mono text-[0.7rem] uppercase tracking-wider text-muted-foreground">
+                <span className="text-[0.7rem] uppercase tracking-wider text-muted-foreground">
                   Direction:
                 </span>
                 <SelectValue />
@@ -470,7 +470,7 @@ export function TransactionsPage() {
               onValueChange={(v) => setCurrency(v as CurrencyFilter)}
             >
               <SelectTrigger size="sm" className="h-8 gap-2 font-normal">
-                <span className="font-mono text-[0.7rem] uppercase tracking-wider text-muted-foreground">
+                <span className="text-[0.7rem] uppercase tracking-wider text-muted-foreground">
                   Currency:
                 </span>
                 <SelectValue />
@@ -494,37 +494,37 @@ export function TransactionsPage() {
             <Table className="w-full table-fixed">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="font-mono text-[0.7rem] uppercase tracking-wider">
+                  <TableHead className="text-[0.7rem] uppercase tracking-wider">
                     Transaction ID
                   </TableHead>
-                  <TableHead className="text-right font-mono text-[0.7rem] uppercase tracking-wider">
+                  <TableHead className="text-right text-[0.7rem] uppercase tracking-wider">
                     Amount
                   </TableHead>
-                  <TableHead className="font-mono text-[0.7rem] uppercase tracking-wider">
+                  <TableHead className="text-[0.7rem] uppercase tracking-wider">
                     Currency
                   </TableHead>
-                  <TableHead className="font-mono text-[0.7rem] uppercase tracking-wider">
+                  <TableHead className="text-[0.7rem] uppercase tracking-wider">
                     Transaction date
                   </TableHead>
-                  <TableHead className="font-mono text-[0.7rem] uppercase tracking-wider">
+                  <TableHead className="text-[0.7rem] uppercase tracking-wider">
                     Sender name
                   </TableHead>
-                  <TableHead className="font-mono text-[0.7rem] uppercase tracking-wider">
+                  <TableHead className="text-[0.7rem] uppercase tracking-wider">
                     Sender bank
                   </TableHead>
-                  <TableHead className="font-mono text-[0.7rem] uppercase tracking-wider">
+                  <TableHead className="text-[0.7rem] uppercase tracking-wider">
                     Customer reference
                   </TableHead>
-                  <TableHead className="font-mono text-[0.7rem] uppercase tracking-wider">
+                  <TableHead className="text-[0.7rem] uppercase tracking-wider">
                     Bank reference
                   </TableHead>
-                  <TableHead className="font-mono text-[0.7rem] uppercase tracking-wider">
+                  <TableHead className="text-[0.7rem] uppercase tracking-wider">
                     Transaction type
                   </TableHead>
-                  <TableHead className="font-mono text-[0.7rem] uppercase tracking-wider">
+                  <TableHead className="text-[0.7rem] uppercase tracking-wider">
                     Created at
                   </TableHead>
-                  <TableHead className="w-12 font-mono text-[0.7rem] uppercase tracking-wider">
+                  <TableHead className="w-12 text-[0.7rem] uppercase tracking-wider">
                     Actions
                   </TableHead>
                 </TableRow>
@@ -546,7 +546,7 @@ export function TransactionsPage() {
                     </TableCell>
                     <TableCell className="text-right whitespace-nowrap">
                       <div
-                        className={`font-mono text-[0.65rem] uppercase tracking-wider ${
+                        className={`text-[0.65rem] uppercase tracking-wider ${
                           t.direction === 'CREDIT'
                             ? 'text-emerald-700'
                             : 'text-muted-foreground'
@@ -554,14 +554,14 @@ export function TransactionsPage() {
                       >
                         {t.direction}
                       </div>
-                      <div className="font-mono text-sm tabular-nums">
+                      <div className="text-sm tabular-nums">
                         {t.direction === 'CREDIT' ? '+' : '-'} {t.amount}
                       </div>
                     </TableCell>
-                    <TableCell className="font-mono text-xs">
+                    <TableCell className="text-xs">
                       {t.currency}
                     </TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground whitespace-nowrap">
+                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                       {t.transactionDate}
                     </TableCell>
                     <TableCell
@@ -595,7 +595,7 @@ export function TransactionsPage() {
                     <TableCell>
                       <StatusPill status={t.transactionType} />
                     </TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground whitespace-nowrap">
+                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                       {t.createdAt}
                     </TableCell>
                     <TableCell
@@ -652,7 +652,7 @@ export function TransactionsPage() {
           </div>
           {filtered.length > 0 && (
             <div className="flex items-center justify-between border-t px-4 py-3">
-              <div className="font-mono text-[0.7rem] uppercase tracking-wider text-muted-foreground">
+              <div className="text-[0.7rem] uppercase tracking-wider text-muted-foreground">
                 Showing {pageStart + 1}–{pageEnd} of {filtered.length}
               </div>
               <div className="flex items-center gap-2">
@@ -666,7 +666,7 @@ export function TransactionsPage() {
                   <ChevronLeftIcon className="size-3.5" />
                   Previous
                 </Button>
-                <span className="font-mono text-xs text-muted-foreground">
+                <span className="text-xs text-muted-foreground">
                   Page {page} of {totalPages}
                 </span>
                 <Button
@@ -698,10 +698,10 @@ export function TransactionsPage() {
               </SheetHeader>
               <div className="grid grid-cols-2 gap-x-6 gap-y-4 px-4 pb-6">
                 <Field label="Direction">
-                  <span className="font-mono text-sm">{openTxn.direction}</span>
+                  <span className="text-sm">{openTxn.direction}</span>
                 </Field>
                 <Field label="Amount">
-                  <span className="font-mono text-sm tabular-nums">
+                  <span className="text-sm tabular-nums">
                     {openTxn.direction === 'CREDIT' ? '+' : '-'} {openTxn.amount}
                   </span>
                 </Field>

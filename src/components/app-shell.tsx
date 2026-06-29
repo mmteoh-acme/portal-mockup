@@ -50,13 +50,13 @@ export function AppShell() {
           <Breadcrumb>
             <BreadcrumbList>
               <BreadcrumbItem className="hidden md:block">
-                <BreadcrumbLink className="font-mono text-xs uppercase tracking-wider">
+                <BreadcrumbLink className="text-xs uppercase tracking-wider">
                   {entity.name}
                 </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator className="hidden md:block" />
               <BreadcrumbItem>
-                <BreadcrumbPage className="font-mono text-xs uppercase tracking-wider">
+                <BreadcrumbPage className="text-xs uppercase tracking-wider">
                   {title}
                 </BreadcrumbPage>
               </BreadcrumbItem>

@@ -29,7 +29,7 @@ export function MonoLabel({
   return (
     <span
       className={cn(
-        'font-mono text-[0.7rem] uppercase tracking-wider text-muted-foreground',
+        'text-[0.7rem] uppercase tracking-wider text-muted-foreground',
         className,
       )}
     >
@@ -49,7 +49,7 @@ export function StatusPill({
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded border px-1.5 py-0.5 font-mono text-[0.65rem] font-medium uppercase tracking-wider',
+        'inline-flex items-center rounded border px-1.5 py-0.5 text-[0.65rem] font-medium uppercase tracking-wider',
         tone,
         className,
       )}

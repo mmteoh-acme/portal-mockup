@@ -73,7 +73,7 @@ export function LoginPage() {
       <div className="relative hidden bg-muted lg:block">
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="max-w-md p-10">
-            <p className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
+            <p className="text-xs uppercase tracking-wider text-muted-foreground">
               Acme External Portal
             </p>
             <h2 className="mt-3 text-3xl font-bold tracking-tight">

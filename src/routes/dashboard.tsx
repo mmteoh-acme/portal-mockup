@@ -66,7 +66,7 @@ export function DashboardPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-baseline gap-2">
-                    <span className="font-mono text-xs text-emerald-700">
+                    <span className="text-xs text-emerald-700">
                       {kpi.delta}
                     </span>
                     <span className="text-xs text-muted-foreground">

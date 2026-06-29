@@ -32,16 +32,16 @@ export function WebhooksPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="font-mono text-[0.7rem] uppercase tracking-wider">
+                <TableHead className="text-[0.7rem] uppercase tracking-wider">
                   URL
                 </TableHead>
-                <TableHead className="font-mono text-[0.7rem] uppercase tracking-wider">
+                <TableHead className="text-[0.7rem] uppercase tracking-wider">
                   Events
                 </TableHead>
-                <TableHead className="font-mono text-[0.7rem] uppercase tracking-wider">
+                <TableHead className="text-[0.7rem] uppercase tracking-wider">
                   Status
                 </TableHead>
-                <TableHead className="font-mono text-[0.7rem] uppercase tracking-wider">
+                <TableHead className="text-[0.7rem] uppercase tracking-wider">
                   Last delivery
                 </TableHead>
               </TableRow>
@@ -52,13 +52,13 @@ export function WebhooksPage() {
                   <TableCell>
                     <Mono>{w.url}</Mono>
                   </TableCell>
-                  <TableCell className="font-mono text-xs">
+                  <TableCell className="text-xs">
                     {w.events}
                   </TableCell>
                   <TableCell>
                     <StatusPill status={w.status} />
                   </TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
+                  <TableCell className="text-xs text-muted-foreground">
                     {w.lastDelivery}
                   </TableCell>
                 </TableRow>

@@ -123,7 +123,7 @@ export function AppSidebar() {
                     <span className="truncate font-semibold">
                       {entity?.name ?? 'Select entity'}
                     </span>
-                    <span className="truncate font-mono text-[0.65rem] uppercase tracking-wider text-muted-foreground">
+                    <span className="truncate text-[0.65rem] uppercase tracking-wider text-muted-foreground">
                       Acme
                     </span>
                   </div>
@@ -135,7 +135,7 @@ export function AppSidebar() {
                 side="bottom"
                 className="w-(--radix-dropdown-menu-trigger-width) min-w-64"
               >
-                <DropdownMenuLabel className="font-mono text-[0.65rem] uppercase tracking-wider text-muted-foreground">
+                <DropdownMenuLabel className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">
                   Entities · Acme
                 </DropdownMenuLabel>
                 {entities.map((e) => {
@@ -223,7 +223,7 @@ export function AppSidebar() {
                     <span className="truncate font-medium">
                       {user.name}
                     </span>
-                    <span className="truncate font-mono text-[0.65rem] uppercase tracking-wider text-muted-foreground">
+                    <span className="truncate text-[0.65rem] uppercase tracking-wider text-muted-foreground">
                       {user.role}
                     </span>
                   </div>
@@ -246,7 +246,7 @@ export function AppSidebar() {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuLabel className="font-mono text-[0.65rem] uppercase tracking-wider text-muted-foreground">
+                <DropdownMenuLabel className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">
                   Switch role
                 </DropdownMenuLabel>
                 <DropdownMenuGroup>
@@ -267,7 +267,7 @@ export function AppSidebar() {
                         </div>
                         <div className="flex flex-1 flex-col leading-tight">
                           <span className="truncate text-sm">{u.name}</span>
-                          <span className="truncate font-mono text-[0.6rem] uppercase tracking-wider text-muted-foreground">
+                          <span className="truncate text-[0.6rem] uppercase tracking-wider text-muted-foreground">
                             {u.role}
                           </span>
                         </div>

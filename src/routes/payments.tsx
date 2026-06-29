@@ -239,8 +239,8 @@ function PaymentsMain() {
         <ClockIcon className="mt-0.5 size-4 shrink-0 text-amber-600" />
         <div>
           <span className="font-medium">Payment cut-off times today:</span>{' '}
-          DBS SGD — <span className="font-mono">17:00 SGT</span> · DBS USD —{' '}
-          <span className="font-mono">11:30 SGT</span> · SCB — <span className="font-mono">15:30 SGT</span>.{' '}
+          DBS SGD — <span>17:00 SGT</span> · DBS USD —{' '}
+          <span>11:30 SGT</span> · SCB — <span>15:30 SGT</span>.{' '}
           Payments submitted after cut-off will be scheduled to the next business day.
         </div>
       </div>
@@ -291,25 +291,25 @@ function PaymentsMain() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="font-mono text-[0.7rem] uppercase tracking-wider">
+                  <TableHead className="text-[0.7rem] uppercase tracking-wider">
                     Payment ID
                   </TableHead>
-                  <TableHead className="font-mono text-[0.7rem] uppercase tracking-wider">
+                  <TableHead className="text-[0.7rem] uppercase tracking-wider">
                     Status
                   </TableHead>
-                  <TableHead className="font-mono text-[0.7rem] uppercase tracking-wider">
+                  <TableHead className="text-[0.7rem] uppercase tracking-wider">
                     Type
                   </TableHead>
-                  <TableHead className="text-right font-mono text-[0.7rem] uppercase tracking-wider">
+                  <TableHead className="text-right text-[0.7rem] uppercase tracking-wider">
                     Amount
                   </TableHead>
-                  <TableHead className="font-mono text-[0.7rem] uppercase tracking-wider">
+                  <TableHead className="text-[0.7rem] uppercase tracking-wider">
                     Receiver
                   </TableHead>
-                  <TableHead className="font-mono text-[0.7rem] uppercase tracking-wider">
+                  <TableHead className="text-[0.7rem] uppercase tracking-wider">
                     Result
                   </TableHead>
-                  <TableHead className="font-mono text-[0.7rem] uppercase tracking-wider">
+                  <TableHead className="text-[0.7rem] uppercase tracking-wider">
                     Created at
                   </TableHead>
                   <TableHead className="w-[60px]"></TableHead>
@@ -364,10 +364,10 @@ function PaymentsMain() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="font-mono text-xs uppercase tracking-wider text-muted-foreground whitespace-nowrap">
+                      <TableCell className="text-xs uppercase tracking-wider text-muted-foreground whitespace-nowrap">
                         {p.type}
                       </TableCell>
-                      <TableCell className="text-right font-mono text-sm tabular-nums whitespace-nowrap">
+                      <TableCell className="text-right text-sm tabular-nums whitespace-nowrap">
                         {p.amount} {p.currency}
                       </TableCell>
                       <TableCell className="min-w-[180px]">
@@ -384,14 +384,14 @@ function PaymentsMain() {
                       </TableCell>
                       <TableCell className="max-w-[220px]">
                         {p.resultCode ? (
-                          <span className="font-mono text-[0.7rem] uppercase tracking-wider text-muted-foreground">
+                          <span className="text-[0.7rem] uppercase tracking-wider text-muted-foreground">
                             {p.resultCode}
                           </span>
                         ) : (
                           <span className="text-muted-foreground">—</span>
                         )}
                       </TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground whitespace-nowrap">
+                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                         {p.createdAt}
                       </TableCell>
                       <TableCell
@@ -506,7 +506,7 @@ function PaymentsMain() {
 
           {filtered.length > 0 && (
             <div className="flex items-center justify-between border-t px-4 py-3">
-              <div className="font-mono text-[0.7rem] uppercase tracking-wider text-muted-foreground">
+              <div className="text-[0.7rem] uppercase tracking-wider text-muted-foreground">
                 Showing {pageStart + 1}–{pageEnd} of {filtered.length}
               </div>
               <div className="flex items-center gap-2">
@@ -520,7 +520,7 @@ function PaymentsMain() {
                   <ChevronLeftIcon className="size-3.5" />
                   Previous
                 </Button>
-                <span className="font-mono text-xs text-muted-foreground">
+                <span className="text-xs text-muted-foreground">
                   Page {page} of {totalPages}
                 </span>
                 <Button
@@ -577,19 +577,19 @@ function PaymentsMain() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="font-mono text-[0.7rem] uppercase tracking-wider">
+                    <TableHead className="text-[0.7rem] uppercase tracking-wider">
                       Original txn
                     </TableHead>
-                    <TableHead className="font-mono text-[0.7rem] uppercase tracking-wider">
+                    <TableHead className="text-[0.7rem] uppercase tracking-wider">
                       Customer
                     </TableHead>
-                    <TableHead className="font-mono text-[0.7rem] uppercase tracking-wider">
+                    <TableHead className="text-[0.7rem] uppercase tracking-wider">
                       Amount
                     </TableHead>
-                    <TableHead className="font-mono text-[0.7rem] uppercase tracking-wider">
+                    <TableHead className="text-[0.7rem] uppercase tracking-wider">
                       Reason
                     </TableHead>
-                    <TableHead className="font-mono text-[0.7rem] uppercase tracking-wider">
+                    <TableHead className="text-[0.7rem] uppercase tracking-wider">
                       Date
                     </TableHead>
                     <TableHead className="w-[140px]"></TableHead>
@@ -604,13 +604,13 @@ function PaymentsMain() {
                       <TableCell className="font-medium">
                         {r.customer}
                       </TableCell>
-                      <TableCell className="font-mono text-sm tabular-nums">
+                      <TableCell className="text-sm tabular-nums">
                         {r.amount}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {r.reason}
                       </TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">
+                      <TableCell className="text-xs text-muted-foreground">
                         {r.date}
                       </TableCell>
                       <TableCell className="text-right">
@@ -753,13 +753,13 @@ function FilterChip({
       type="button"
       onClick={onClick}
       className={cn(
-        'inline-flex items-center gap-2 rounded-full border px-3 py-1 font-mono text-[0.7rem] uppercase tracking-wider transition-colors',
+        'inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[0.7rem] uppercase tracking-wider transition-colors',
         toneClasses[tone],
         active && 'ring-1 ring-inset ring-current/20',
       )}
     >
       <span>{label}</span>
-      <span className="font-mono text-[0.7rem] tabular-nums opacity-80">
+      <span className="text-[0.7rem] tabular-nums opacity-80">
         {count}
       </span>
     </button>
@@ -778,7 +778,7 @@ function PaymentStatusPill({ status }: { status: Payment['status'] }) {
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded border px-1.5 py-0.5 font-mono text-[0.65rem] font-medium uppercase tracking-wider',
+        'inline-flex items-center rounded border px-1.5 py-0.5 text-[0.65rem] font-medium uppercase tracking-wider',
         map[status],
       )}
     >
@@ -800,7 +800,7 @@ function RefundStatusPill({
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded border px-1.5 py-0.5 font-mono text-[0.65rem] font-medium uppercase tracking-wider whitespace-nowrap',
+        'inline-flex items-center rounded border px-1.5 py-0.5 text-[0.65rem] font-medium uppercase tracking-wider whitespace-nowrap',
         map[status],
       )}
     >
@@ -865,7 +865,7 @@ function PaymentDetailSheet({
                     value={
                       <span className="text-sm">
                         {retry.requester}{' '}
-                        <span className="font-mono text-[0.65rem] uppercase tracking-wider text-muted-foreground">
+                        <span className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">
                           · MAKER
                         </span>
                       </span>
@@ -880,11 +880,11 @@ function PaymentDetailSheet({
                             ? 'Approved'
                             : 'Rejected'}{' '}
                           by {retry.reviewer.name}{' '}
-                          <span className="font-mono text-[0.65rem] uppercase tracking-wider text-muted-foreground">
+                          <span className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">
                             ({retry.reviewer.role})
                           </span>{' '}
                           —{' '}
-                          <span className="font-mono text-xs">
+                          <span className="text-xs">
                             {retry.reviewer.at}
                           </span>
                         </span>
@@ -909,7 +909,7 @@ function PaymentDetailSheet({
                     value={
                       <span className="text-sm">
                         {refund.requester}{' '}
-                        <span className="font-mono text-[0.65rem] uppercase tracking-wider text-muted-foreground">
+                        <span className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">
                           · MAKER
                         </span>
                       </span>
@@ -923,10 +923,10 @@ function PaymentDetailSheet({
                           ? 'Approved'
                           : 'Rejected'}{' '}
                         by {refund.reviewer.name}{' '}
-                        <span className="font-mono text-[0.65rem] uppercase tracking-wider text-muted-foreground">
+                        <span className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">
                           ({refund.reviewer.role})
                         </span>{' '}
-                        — <span className="font-mono text-xs">{refund.reviewer.at}</span>
+                        — <span className="text-xs">{refund.reviewer.at}</span>
                       </span>
                     }
                   />
@@ -950,7 +950,7 @@ function PaymentDetailSheet({
                 <DetailRow
                   label="Type"
                   value={
-                    <span className="font-mono text-xs uppercase tracking-wider">
+                    <span className="text-xs uppercase tracking-wider">
                       {payment.type}
                     </span>
                   }
@@ -958,7 +958,7 @@ function PaymentDetailSheet({
                 <DetailRow
                   label="Amount"
                   value={
-                    <span className="font-mono text-sm tabular-nums">
+                    <span className="text-sm tabular-nums">
                       {payment.amount} {payment.currency}
                     </span>
                   }
@@ -966,7 +966,7 @@ function PaymentDetailSheet({
                 <DetailRow
                   label="Mode"
                   value={
-                    <span className="font-mono text-xs uppercase tracking-wider">
+                    <span className="text-xs uppercase tracking-wider">
                       {payment.mode}
                     </span>
                   }
@@ -1029,7 +1029,7 @@ function PaymentDetailSheet({
                   label="Result code"
                   value={
                     payment.resultCode ? (
-                      <span className="font-mono text-xs uppercase tracking-wider">
+                      <span className="text-xs uppercase tracking-wider">
                         {payment.resultCode}
                       </span>
                     ) : (
@@ -1082,7 +1082,7 @@ function PaymentDetailSheet({
                 <DetailRow
                   label="Created at"
                   value={
-                    <span className="font-mono text-xs">
+                    <span className="text-xs">
                       {payment.createdAt}
                     </span>
                   }
@@ -1090,7 +1090,7 @@ function PaymentDetailSheet({
                 <DetailRow
                   label="Updated at"
                   value={
-                    <span className="font-mono text-xs">
+                    <span className="text-xs">
                       {payment.updatedAt}
                     </span>
                   }
@@ -1152,7 +1152,7 @@ function DetailRow({
 }) {
   return (
     <div className="flex items-start gap-3 py-1">
-      <div className="w-40 shrink-0 font-mono text-[0.7rem] uppercase tracking-wider text-muted-foreground">
+      <div className="w-40 shrink-0 text-[0.7rem] uppercase tracking-wider text-muted-foreground">
         {label}
       </div>
       <div className="min-w-0 flex-1 text-sm">{value}</div>
@@ -1259,9 +1259,9 @@ function NewRefundFromTxn({ txn }: { txn: Txn | null }) {
           <AlertCircleIcon className="mt-0.5 size-4 shrink-0" />
           <span>
             You're acting as a{' '}
-            <span className="font-mono uppercase tracking-wider">CHECKER</span>.
+            <span className="uppercase tracking-wider font-medium">CHECKER</span>.
             Switch to{' '}
-            <span className="font-mono uppercase tracking-wider">MAKER</span>{' '}
+            <span className="uppercase tracking-wider font-medium">MAKER</span>{' '}
             from the profile menu to submit a new refund.
           </span>
         </div>
@@ -1278,7 +1278,7 @@ function NewRefundFromTxn({ txn }: { txn: Txn | null }) {
           <ContextRow label="Requester">
             <span className="text-sm">
               {user.name}{' '}
-              <span className="font-mono text-[0.65rem] uppercase tracking-wider text-muted-foreground">
+              <span className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">
                 · {user.role}
               </span>{' '}
               — Acme Operations Team
@@ -1290,7 +1290,7 @@ function NewRefundFromTxn({ txn }: { txn: Txn | null }) {
           {txn && (
             <>
               <ContextRow label="Original amount">
-                <span className="font-mono text-sm">
+                <span className="text-sm">
                   {txn.amount} {txn.currency}
                 </span>
               </ContextRow>
@@ -1475,7 +1475,7 @@ function NewRefundFromTxn({ txn }: { txn: Txn | null }) {
                   <span className="min-w-0 flex-1 truncate font-mono text-xs">
                     {f.name}
                   </span>
-                  <span className="shrink-0 font-mono text-[0.65rem] text-muted-foreground">
+                  <span className="shrink-0 text-[0.65rem] text-muted-foreground">
                     {(f.size / 1024).toFixed(0)} KB
                   </span>
                   <button
@@ -1507,7 +1507,7 @@ function NewRefundFromTxn({ txn }: { txn: Txn | null }) {
       </Card>
 
       <div className="rounded-md border border-dashed bg-muted/30 p-3 text-xs text-muted-foreground">
-        <span className="font-mono uppercase tracking-wider text-[0.65rem]">
+        <span className="text-[0.65rem] uppercase tracking-wider font-medium">
           Maker-checker preview
         </span>
         <div className="mt-1">
@@ -1589,7 +1589,7 @@ function NewRefundDialog({
               <>
                 Enter beneficiary details for{' '}
                 <Mono>{row.originalTxnId}</Mono> · {row.customer} ·{' '}
-                <span className="font-mono">{row.amount}</span>
+                <span>{row.amount}</span>
               </>
             ) : (
               'Enter beneficiary details to initiate a refund. Goes through maker-checker before Acme executes.'
@@ -1804,9 +1804,9 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
           <AlertCircleIcon className="mt-0.5 size-4 shrink-0" />
           <span>
             You're acting as a{' '}
-            <span className="font-mono uppercase tracking-wider">CHECKER</span>{' '}
+            <span className="uppercase tracking-wider font-medium">CHECKER</span>{' '}
             — switch to{' '}
-            <span className="font-mono uppercase tracking-wider">MAKER</span>{' '}
+            <span className="uppercase tracking-wider font-medium">MAKER</span>{' '}
             to submit retries.
           </span>
         </div>
@@ -1821,13 +1821,13 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
             <Mono>{payment.id}</Mono>
           </ContextRow>
           <ContextRow label="Original amount">
-            <span className="font-mono text-sm">
+            <span className="text-sm">
               {payment.amount} {payment.currency}
             </span>
           </ContextRow>
           <ContextRow label="Original failure reason">
             {payment.resultCode ? (
-              <span className="font-mono text-xs uppercase tracking-wider">
+              <span className="text-xs uppercase tracking-wider">
                 {payment.resultCode}
               </span>
             ) : (
@@ -1844,12 +1844,12 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
             )}
           </ContextRow>
           <ContextRow label="Original created at">
-            <span className="font-mono text-xs">{payment.createdAt}</span>
+            <span className="text-xs">{payment.createdAt}</span>
           </ContextRow>
           <ContextRow label="Requester">
             <span className="text-sm">
               {user.name}{' '}
-              <span className="font-mono text-[0.65rem] uppercase tracking-wider text-muted-foreground">
+              <span className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">
                 · {user.role}
               </span>
             </span>
@@ -1940,7 +1940,7 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
       </Card>
 
       <div className="rounded-md border border-dashed bg-muted/30 p-3 text-xs text-muted-foreground">
-        <span className="font-mono uppercase tracking-wider text-[0.65rem]">
+        <span className="text-[0.65rem] uppercase tracking-wider font-medium">
           Maker-checker preview
         </span>
         <div className="mt-1">

@@ -277,7 +277,7 @@ export function ActivityPage() {
             <SelectItem value="AUTH">Authentication</SelectItem>
           </SelectContent>
         </Select>
-        <span className="font-mono text-[0.7rem] uppercase tracking-wider text-muted-foreground">
+        <span className="text-[0.7rem] uppercase tracking-wider text-muted-foreground">
           {filtered.length} event{filtered.length !== 1 ? 's' : ''}
         </span>
       </div>
@@ -310,7 +310,7 @@ export function ActivityPage() {
                         {outcome.label}
                       </OutcomePill>
                     </div>
-                    <div className="truncate font-mono text-[0.7rem] text-muted-foreground">
+                    <div className="truncate text-[0.7rem] text-muted-foreground">
                       {evt.target}
                     </div>
                     <div className="flex items-center gap-3 pt-0.5">
@@ -319,7 +319,7 @@ export function ActivityPage() {
                           {evt.actor}
                         </span>{' '}
                         ·{' '}
-                        <span className="font-mono text-[0.65rem] uppercase tracking-wider">
+                        <span className="text-[0.65rem] uppercase tracking-wider">
                           {evt.actorRole}
                         </span>
                       </span>
@@ -330,7 +330,7 @@ export function ActivityPage() {
                       )}
                     </div>
                   </div>
-                  <div className="shrink-0 font-mono text-[0.65rem] text-muted-foreground whitespace-nowrap">
+                  <div className="shrink-0 text-[0.65rem] text-muted-foreground whitespace-nowrap">
                     {evt.timestamp}
                   </div>
                 </div>
@@ -352,7 +352,7 @@ function OutcomePill({
 }) {
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 font-mono text-[0.6rem] font-medium uppercase tracking-wider ${className}`}
+      className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[0.6rem] font-medium uppercase tracking-wider ${className}`}
     >
       {children}
     </span>
