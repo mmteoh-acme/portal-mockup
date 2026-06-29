@@ -273,7 +273,7 @@ const RECENT_ACTIVITY: Record<string, ActivityItem[]> = {
   ],
   ent_acme_markets_indo: [
     { id: 'act_01', text: 'Deposit credited to 12344555', time: '8 min ago', actor: 'system' },
-    { id: 'act_02', text: 'Refund initiated for txn_0H3BQSCFG1A60', time: '47 min ago', actor: 'Acme Ops' },
+    { id: 'act_02', text: 'Refund initiated for Txn_01J9K70V1U2T3', time: '47 min ago', actor: 'Acme Ops' },
     { id: 'act_03', text: 'Balance snapshot refreshed', time: '1 hr ago', actor: 'system' },
   ],
 }
@@ -387,7 +387,7 @@ export type Txn = {
 export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
   ent_acme_labs_sg: [
     {
-      id: 'txn_2606_001',
+      id: 'Txn_01J9KA2M3X4P5',
       direction: 'DEBIT',
       amount: '18,420',
       currency: 'SGD',
@@ -404,7 +404,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: '1 Jun, 2026, 09:12',
     },
     {
-      id: 'txn_2606_002',
+      id: 'Txn_01J9KA3N4Y5Q6',
       direction: 'CREDIT',
       amount: '12,000',
       currency: 'SGD',
@@ -421,7 +421,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: '1 Jun, 2026, 08:18',
     },
     {
-      id: 'txn_2606_003',
+      id: 'Txn_01J9KA4P5Z6R7',
       direction: 'DEBIT',
       amount: '92,400',
       currency: 'SGD',
@@ -438,7 +438,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: '1 Jun, 2026, 07:55',
     },
     {
-      id: 'txn_2606_004',
+      id: 'Txn_01J9KA5Q6A7S8',
       direction: 'DEBIT',
       amount: '22,108',
       currency: 'SGD',
@@ -455,7 +455,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: '31 May, 2026, 18:44',
     },
     {
-      id: 'txn_2606_005',
+      id: 'Txn_01J9KA6R7B8T9',
       direction: 'CREDIT',
       amount: '4,211',
       currency: 'SGD',
@@ -472,7 +472,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: '31 May, 2026, 14:32',
     },
     {
-      id: 'txn_2606_006',
+      id: 'Txn_01J9KA7S8C9U0',
       direction: 'DEBIT',
       amount: '1,250',
       currency: 'SGD',
@@ -483,13 +483,13 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       customerRef: 'RF-PRL-0531',
       bankRef: 'DBS-RF-20260531-Q1',
       additionalInformation: 'Refund initiated by Acme Ops, maker-checker approved',
-      remittanceInfo: 'Refund for txn_2405_881',
+      remittanceInfo: 'Refund for Txn_01J8MA1B2C3D4',
       transactionType: 'ACT',
       dataSource: 'ICN',
       createdAt: '31 May, 2026, 11:02',
     },
     {
-      id: 'txn_2606_007',
+      id: 'Txn_01J9KA8T9D0V1',
       direction: 'CREDIT',
       amount: '18,910',
       currency: 'SGD',
@@ -508,7 +508,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
   ],
   ent_acme_markets_indo: [
     {
-      id: "txn_0QJ6YQEA3DVAS",
+      id: "Txn_0QJ6YQEA3DVAS",
       direction: 'DEBIT',
       amount: "69",
       currency: "USD",
@@ -525,7 +525,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "1 Jun, 2026, 14:32",
     },
     {
-      id: "txn_0QJ594XCT92VP",
+      id: "Txn_0QJ594XCT92VP",
       direction: 'DEBIT',
       amount: "50,000,000",
       currency: "USD",
@@ -542,7 +542,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "1 Jun, 2026, 10:37",
     },
     {
-      id: "txn_0QHTJ1TRT92BT",
+      id: "Txn_0QHTJ1TRT92BT",
       direction: 'CREDIT',
       amount: "531,182",
       currency: "SGD",
@@ -559,7 +559,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "31 May, 2026, 09:38",
     },
     {
-      id: "txn_0QHTHVJ0A9197",
+      id: "Txn_0QHTHVJ0A9197",
       direction: 'CREDIT',
       amount: "20,350",
       currency: "SGD",
@@ -576,7 +576,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "31 May, 2026, 09:38",
     },
     {
-      id: "txn_0QHTHV3EE909R",
+      id: "Txn_0QHTHV3EE909R",
       direction: 'CREDIT',
       amount: "140,080",
       currency: "SGD",
@@ -593,7 +593,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "31 May, 2026, 09:38",
     },
     {
-      id: "txn_0QHTHPP46929H",
+      id: "Txn_0QHTHPP46929H",
       direction: 'CREDIT',
       amount: "31,343",
       currency: "SGD",
@@ -610,7 +610,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "31 May, 2026, 09:37",
     },
     {
-      id: "txn_0QHFRPCEQNAPR",
+      id: "Txn_0QHFRPCEQNAPR",
       direction: 'DEBIT',
       amount: "1,199,990,000",
       currency: "USD",
@@ -627,7 +627,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "30 May, 2026, 08:30",
     },
     {
-      id: "txn_0QHFRPCAVNAQV",
+      id: "Txn_0QHFRPCAVNAQV",
       direction: 'DEBIT',
       amount: "27,601,332",
       currency: "USD",
@@ -644,7 +644,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "30 May, 2026, 08:30",
     },
     {
-      id: "txn_0QH9RG9DDHZKH",
+      id: "Txn_0QH9RG9DDHZKH",
       direction: 'DEBIT',
       amount: "19,998,000",
       currency: "USD",
@@ -661,7 +661,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "29 May, 2026, 18:30",
     },
     {
-      id: "txn_0QH91WHHBBQ43",
+      id: "Txn_0QH91WHHBBQ43",
       direction: 'CREDIT',
       amount: "455,000,000",
       currency: "USD",
@@ -678,7 +678,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "29 May, 2026, 16:51",
     },
     {
-      id: "txn_0QH8X2M9GD36E",
+      id: "Txn_0QH8X2M9GD36E",
       direction: 'DEBIT',
       amount: "1,500",
       currency: "USD",
@@ -695,7 +695,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "29 May, 2026, 16:30",
     },
     {
-      id: "txn_0QH7M3KVTAFCE",
+      id: "Txn_0QH7M3KVTAFCE",
       direction: 'DEBIT',
       amount: "119,976,000",
       currency: "USD",
@@ -712,7 +712,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "29 May, 2026, 13:31",
     },
     {
-      id: "txn_0QH7M23VYAFE3",
+      id: "Txn_0QH7M23VYAFE3",
       direction: 'DEBIT',
       amount: "500",
       currency: "SGD",
@@ -729,7 +729,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "29 May, 2026, 13:31",
     },
     {
-      id: "txn_0QH7635Y4S4P8",
+      id: "Txn_0QH7635Y4S4P8",
       direction: 'DEBIT',
       amount: "114,977,000",
       currency: "USD",
@@ -746,7 +746,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "29 May, 2026, 12:30",
     },
     {
-      id: "txn_0QH70M5VXJDSA",
+      id: "Txn_0QH70M5VXJDSA",
       direction: 'CREDIT',
       amount: "20,000,000",
       currency: "SGD",
@@ -763,7 +763,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "29 May, 2026, 12:06",
     },
     {
-      id: "txn_0QH70M5T8ZJNC",
+      id: "Txn_0QH70M5T8ZJNC",
       direction: 'CREDIT',
       amount: "20,000,000",
       currency: "SGD",
@@ -780,7 +780,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "29 May, 2026, 12:06",
     },
     {
-      id: "txn_0QH70M2ZGZK4Y",
+      id: "Txn_0QH70M2ZGZK4Y",
       direction: 'CREDIT',
       amount: "15,597,452",
       currency: "SGD",
@@ -797,7 +797,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "29 May, 2026, 12:06",
     },
     {
-      id: "txn_0QH703WVCS74N",
+      id: "Txn_0QH703WVCS74N",
       direction: 'CREDIT',
       amount: "72,849,911",
       currency: "SGD",
@@ -814,7 +814,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "29 May, 2026, 12:04",
     },
     {
-      id: "txn_0QH6RQ2FDJDRJ",
+      id: "Txn_0QH6RQ2FDJDRJ",
       direction: 'DEBIT',
       amount: "84,983,000",
       currency: "USD",
@@ -831,7 +831,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "29 May, 2026, 11:31",
     },
     {
-      id: "txn_0QH6B8YEQDX8G",
+      id: "Txn_0QH6B8YEQDX8G",
       direction: 'DEBIT',
       amount: "104,979,000",
       currency: "USD",
@@ -848,7 +848,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "29 May, 2026, 10:33",
     },
     {
-      id: "txn_0QH6AJWCQDZZC",
+      id: "Txn_0QH6AJWCQDZZC",
       direction: 'DEBIT',
       amount: "700,000,000",
       currency: "SGD",
@@ -865,7 +865,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "29 May, 2026, 10:30",
     },
     {
-      id: "txn_0QH5VHGAVDXB8",
+      id: "Txn_0QH5VHGAVDXB8",
       direction: 'CREDIT',
       amount: "100",
       currency: "USD",
@@ -882,7 +882,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "29 May, 2026, 09:24",
     },
     {
-      id: "txn_0QH5D3NQWC4A6",
+      id: "Txn_0QH5D3NQWC4A6",
       direction: 'CREDIT',
       amount: "10,200",
       currency: "USD",
@@ -899,7 +899,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "29 May, 2026, 08:21",
     },
     {
-      id: "txn_0QH5CVGY4C5RN",
+      id: "Txn_0QH5CVGY4C5RN",
       direction: 'CREDIT',
       amount: "10,100",
       currency: "USD",
@@ -916,7 +916,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "29 May, 2026, 08:20",
     },
     {
-      id: "txn_0QGYQ6BNBDXP7",
+      id: "Txn_0QGYQ6BNBDXP7",
       direction: 'CREDIT',
       amount: "10,000",
       currency: "SGD",
@@ -933,7 +933,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "28 May, 2026, 16:46",
     },
     {
-      id: "txn_0QGYJV7VGC62W",
+      id: "Txn_0QGYJV7VGC62W",
       direction: 'CREDIT',
       amount: "220,000,000",
       currency: "USD",
@@ -950,7 +950,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "28 May, 2026, 16:27",
     },
     {
-      id: "txn_0QGXAXW6WC6NT",
+      id: "Txn_0QGXAXW6WC6NT",
       direction: 'DEBIT',
       amount: "50,000,000",
       currency: "USD",
@@ -967,7 +967,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "28 May, 2026, 13:33",
     },
     {
-      id: "txn_0QGXA9FZGC69Y",
+      id: "Txn_0QGXA9FZGC69Y",
       direction: 'DEBIT',
       amount: "500",
       currency: "SGD",
@@ -984,7 +984,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "28 May, 2026, 13:30",
     },
     {
-      id: "txn_0QGX3W6W8C5KQ",
+      id: "Txn_0QGX3W6W8C5KQ",
       direction: 'CREDIT',
       amount: "5,000,000",
       currency: "SGD",
@@ -1001,7 +1001,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "28 May, 2026, 13:02",
     },
     {
-      id: "txn_0QGWWEGJ2PH73",
+      id: "Txn_0QGWWEGJ2PH73",
       direction: 'DEBIT',
       amount: "1,700,000,000",
       currency: "SGD",
@@ -1018,7 +1018,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "28 May, 2026, 12:30",
     },
     {
-      id: "txn_0QGWPHHJTPH4A",
+      id: "Txn_0QGWPHHJTPH4A",
       direction: 'CREDIT',
       amount: "685,814,681",
       currency: "SGD",
@@ -1035,7 +1035,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "28 May, 2026, 12:04",
     },
     {
-      id: "txn_0QGWF311B9770",
+      id: "Txn_0QGWF311B9770",
       direction: 'DEBIT',
       amount: "99,980,000",
       currency: "USD",
@@ -1052,7 +1052,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "28 May, 2026, 11:31",
     },
     {
-      id: "txn_0QGQY90QK94DF",
+      id: "Txn_0QGQY90QK94DF",
       direction: 'CREDIT',
       amount: "2,104",
       currency: "SGD",
@@ -1069,7 +1069,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "28 May, 2026, 00:58",
     },
     {
-      id: "txn_0QGKBY25V966W",
+      id: "Txn_0QGKBY25V966W",
       direction: 'CREDIT',
       amount: "240,000,000",
       currency: "USD",
@@ -1086,7 +1086,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "27 May, 2026, 14:19",
     },
     {
-      id: "txn_0QGJ5EA76T7HM",
+      id: "Txn_0QGJ5EA76T7HM",
       direction: 'DEBIT',
       amount: "1,648",
       currency: "USD",
@@ -1103,7 +1103,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "27 May, 2026, 11:31",
     },
     {
-      id: "txn_0QG94RTB7TV47",
+      id: "Txn_0QG94RTB7TV47",
       direction: 'DEBIT',
       amount: "100,000,000",
       currency: "USD",
@@ -1120,7 +1120,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "26 May, 2026, 14:30",
     },
     {
-      id: "txn_0QG91NH7Q34Q0",
+      id: "Txn_0QG91NH7Q34Q0",
       direction: 'CREDIT',
       amount: "1,602,169,828",
       currency: "SGD",
@@ -1137,7 +1137,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "26 May, 2026, 14:16",
     },
     {
-      id: "txn_0QG89BAWY9MPP",
+      id: "Txn_0QG89BAWY9MPP",
       direction: 'DEBIT',
       amount: "25,000,000",
       currency: "USD",
@@ -1154,7 +1154,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "26 May, 2026, 12:30",
     },
     {
-      id: "txn_0QG8908C46M1D",
+      id: "Txn_0QG8908C46M1D",
       direction: 'CREDIT',
       amount: "2,334,605",
       currency: "SGD",
@@ -1171,7 +1171,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "26 May, 2026, 12:28",
     },
     {
-      id: "txn_0QG89083W6QYS",
+      id: "Txn_0QG89083W6QYS",
       direction: 'CREDIT',
       amount: "20,000,000",
       currency: "SGD",
@@ -1188,7 +1188,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "26 May, 2026, 12:28",
     },
     {
-      id: "txn_0QG8907JW6PY4",
+      id: "Txn_0QG8907JW6PY4",
       direction: 'CREDIT',
       amount: "20,000,000",
       currency: "SGD",
@@ -1205,7 +1205,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "26 May, 2026, 12:28",
     },
     {
-      id: "txn_0QG8907AJ9QCE",
+      id: "Txn_0QG8907AJ9QCE",
       direction: 'CREDIT',
       amount: "20,000,000",
       currency: "SGD",
@@ -1222,7 +1222,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "26 May, 2026, 12:28",
     },
     {
-      id: "txn_0QG81FNVW6N09",
+      id: "Txn_0QG81FNVW6N09",
       direction: 'CREDIT',
       amount: "10,000,000",
       currency: "SGD",
@@ -1239,7 +1239,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "26 May, 2026, 11:56",
     },
     {
-      id: "txn_0QG7V2PFR6QSV",
+      id: "Txn_0QG7V2PFR6QSV",
       direction: 'CREDIT',
       amount: "400,000,000",
       currency: "USD",
@@ -1256,7 +1256,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "26 May, 2026, 11:28",
     },
     {
-      id: "txn_0QFY03BZDAZTG",
+      id: "Txn_0QFY03BZDAZTG",
       direction: 'DEBIT',
       amount: "50,000,000",
       currency: "SGD",
@@ -1273,7 +1273,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "25 May, 2026, 12:31",
     },
     {
-      id: "txn_0QFMHJ8R577MQ",
+      id: "Txn_0QFMHJ8R577MQ",
       direction: 'DEBIT',
       amount: "30,000,000",
       currency: "USD",
@@ -1290,7 +1290,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "24 May, 2026, 14:30",
     },
     {
-      id: "txn_0QF0ERX7S5P4Y",
+      id: "Txn_0QF0ERX7S5P4Y",
       direction: 'CREDIT',
       amount: "205,000,000",
       currency: "USD",
@@ -1307,7 +1307,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "22 May, 2026, 15:41",
     },
     {
-      id: "txn_0QF0C3TR15MTA",
+      id: "Txn_0QF0C3TR15MTA",
       direction: 'DEBIT',
       amount: "5,000",
       currency: "USD",
@@ -1324,7 +1324,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "22 May, 2026, 15:30",
     },
     {
-      id: "txn_0QEZY7RQ5AX0S",
+      id: "Txn_0QEZY7RQ5AX0S",
       direction: 'CREDIT',
       amount: "200,000,000",
       currency: "USD",
@@ -1341,7 +1341,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "22 May, 2026, 14:29",
     },
     {
-      id: "txn_0QEZHJGXN5Q59",
+      id: "Txn_0QEZHJGXN5Q59",
       direction: 'CREDIT',
       amount: "10,500,221",
       currency: "SGD",
@@ -1358,7 +1358,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "22 May, 2026, 13:34",
     },
     {
-      id: "txn_0QEZHJGGD5N8T",
+      id: "Txn_0QEZHJGGD5N8T",
       direction: 'CREDIT',
       amount: "20,000,000",
       currency: "SGD",
@@ -1375,7 +1375,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "22 May, 2026, 13:34",
     },
     {
-      id: "txn_0QEZHJGCN5QK6",
+      id: "Txn_0QEZHJGCN5QK6",
       direction: 'CREDIT',
       amount: "20,000,000",
       currency: "SGD",
@@ -1392,7 +1392,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "22 May, 2026, 13:34",
     },
     {
-      id: "txn_0QEZH3NT577D4",
+      id: "Txn_0QEZH3NT577D4",
       direction: 'DEBIT',
       amount: "500",
       currency: "SGD",
@@ -1409,7 +1409,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "22 May, 2026, 13:32",
     },
     {
-      id: "txn_0QEZGYXQ5768Q",
+      id: "Txn_0QEZGYXQ5768Q",
       direction: 'DEBIT',
       amount: "15,000,000",
       currency: "USD",
@@ -1426,7 +1426,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "22 May, 2026, 13:31",
     },
     {
-      id: "txn_0QEYWTW1XAZ8J",
+      id: "Txn_0QEYWTW1XAZ8J",
       direction: 'CREDIT',
       amount: "45,626,337",
       currency: "SGD",
@@ -1443,7 +1443,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "22 May, 2026, 12:03",
     },
     {
-      id: "txn_0QEYTR4DX77PK",
+      id: "Txn_0QEYTR4DX77PK",
       direction: 'CREDIT',
       amount: "10,000,000",
       currency: "SGD",
@@ -1460,7 +1460,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "22 May, 2026, 11:54",
     },
     {
-      id: "txn_0QEPF4B4BYD1B",
+      id: "Txn_0QEPF4B4BYD1B",
       direction: 'CREDIT',
       amount: "150,000,000",
       currency: "USD",
@@ -1477,7 +1477,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "21 May, 2026, 16:25",
     },
     {
-      id: "txn_0QENHNPS7YDWM",
+      id: "Txn_0QENHNPS7YDWM",
       direction: 'CREDIT',
       amount: "100,000,000",
       currency: "USD",
@@ -1494,7 +1494,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "21 May, 2026, 14:16",
     },
     {
-      id: "txn_0QEMBTS2ZYFZH",
+      id: "Txn_0QEMBTS2ZYFZH",
       direction: 'CREDIT',
       amount: "1,500,000",
       currency: "SGD",
@@ -1511,7 +1511,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "21 May, 2026, 11:31",
     },
     {
-      id: "txn_0QEKGDNMVYD43",
+      id: "Txn_0QEKGDNMVYD43",
       direction: 'DEBIT',
       amount: "20,000,000",
       currency: "USD",
@@ -1528,7 +1528,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "21 May, 2026, 09:31",
     },
     {
-      id: "txn_0QEE3QG57YDR7",
+      id: "Txn_0QEE3QG57YDR7",
       direction: 'CREDIT',
       amount: "29,823,135",
       currency: "USD",
@@ -1545,7 +1545,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "20 May, 2026, 20:56",
     },
     {
-      id: "txn_0QEBZZA3MDAK5",
+      id: "Txn_0QEBZZA3MDAK5",
       direction: 'CREDIT',
       amount: "200,000,000",
       currency: "USD",
@@ -1562,7 +1562,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "20 May, 2026, 16:00",
     },
     {
-      id: "txn_0QEAXH9BFBFVS",
+      id: "Txn_0QEAXH9BFBFVS",
       direction: 'DEBIT',
       amount: "500",
       currency: "SGD",
@@ -1579,7 +1579,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "20 May, 2026, 13:30",
     },
     {
-      id: "txn_0QEA9KB0QBCP7",
+      id: "Txn_0QEA9KB0QBCP7",
       direction: 'CREDIT',
       amount: "593,220,498",
       currency: "SGD",
@@ -1596,7 +1596,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "20 May, 2026, 12:03",
     },
     {
-      id: "txn_0QEA7DNWQBCGR",
+      id: "Txn_0QEA7DNWQBCGR",
       direction: 'CREDIT',
       amount: "135,000,000",
       currency: "USD",
@@ -1613,7 +1613,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "20 May, 2026, 11:53",
     },
     {
-      id: "txn_0QEA27NGVBDTX",
+      id: "Txn_0QEA27NGVBDTX",
       direction: 'DEBIT',
       amount: "99,980,000",
       currency: "USD",
@@ -1630,7 +1630,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "20 May, 2026, 11:31",
     },
     {
-      id: "txn_0QE9KNS58RBYT",
+      id: "Txn_0QE9KNS58RBYT",
       direction: 'CREDIT',
       amount: "20,000,000",
       currency: "SGD",
@@ -1647,7 +1647,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "20 May, 2026, 10:27",
     },
     {
-      id: "txn_0QE9KNQ6KYCE5",
+      id: "Txn_0QE9KNQ6KYCE5",
       direction: 'CREDIT',
       amount: "20,000,000",
       currency: "SGD",
@@ -1664,7 +1664,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "20 May, 2026, 10:27",
     },
     {
-      id: "txn_0QE9KNPSGVYBP",
+      id: "Txn_0QE9KNPSGVYBP",
       direction: 'CREDIT',
       amount: "2,806,368",
       currency: "SGD",
@@ -1681,7 +1681,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "20 May, 2026, 10:27",
     },
     {
-      id: "txn_0QE9KNP3MRAS2",
+      id: "Txn_0QE9KNP3MRAS2",
       direction: 'CREDIT',
       amount: "20,000,000",
       currency: "SGD",
@@ -1698,7 +1698,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "20 May, 2026, 10:27",
     },
     {
-      id: "txn_0QE9KNN63BFN7",
+      id: "Txn_0QE9KNN63BFN7",
       direction: 'CREDIT',
       amount: "20,000,000",
       currency: "SGD",
@@ -1715,7 +1715,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "20 May, 2026, 10:27",
     },
     {
-      id: "txn_0QE1F82C8MTW6",
+      id: "Txn_0QE1F82C8MTW6",
       direction: 'CREDIT',
       amount: "1,553,554,364",
       currency: "SGD",
@@ -1732,7 +1732,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "19 May, 2026, 15:29",
     },
     {
-      id: "txn_0QE11T200MTDV",
+      id: "Txn_0QE11T200MTDV",
       direction: 'DEBIT',
       amount: "10,000",
       currency: "USD",
@@ -1749,7 +1749,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "19 May, 2026, 14:30",
     },
     {
-      id: "txn_0QE0HVF2WR95B",
+      id: "Txn_0QE0HVF2WR95B",
       direction: 'CREDIT',
       amount: "99,898,964",
       currency: "USD",
@@ -1766,7 +1766,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "19 May, 2026, 13:21",
     },
     {
-      id: "txn_0QE07CE8RVZ9S",
+      id: "Txn_0QE07CE8RVZ9S",
       direction: 'CREDIT',
       amount: "50,000,000",
       currency: "USD",
@@ -1783,7 +1783,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "19 May, 2026, 12:35",
     },
     {
-      id: "txn_0QDYFG8V0MSZW",
+      id: "Txn_0QDYFG8V0MSZW",
       direction: 'DEBIT',
       amount: "10,000",
       currency: "USD",
@@ -1800,7 +1800,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "19 May, 2026, 08:31",
     },
     {
-      id: "txn_0QDYFG8SRMSPM",
+      id: "Txn_0QDYFG8SRMSPM",
       direction: 'DEBIT',
       amount: "10,000",
       currency: "USD",
@@ -1817,7 +1817,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "19 May, 2026, 08:31",
     },
     {
-      id: "txn_0QDYFG8RCMSF3",
+      id: "Txn_0QDYFG8RCMSF3",
       direction: 'DEBIT',
       amount: "11,000",
       currency: "USD",
@@ -1834,7 +1834,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "19 May, 2026, 08:31",
     },
     {
-      id: "txn_0QDYFG8Q4MSVD",
+      id: "Txn_0QDYFG8Q4MSVD",
       direction: 'DEBIT',
       amount: "10,800",
       currency: "USD",
@@ -1851,7 +1851,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "19 May, 2026, 08:31",
     },
     {
-      id: "txn_0QDYFG8NRMTPA",
+      id: "Txn_0QDYFG8NRMTPA",
       direction: 'DEBIT',
       amount: "10,000",
       currency: "USD",
@@ -1868,7 +1868,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "19 May, 2026, 08:31",
     },
     {
-      id: "txn_0QDYFG8MCMTF6",
+      id: "Txn_0QDYFG8MCMTF6",
       direction: 'DEBIT',
       amount: "10,700",
       currency: "USD",
@@ -1885,7 +1885,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "19 May, 2026, 08:31",
     },
     {
-      id: "txn_0QDYFG8K0MT4S",
+      id: "Txn_0QDYFG8K0MT4S",
       direction: 'DEBIT',
       amount: "40,000,000",
       currency: "USD",
@@ -1902,7 +1902,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "19 May, 2026, 08:31",
     },
     {
-      id: "txn_0QDRF4SMRMSE8",
+      id: "Txn_0QDRF4SMRMSE8",
       direction: 'DEBIT',
       amount: "10,000,000",
       currency: "USD",
@@ -1919,7 +1919,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "18 May, 2026, 18:30",
     },
     {
-      id: "txn_0QDR1HM98VW3C",
+      id: "Txn_0QDR1HM98VW3C",
       direction: 'DEBIT',
       amount: "500",
       currency: "SGD",
@@ -1936,7 +1936,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "18 May, 2026, 17:31",
     },
     {
-      id: "txn_0QDQDGJYWMRCH",
+      id: "Txn_0QDQDGJYWMRCH",
       direction: 'CREDIT',
       amount: "30,000",
       currency: "USD",
@@ -1953,7 +1953,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "18 May, 2026, 16:03",
     },
     {
-      id: "txn_0QDQ37H00MSWV",
+      id: "Txn_0QDQ37H00MSWV",
       direction: 'CREDIT',
       amount: "11,000",
       currency: "USD",
@@ -1970,7 +1970,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "18 May, 2026, 15:19",
     },
     {
-      id: "txn_0QDQ31NE8MT3Y",
+      id: "Txn_0QDQ31NE8MT3Y",
       direction: 'CREDIT',
       amount: "10,900",
       currency: "USD",
@@ -1987,7 +1987,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "18 May, 2026, 15:18",
     },
     {
-      id: "txn_0QDNSNZB489XP",
+      id: "Txn_0QDNSNZB489XP",
       direction: 'CREDIT',
       amount: "150,000,000",
       currency: "USD",
@@ -2004,7 +2004,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "18 May, 2026, 12:17",
     },
     {
-      id: "txn_0QDKR71BN6ZS6",
+      id: "Txn_0QDKR71BN6ZS6",
       direction: 'DEBIT',
       amount: "8,720",
       currency: "SGD",
@@ -2021,7 +2021,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "18 May, 2026, 07:31",
     },
     {
-      id: "txn_0QCSA4JKH6WVX",
+      id: "Txn_0QCSA4JKH6WVX",
       direction: 'CREDIT',
       amount: "10,800",
       currency: "USD",
@@ -2038,7 +2038,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "15 May, 2026, 17:54",
     },
     {
-      id: "txn_0QCR8GA2S7DX7",
+      id: "Txn_0QCR8GA2S7DX7",
       direction: 'CREDIT',
       amount: "10,700",
       currency: "USD",
@@ -2055,7 +2055,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "15 May, 2026, 15:27",
     },
     {
-      id: "txn_0QCQPQ7785SQH",
+      id: "Txn_0QCQPQ7785SQH",
       direction: 'CREDIT',
       amount: "190,000,000",
       currency: "USD",
@@ -2072,7 +2072,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "15 May, 2026, 14:10",
     },
     {
-      id: "txn_0QCQJAETJT0HP",
+      id: "Txn_0QCQJAETJT0HP",
       direction: 'CREDIT',
       amount: "20,000,000",
       currency: "SGD",
@@ -2089,7 +2089,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "15 May, 2026, 13:51",
     },
     {
-      id: "txn_0QCQJAEBN7EZK",
+      id: "Txn_0QCQJAEBN7EZK",
       direction: 'CREDIT',
       amount: "6,874,016",
       currency: "SGD",
@@ -2106,7 +2106,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "15 May, 2026, 13:51",
     },
     {
-      id: "txn_0QCQJA5J6T10D",
+      id: "Txn_0QCQJA5J6T10D",
       direction: 'CREDIT',
       amount: "20,000,000",
       currency: "SGD",
@@ -2123,7 +2123,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "15 May, 2026, 13:51",
     },
     {
-      id: "txn_0QCQJA2EYT1SR",
+      id: "Txn_0QCQJA2EYT1SR",
       direction: 'CREDIT',
       amount: "20,000,000",
       currency: "SGD",
@@ -2140,7 +2140,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "15 May, 2026, 13:51",
     },
     {
-      id: "txn_0QCQJA1Z45SS1",
+      id: "Txn_0QCQJA1Z45SS1",
       direction: 'CREDIT',
       amount: "20,000,000",
       currency: "SGD",
@@ -2157,7 +2157,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "15 May, 2026, 13:51",
     },
     {
-      id: "txn_0QCQE54MTT28M",
+      id: "Txn_0QCQE54MTT28M",
       direction: 'DEBIT',
       amount: "500",
       currency: "SGD",
@@ -2174,7 +2174,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "15 May, 2026, 13:32",
     },
     {
-      id: "txn_0QCPT1D2ET1KW",
+      id: "Txn_0QCPT1D2ET1KW",
       direction: 'CREDIT',
       amount: "92,290,228",
       currency: "SGD",
@@ -2191,7 +2191,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "15 May, 2026, 12:04",
     },
     {
-      id: "txn_0QCPR9A2G5TSC",
+      id: "Txn_0QCPR9A2G5TSC",
       direction: 'CREDIT',
       amount: "15,000,000",
       currency: "SGD",
@@ -2208,7 +2208,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "15 May, 2026, 11:57",
     },
     {
-      id: "txn_0QCCPYFTM5T9B",
+      id: "Txn_0QCCPYFTM5T9B",
       direction: 'CREDIT',
       amount: "5,000,000",
       currency: "SGD",
@@ -2225,7 +2225,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "14 May, 2026, 12:33",
     },
     {
-      id: "txn_0QCC8H1GM5VEF",
+      id: "Txn_0QCC8H1GM5VEF",
       direction: 'DEBIT',
       amount: "15,000,000",
       currency: "USD",
@@ -2242,7 +2242,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "14 May, 2026, 11:30",
     },
     {
-      id: "txn_0QCBCEAY97EX4",
+      id: "Txn_0QCBCEAY97EX4",
       direction: 'CREDIT',
       amount: "10,000",
       currency: "USD",
@@ -2259,7 +2259,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "14 May, 2026, 09:27",
     },
     {
-      id: "txn_0QCBC52YG5SA4",
+      id: "Txn_0QCBC52YG5SA4",
       direction: 'CREDIT',
       amount: "10,000",
       currency: "USD",
@@ -2276,7 +2276,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "14 May, 2026, 09:26",
     },
     {
-      id: "txn_0QCBBX866T2GF",
+      id: "Txn_0QCBBX866T2GF",
       direction: 'CREDIT',
       amount: "10,000",
       currency: "USD",
@@ -2293,7 +2293,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "14 May, 2026, 09:25",
     },
     {
-      id: "txn_0QCBBMDYTT1WN",
+      id: "Txn_0QCBBMDYTT1WN",
       direction: 'CREDIT',
       amount: "10,000",
       currency: "USD",
@@ -2310,7 +2310,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "14 May, 2026, 09:24",
     },
     {
-      id: "txn_0QC2TFAT6T0K3",
+      id: "Txn_0QC2TFAT6T0K3",
       direction: 'DEBIT',
       amount: "500",
       currency: "SGD",
@@ -2327,7 +2327,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "13 May, 2026, 13:30",
     },
     {
-      id: "txn_0QC2CZRQH7FAJ",
+      id: "Txn_0QC2CZRQH7FAJ",
       direction: 'DEBIT',
       amount: "99,980,000",
       currency: "USD",
@@ -2344,7 +2344,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "13 May, 2026, 12:31",
     },
     {
-      id: "txn_0QC2CZRJ17E5T",
+      id: "Txn_0QC2CZRJ17E5T",
       direction: 'DEBIT',
       amount: "29,997,000",
       currency: "USD",
@@ -2361,7 +2361,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "13 May, 2026, 12:31",
     },
     {
-      id: "txn_0QC278YVYT3W4",
+      id: "Txn_0QC278YVYT3W4",
       direction: 'CREDIT',
       amount: "10,000,000",
       currency: "SGD",
@@ -2378,7 +2378,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "13 May, 2026, 12:06",
     },
     {
-      id: "txn_0QC26F09G5VAH",
+      id: "Txn_0QC26F09G5VAH",
       direction: 'CREDIT',
       amount: "734,411,968",
       currency: "SGD",
@@ -2395,7 +2395,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "13 May, 2026, 12:03",
     },
     {
-      id: "txn_0QC1Z8HY17EZR",
+      id: "Txn_0QC1Z8HY17EZR",
       direction: 'DEBIT',
       amount: "99,980,000",
       currency: "USD",
@@ -2412,7 +2412,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "13 May, 2026, 11:31",
     },
     {
-      id: "txn_0QC1HBMHTT0FY",
+      id: "Txn_0QC1HBMHTT0FY",
       direction: 'DEBIT',
       amount: "69,986,000",
       currency: "USD",
@@ -2429,7 +2429,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "13 May, 2026, 10:31",
     },
     {
-      id: "txn_0QC1G34245V93",
+      id: "Txn_0QC1G34245V93",
       direction: 'CREDIT',
       amount: "20,000,000",
       currency: "SGD",
@@ -2446,7 +2446,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "13 May, 2026, 10:25",
     },
     {
-      id: "txn_0QC1G2R305R95",
+      id: "Txn_0QC1G2R305R95",
       direction: 'CREDIT',
       amount: "20,000,000",
       currency: "SGD",
@@ -2463,7 +2463,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "13 May, 2026, 10:25",
     },
     {
-      id: "txn_0QC1G2R2G5SH9",
+      id: "Txn_0QC1G2R2G5SH9",
       direction: 'CREDIT',
       amount: "20,000,000",
       currency: "SGD",
@@ -2480,7 +2480,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "13 May, 2026, 10:25",
     },
     {
-      id: "txn_0QC1G2R257C71",
+      id: "Txn_0QC1G2R257C71",
       direction: 'CREDIT',
       amount: "5,842,365",
       currency: "SGD",
@@ -2497,7 +2497,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "13 May, 2026, 10:25",
     },
     {
-      id: "txn_0QC0NR243848V",
+      id: "Txn_0QC0NR243848V",
       direction: 'DEBIT',
       amount: "931,000",
       currency: "USD",
@@ -2514,7 +2514,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "13 May, 2026, 08:30",
     },
     {
-      id: "txn_0QBSFPKYD2Y90",
+      id: "Txn_0QBSFPKYD2Y90",
       direction: 'CREDIT',
       amount: "1,590,615,230",
       currency: "SGD",
@@ -2531,7 +2531,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "12 May, 2026, 15:45",
     },
     {
-      id: "txn_0QBQKQ06386XY",
+      id: "Txn_0QBQKQ06386XY",
       direction: 'CREDIT',
       amount: "99,999,000",
       currency: "USD",
@@ -2548,7 +2548,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "12 May, 2026, 11:23",
     },
     {
-      id: "txn_0QBQ7AEZF856Z",
+      id: "Txn_0QBQ7AEZF856Z",
       direction: 'CREDIT',
       amount: "9,998,350",
       currency: "USD",
@@ -2565,7 +2565,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "12 May, 2026, 10:29",
     },
     {
-      id: "txn_0QBEN4W8CVYV7",
+      id: "Txn_0QBEN4W8CVYV7",
       direction: 'DEBIT',
       amount: "499,875,000",
       currency: "USD",
@@ -2582,7 +2582,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "11 May, 2026, 14:31",
     },
     {
-      id: "txn_0QBDSE3WGVZ5X",
+      id: "Txn_0QBDSE3WGVZ5X",
       direction: 'DEBIT',
       amount: "49,990,000",
       currency: "USD",
@@ -2599,7 +2599,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "11 May, 2026, 12:30",
     },
     {
-      id: "txn_0QBDBQGK56G2Y",
+      id: "Txn_0QBDBQGK56G2Y",
       direction: 'DEBIT',
       amount: "29,997,000",
       currency: "USD",
@@ -2616,7 +2616,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "11 May, 2026, 11:30",
     },
     {
-      id: "txn_0QBCY0NKRWTXD",
+      id: "Txn_0QBCY0NKRWTXD",
       direction: 'DEBIT',
       amount: "49,990,000",
       currency: "USD",
@@ -2633,7 +2633,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "11 May, 2026, 10:30",
     },
     {
-      id: "txn_0QBCY0NDRWS8G",
+      id: "Txn_0QBCY0NDRWS8G",
       direction: 'DEBIT',
       amount: "69,986,000",
       currency: "USD",
@@ -2650,7 +2650,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "11 May, 2026, 10:30",
     },
     {
-      id: "txn_0QAG5XQGMWR6V",
+      id: "Txn_0QAG5XQGMWR6V",
       direction: 'DEBIT',
       amount: "10,000",
       currency: "USD",
@@ -2667,7 +2667,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "8 May, 2026, 15:30",
     },
     {
-      id: "txn_0QAFARP089MH9",
+      id: "Txn_0QAFARP089MH9",
       direction: 'DEBIT',
       amount: "500",
       currency: "SGD",
@@ -2684,7 +2684,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "8 May, 2026, 13:31",
     },
     {
-      id: "txn_0QAFAQV1G9P5E",
+      id: "Txn_0QAFAQV1G9P5E",
       direction: 'DEBIT',
       amount: "151,040",
       currency: "USD",
@@ -2701,7 +2701,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "8 May, 2026, 13:31",
     },
     {
-      id: "txn_0QAEPTQ6ED5MZ",
+      id: "Txn_0QAEPTQ6ED5MZ",
       direction: 'CREDIT',
       amount: "45,945,816",
       currency: "SGD",
@@ -2718,7 +2718,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "8 May, 2026, 12:04",
     },
     {
-      id: "txn_0QAEJJRBYESMZ",
+      id: "Txn_0QAEJJRBYESMZ",
       direction: 'CREDIT',
       amount: "10,000,000",
       currency: "SGD",
@@ -2735,7 +2735,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "8 May, 2026, 11:46",
     },
     {
-      id: "txn_0QAE66Z2MT3BH",
+      id: "Txn_0QAE66Z2MT3BH",
       direction: 'CREDIT',
       amount: "20,000,000",
       currency: "SGD",
@@ -2752,7 +2752,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "8 May, 2026, 10:52",
     },
     {
-      id: "txn_0QAE66Y9TEVRD",
+      id: "Txn_0QAE66Y9TEVRD",
       direction: 'CREDIT',
       amount: "9,925,000",
       currency: "SGD",
@@ -2769,7 +2769,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "8 May, 2026, 10:52",
     },
     {
-      id: "txn_0QAE66V9JD4Z7",
+      id: "Txn_0QAE66V9JD4Z7",
       direction: 'CREDIT',
       amount: "20,000,000",
       currency: "SGD",
@@ -2786,7 +2786,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "8 May, 2026, 10:51",
     },
     {
-      id: "txn_0QA814G7TD6GH",
+      id: "Txn_0QA814G7TD6GH",
       direction: 'DEBIT',
       amount: "19,998,000",
       currency: "USD",
@@ -2803,7 +2803,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "7 May, 2026, 20:30",
     },
     {
-      id: "txn_0QA5WCDAPERX0",
+      id: "Txn_0QA5WCDAPERX0",
       direction: 'DEBIT',
       amount: "14,998,500",
       currency: "USD",
@@ -2820,7 +2820,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "7 May, 2026, 15:30",
     },
     {
-      id: "txn_0QA46HNSPH1FJ",
+      id: "Txn_0QA46HNSPH1FJ",
       direction: 'CREDIT',
       amount: "22,011,146",
       currency: "USD",
@@ -2837,7 +2837,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "7 May, 2026, 11:35",
     },
     {
-      id: "txn_0QA45KE1GWVMJ",
+      id: "Txn_0QA45KE1GWVMJ",
       direction: 'DEBIT',
       amount: "99,980,000",
       currency: "USD",
@@ -2854,7 +2854,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "7 May, 2026, 11:31",
     },
     {
-      id: "txn_0QA2WNNAJH029",
+      id: "Txn_0QA2WNNAJH029",
       direction: 'DEBIT',
       amount: "19,998,000",
       currency: "USD",
@@ -2871,7 +2871,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "7 May, 2026, 08:32",
     },
     {
-      id: "txn_0Q9VJT4XJV3F0",
+      id: "Txn_0Q9VJT4XJV3F0",
       direction: 'DEBIT',
       amount: "92,981,400",
       currency: "USD",
@@ -2888,7 +2888,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "6 May, 2026, 15:30",
     },
     {
-      id: "txn_0Q9VJT4WYV0MJ",
+      id: "Txn_0Q9VJT4WYV0MJ",
       direction: 'DEBIT',
       amount: "24,997,500",
       currency: "USD",
@@ -2905,7 +2905,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "6 May, 2026, 15:30",
     },
     {
-      id: "txn_0Q9V5317WWTDM",
+      id: "Txn_0Q9V5317WWTDM",
       direction: 'DEBIT',
       amount: "49,990,000",
       currency: "USD",
@@ -2922,7 +2922,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "6 May, 2026, 14:30",
     },
     {
-      id: "txn_0Q9TQEF16H1FH",
+      id: "Txn_0Q9TQEF16H1FH",
       direction: 'DEBIT',
       amount: "500",
       currency: "SGD",
@@ -2939,7 +2939,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "6 May, 2026, 13:31",
     },
     {
-      id: "txn_0Q9T3HTH4WRCR",
+      id: "Txn_0Q9T3HTH4WRCR",
       direction: 'CREDIT',
       amount: "810,739,486",
       currency: "SGD",
@@ -2956,7 +2956,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "6 May, 2026, 12:04",
     },
     {
-      id: "txn_0Q9SW02WYH2C6",
+      id: "Txn_0Q9SW02WYH2C6",
       direction: 'DEBIT',
       amount: "59,988,000",
       currency: "USD",
@@ -2973,7 +2973,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "6 May, 2026, 11:31",
     },
     {
-      id: "txn_0Q9SW02SJH3FH",
+      id: "Txn_0Q9SW02SJH3FH",
       direction: 'DEBIT',
       amount: "24,997,500",
       currency: "USD",
@@ -2990,7 +2990,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "6 May, 2026, 11:31",
     },
     {
-      id: "txn_0Q9SR4VN6H3YX",
+      id: "Txn_0Q9SR4VN6H3YX",
       direction: 'CREDIT',
       amount: "10,000",
       currency: "USD",
@@ -3007,7 +3007,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "6 May, 2026, 11:14",
     },
     {
-      id: "txn_0Q9SMYZBYH0HQ",
+      id: "Txn_0Q9SMYZBYH0HQ",
       direction: 'CREDIT',
       amount: "19,870,150",
       currency: "SGD",
@@ -3024,7 +3024,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "6 May, 2026, 11:00",
     },
     {
-      id: "txn_0Q9SENMEGWT01",
+      id: "Txn_0Q9SENMEGWT01",
       direction: 'DEBIT',
       amount: "59,988,000",
       currency: "USD",
@@ -3041,7 +3041,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "6 May, 2026, 10:32",
     },
     {
-      id: "txn_0Q9SENMDGWTAE",
+      id: "Txn_0Q9SENMDGWTAE",
       direction: 'DEBIT',
       amount: "44,991,000",
       currency: "USD",
@@ -3058,7 +3058,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "6 May, 2026, 10:32",
     },
     {
-      id: "txn_0Q9R51GGPH0G8",
+      id: "Txn_0Q9R51GGPH0G8",
       direction: 'CREDIT',
       amount: "11,642,070",
       currency: "SGD",
@@ -3075,7 +3075,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "6 May, 2026, 07:31",
     },
     {
-      id: "txn_0Q9GZ6CV7X69M",
+      id: "Txn_0Q9GZ6CV7X69M",
       direction: 'CREDIT',
       amount: "1,599,212,901",
       currency: "SGD",
@@ -3092,7 +3092,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "5 May, 2026, 14:46",
     },
     {
-      id: "txn_0Q9GE1EAVKX57",
+      id: "Txn_0Q9GE1EAVKX57",
       direction: 'DEBIT',
       amount: "19,998,000",
       currency: "USD",
@@ -3109,7 +3109,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "5 May, 2026, 13:31",
     },
     {
-      id: "txn_0Q97DH0QQKY9B",
+      id: "Txn_0Q97DH0QQKY9B",
       direction: 'DEBIT',
       amount: "30,000,000",
       currency: "USD",
@@ -3126,7 +3126,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "4 May, 2026, 16:31",
     },
     {
-      id: "txn_0Q97DBWAQKXJ7",
+      id: "Txn_0Q97DBWAQKXJ7",
       direction: 'DEBIT',
       amount: "64,987,000",
       currency: "USD",
@@ -3143,7 +3143,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "4 May, 2026, 16:30",
     },
     {
-      id: "txn_0Q9641HHFX5GN",
+      id: "Txn_0Q9641HHFX5GN",
       direction: 'DEBIT',
       amount: "500",
       currency: "SGD",
@@ -3160,7 +3160,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "4 May, 2026, 13:30",
     },
     {
-      id: "txn_0Q95GGF1BKXPT",
+      id: "Txn_0Q95GGF1BKXPT",
       direction: 'CREDIT',
       amount: "182,589,474",
       currency: "SGD",
@@ -3177,7 +3177,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "4 May, 2026, 12:04",
     },
     {
-      id: "txn_0Q8TZBZ8AM9ZG",
+      id: "Txn_0Q8TZBZ8AM9ZG",
       direction: 'DEBIT',
       amount: "1,000",
       currency: "USD",
@@ -3194,7 +3194,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "3 May, 2026, 11:31",
     },
     {
-      id: "txn_0Q8TZBZ6YM8BS",
+      id: "Txn_0Q8TZBZ6YM8BS",
       direction: 'DEBIT',
       amount: "1,000",
       currency: "USD",
@@ -3211,7 +3211,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "3 May, 2026, 11:31",
     },
     {
-      id: "txn_0Q87NCG02MA7C",
+      id: "Txn_0Q87NCG02MA7C",
       direction: 'DEBIT',
       amount: "10,000",
       currency: "USD",
@@ -3228,7 +3228,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "1 May, 2026, 14:31",
     },
     {
-      id: "txn_0Q85JJXA6M86C",
+      id: "Txn_0Q85JJXA6M86C",
       direction: 'CREDIT',
       amount: "779,442",
       currency: "SGD",
@@ -3245,7 +3245,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "1 May, 2026, 09:39",
     },
     {
-      id: "txn_0Q85JEM96MBB1",
+      id: "Txn_0Q85JEM96MBB1",
       direction: 'CREDIT',
       amount: "1,177",
       currency: "SGD",
@@ -3262,7 +3262,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "1 May, 2026, 09:39",
     },
     {
-      id: "txn_0Q85J9B6JM94S",
+      id: "Txn_0Q85J9B6JM94S",
       direction: 'CREDIT',
       amount: "1,102,110",
       currency: "USD",
@@ -3279,7 +3279,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "1 May, 2026, 09:38",
     },
     {
-      id: "txn_0Q80B923TMBMT",
+      id: "Txn_0Q80B923TMBMT",
       direction: 'CREDIT',
       amount: "414,000,000",
       currency: "USD",
@@ -3296,7 +3296,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "30 Apr, 2026, 21:28",
     },
     {
-      id: "txn_0Q7YMK8CG5RKF",
+      id: "Txn_0Q7YMK8CG5RKF",
       direction: 'DEBIT',
       amount: "10,000",
       currency: "USD",
@@ -3313,7 +3313,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "30 Apr, 2026, 17:30",
     },
     {
-      id: "txn_0Q7XS8GXR5VQ7",
+      id: "Txn_0Q7XS8GXR5VQ7",
       direction: 'DEBIT',
       amount: "308,007,570",
       currency: "USD",
@@ -3330,7 +3330,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "30 Apr, 2026, 15:30",
     },
     {
-      id: "txn_0Q7XRN7VYMA76",
+      id: "Txn_0Q7XRN7VYMA76",
       direction: 'CREDIT',
       amount: "10,000",
       currency: "USD",
@@ -3347,7 +3347,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "30 Apr, 2026, 15:27",
     },
     {
-      id: "txn_0Q7X00K1YMAJQ",
+      id: "Txn_0Q7X00K1YMAJQ",
       direction: 'CREDIT',
       amount: "80,000,000",
       currency: "USD",
@@ -3364,7 +3364,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "30 Apr, 2026, 13:40",
     },
     {
-      id: "txn_0Q7WGZV8DHJRA",
+      id: "Txn_0Q7WGZV8DHJRA",
       direction: 'CREDIT',
       amount: "14,286,845",
       currency: "USD",
@@ -3381,7 +3381,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "30 Apr, 2026, 12:34",
     },
     {
-      id: "txn_0Q7W8BZ985V1R",
+      id: "Txn_0Q7W8BZ985V1R",
       direction: 'CREDIT',
       amount: "10,000",
       currency: "USD",
@@ -3398,7 +3398,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "30 Apr, 2026, 11:57",
     },
     {
-      id: "txn_0Q7W2M3MSHG89",
+      id: "Txn_0Q7W2M3MSHG89",
       direction: 'DEBIT',
       amount: "14,998,500",
       currency: "USD",
@@ -3415,7 +3415,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "30 Apr, 2026, 11:31",
     },
     {
-      id: "txn_0Q7W2M3M9HJ5N",
+      id: "Txn_0Q7W2M3M9HJ5N",
       direction: 'DEBIT',
       amount: "99,980,000",
       currency: "USD",
@@ -3432,7 +3432,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "30 Apr, 2026, 11:31",
     },
     {
-      id: "txn_0Q7W26SEHHHSR",
+      id: "Txn_0Q7W26SEHHHSR",
       direction: 'DEBIT',
       amount: "20,000,000",
       currency: "USD",
@@ -3449,7 +3449,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "30 Apr, 2026, 11:30",
     },
     {
-      id: "txn_0Q7VN7QJM5RC6",
+      id: "Txn_0Q7VN7QJM5RC6",
       direction: 'DEBIT',
       amount: "10,200",
       currency: "USD",
@@ -3466,7 +3466,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "30 Apr, 2026, 10:33",
     },
     {
-      id: "txn_0Q7VN7QDC5V46",
+      id: "Txn_0Q7VN7QDC5V46",
       direction: 'DEBIT',
       amount: "10,300",
       currency: "USD",
@@ -3483,7 +3483,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "30 Apr, 2026, 10:33",
     },
     {
-      id: "txn_0Q7VMNAS85SH3",
+      id: "Txn_0Q7VMNAS85SH3",
       direction: 'DEBIT',
       amount: "99,980,000",
       currency: "USD",
@@ -3500,7 +3500,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "30 Apr, 2026, 10:30",
     },
     {
-      id: "txn_0Q7SRVA22M9DY",
+      id: "Txn_0Q7SRVA22M9DY",
       direction: 'CREDIT',
       amount: "899,815,613",
       currency: "USD",
@@ -3517,7 +3517,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "30 Apr, 2026, 06:09",
     },
     {
-      id: "txn_0Q7KVQR32AQ62",
+      id: "Txn_0Q7KVQR32AQ62",
       direction: 'CREDIT',
       amount: "10,300",
       currency: "USD",
@@ -3534,7 +3534,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "29 Apr, 2026, 16:23",
     },
     {
-      id: "txn_0Q7KVG1XS7K21",
+      id: "Txn_0Q7KVG1XS7K21",
       direction: 'CREDIT',
       amount: "10,200",
       currency: "USD",
@@ -3551,7 +3551,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "29 Apr, 2026, 16:22",
     },
     {
-      id: "txn_0Q7K250RPAPTQ",
+      id: "Txn_0Q7K250RPAPTQ",
       direction: 'DEBIT',
       amount: "200",
       currency: "USD",
@@ -3568,7 +3568,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "29 Apr, 2026, 14:31",
     },
     {
-      id: "txn_0Q7JM7MEDG8C3",
+      id: "Txn_0Q7JM7MEDG8C3",
       direction: 'DEBIT',
       amount: "500",
       currency: "SGD",
@@ -3585,7 +3585,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "29 Apr, 2026, 13:30",
     },
     {
-      id: "txn_0Q7J08SGJBY6N",
+      id: "Txn_0Q7J08SGJBY6N",
       direction: 'CREDIT',
       amount: "873,627,314",
       currency: "SGD",
@@ -3602,7 +3602,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "29 Apr, 2026, 12:03",
     },
     {
-      id: "txn_0Q7HZ67Z8H0HA",
+      id: "Txn_0Q7HZ67Z8H0HA",
       direction: 'CREDIT',
       amount: "200",
       currency: "USD",
@@ -3619,7 +3619,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "29 Apr, 2026, 11:58",
     },
     {
-      id: "txn_0Q7HSPK9MH2FJ",
+      id: "Txn_0Q7HSPK9MH2FJ",
       direction: 'CREDIT',
       amount: "300,000,000",
       currency: "USD",
@@ -3636,7 +3636,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "29 Apr, 2026, 11:34",
     },
     {
-      id: "txn_0Q7HBC4ZWH3WE",
+      id: "Txn_0Q7HBC4ZWH3WE",
       direction: 'DEBIT',
       amount: "99,980,000",
       currency: "USD",
@@ -3653,7 +3653,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "29 Apr, 2026, 10:32",
     },
     {
-      id: "txn_0Q7GXCENPBYDK",
+      id: "Txn_0Q7GXCENPBYDK",
       direction: 'DEBIT',
       amount: "29,997,000",
       currency: "USD",
@@ -3670,7 +3670,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "29 Apr, 2026, 09:31",
     },
     {
-      id: "txn_0Q79FMHRSV8JF",
+      id: "Txn_0Q79FMHRSV8JF",
       direction: 'CREDIT',
       amount: "1,556,434,939",
       currency: "SGD",
@@ -3687,7 +3687,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "28 Apr, 2026, 16:12",
     },
     {
-      id: "txn_0Q7961CBYF5BD",
+      id: "Txn_0Q7961CBYF5BD",
       direction: 'DEBIT',
       amount: "2,766",
       currency: "USD",
@@ -3704,7 +3704,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "28 Apr, 2026, 15:30",
     },
     {
-      id: "txn_0Q78RE5JGYNAE",
+      id: "Txn_0Q78RE5JGYNAE",
       direction: 'DEBIT',
       amount: "1,000",
       currency: "SGD",
@@ -3721,7 +3721,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "28 Apr, 2026, 14:31",
     },
     {
-      id: "txn_0Q78RE5D0YPN9",
+      id: "Txn_0Q78RE5D0YPN9",
       direction: 'DEBIT',
       amount: "50,000,000",
       currency: "SGD",
@@ -3738,7 +3738,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "28 Apr, 2026, 14:31",
     },
     {
-      id: "txn_0Q78ARZG76WB8",
+      id: "Txn_0Q78ARZG76WB8",
       direction: 'DEBIT',
       amount: "1,000",
       currency: "USD",
@@ -3755,7 +3755,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "28 Apr, 2026, 13:31",
     },
     {
-      id: "txn_0Q77WVF2W6ZXG",
+      id: "Txn_0Q77WVF2W6ZXG",
       direction: 'DEBIT',
       amount: "49,990,000",
       currency: "USD",
@@ -3772,7 +3772,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "28 Apr, 2026, 12:30",
     },
     {
-      id: "txn_0Q77QVV3C6ZHY",
+      id: "Txn_0Q77QVV3C6ZHY",
       direction: 'CREDIT',
       amount: "1,000",
       currency: "USD",
@@ -3789,7 +3789,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "28 Apr, 2026, 12:08",
     },
     {
-      id: "txn_0Q774W25K7Q7T",
+      id: "Txn_0Q774W25K7Q7T",
       direction: 'CREDIT',
       amount: "300,000,000",
       currency: "USD",
@@ -3806,7 +3806,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "28 Apr, 2026, 10:45",
     },
     {
-      id: "txn_0Q7732XJZAVM1",
+      id: "Txn_0Q7732XJZAVM1",
       direction: 'DEBIT',
       amount: "899,820,000",
       currency: "USD",
@@ -3823,7 +3823,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "28 Apr, 2026, 10:37",
     },
     {
-      id: "txn_0Q7732X3ZASG7",
+      id: "Txn_0Q7732X3ZASG7",
       direction: 'DEBIT',
       amount: "19,998,000",
       currency: "USD",
@@ -3840,7 +3840,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "28 Apr, 2026, 10:37",
     },
     {
-      id: "txn_0Q7116GAK7PMJ",
+      id: "Txn_0Q7116GAK7PMJ",
       direction: 'DEBIT',
       amount: "499,850,000",
       currency: "USD",
@@ -3857,7 +3857,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "27 Apr, 2026, 20:30",
     },
     {
-      id: "txn_0Q6ZA3SM77P62",
+      id: "Txn_0Q6ZA3SM77P62",
       direction: 'DEBIT',
       amount: "14,998,500",
       currency: "USD",
@@ -3874,7 +3874,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "27 Apr, 2026, 16:30",
     },
     {
-      id: "txn_0Q6Z9T4TQ7MHD",
+      id: "Txn_0Q6Z9T4TQ7MHD",
       direction: 'CREDIT',
       amount: "150,000,000",
       currency: "USD",
@@ -3891,7 +3891,7 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       createdAt: "27 Apr, 2026, 16:28",
     },
     {
-      id: "txn_0Q6YWNK8RYQP9",
+      id: "Txn_0Q6YWNK8RYQP9",
       direction: 'DEBIT',
       amount: "49,990,000",
       currency: "USD",
@@ -3924,14 +3924,14 @@ export type UnprocessedRefund = {
 
 export const unprocessedRefunds: UnprocessedRefund[] = [
   {
-    originalTxnId: 'txn_0QJ87FX8QDVV2',
+    originalTxnId: 'Txn_0QJ87FX8QDVV2',
     customer: 'Vivien Tan',
     amount: 'S$ 12,000.00',
     reason: 'Sender name unmatched',
     date: '2026-05-28',
   },
   {
-    originalTxnId: 'txn_0QJ4FX8RDVD3',
+    originalTxnId: 'Txn_0QJ4FX8RDVD3',
     customer: 'John Eames',
     amount: 'S$ 620.00',
     reason: 'Incorrect account number',
@@ -4086,7 +4086,7 @@ export const allPayments: Payment[] = [
     receiverLocalRoutingIdentifier: "931",
     resultCode: "REJECTED_BY_SENDING_BANK",
     underlyingErrorMessage: "44 - AC01 - Account number provided is incorrect",
-    customerReference: "REFUND-txn_0Q6NQHAZXV3W5",
+    customerReference: "REFUND-Txn_0Q6NQHAZXV3W5",
     paymentDetails: "",
   },
   {
@@ -4106,7 +4106,7 @@ export const allPayments: Payment[] = [
     receiverLocalRoutingIdentifier: "004",
     resultCode: "REJECTED_BY_SENDING_BANK",
     underlyingErrorMessage: "44 - BE01 - Payee name does not match please check",
-    customerReference: "REFUND-txn_0Q3NZ14F74271",
+    customerReference: "REFUND-Txn_0Q3NZ14F74271",
     paymentDetails: "",
   },
   {
@@ -4146,7 +4146,7 @@ export const allPayments: Payment[] = [
     receiverLocalRoutingIdentifier: "004",
     resultCode: "REJECTED_BY_SENDING_BANK",
     underlyingErrorMessage: "44 - BE01 - Payee name does not match please check",
-    customerReference: "REFUND-txn_0Q1G2Z2QW204A",
+    customerReference: "REFUND-Txn_0Q1G2Z2QW204A",
     paymentDetails: "",
   },
   {
@@ -4206,7 +4206,7 @@ export const allPayments: Payment[] = [
     receiverLocalRoutingIdentifier: "389",
     resultCode: "REJECTED_BY_SENDING_BANK",
     underlyingErrorMessage: "44 - NARR - /REASON/Invalid Account Type",
-    customerReference: "REFUND-txn_0PXXNZVD3S94Q",
+    customerReference: "REFUND-Txn_0PXXNZVD3S94Q",
     paymentDetails: "",
   },
   {
@@ -4446,7 +4446,7 @@ export const allPayments: Payment[] = [
     receiverLocalRoutingIdentifier: "948",
     resultCode: "REJECTED_BY_SENDING_BANK",
     underlyingErrorMessage: "44 - NARR - /REASON/AMOUNT_EXCEED_LIMIT.",
-    customerReference: "REFUND-txn_0PHFH7VYAW585",
+    customerReference: "REFUND-Txn_0PHFH7VYAW585",
     paymentDetails: "",
   },
   {
@@ -4466,7 +4466,7 @@ export const allPayments: Payment[] = [
     receiverLocalRoutingIdentifier: "948",
     resultCode: "REJECTED_BY_SENDING_BANK",
     underlyingErrorMessage: "44 - NARR - /REASON/AMOUNT_EXCEED_LIMIT.",
-    customerReference: "REFUND-txn_0PHEH2QR3X8XK",
+    customerReference: "REFUND-Txn_0PHEH2QR3X8XK",
     paymentDetails: "",
   },
   {
@@ -4486,7 +4486,7 @@ export const allPayments: Payment[] = [
     receiverLocalRoutingIdentifier: "948",
     resultCode: "REJECTED_BY_SENDING_BANK",
     underlyingErrorMessage: "44 - NARR - /REASON/AMOUNT_EXCEED_LIMIT.",
-    customerReference: "REFUND-txn_0PHEE0VVZX8N7",
+    customerReference: "REFUND-Txn_0PHEE0VVZX8N7",
     paymentDetails: "",
   },
   {
@@ -4546,7 +4546,7 @@ export const allPayments: Payment[] = [
     receiverLocalRoutingIdentifier: "948",
     resultCode: "REJECTED_BY_SENDING_BANK",
     underlyingErrorMessage: "44",
-    customerReference: "REFUND-txn_0PDQRRFJ0DBG7",
+    customerReference: "REFUND-Txn_0PDQRRFJ0DBG7",
     paymentDetails: "",
   },
   {
@@ -6886,7 +6886,7 @@ export const allPayments: Payment[] = [
     receiverLocalRoutingIdentifier: "250",
     resultCode: "",
     underlyingErrorMessage: "",
-    customerReference: "REFUND-txn_0Q3RT3XSV4049",
+    customerReference: "REFUND-Txn_0Q3RT3XSV4049",
     paymentDetails: "",
   },
   {
@@ -7586,7 +7586,7 @@ export const allPayments: Payment[] = [
     receiverLocalRoutingIdentifier: "393",
     resultCode: "",
     underlyingErrorMessage: "",
-    customerReference: "REFUND-txn_0PRCNMCW5GC3G",
+    customerReference: "REFUND-Txn_0PRCNMCW5GC3G",
     paymentDetails: "",
   },
   {
@@ -7686,7 +7686,7 @@ export const allPayments: Payment[] = [
     receiverLocalRoutingIdentifier: "004",
     resultCode: "",
     underlyingErrorMessage: "",
-    customerReference: "REFUND-txn_0PNBMY09P6STA",
+    customerReference: "REFUND-Txn_0PNBMY09P6STA",
     paymentDetails: "",
   },
   {
