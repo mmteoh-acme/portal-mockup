@@ -9,7 +9,6 @@ import {
   MoreHorizontalIcon,
   AlertCircleIcon,
   RotateCcwIcon,
-  ClockIcon,
   PaperclipIcon,
   XIcon,
 } from 'lucide-react'
@@ -228,60 +227,22 @@ function PaymentsMain() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Payments</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Monitor payment status across all rails. Failed payments that need
-          ops attention are surfaced first.
-        </p>
       </div>
 
-      {/* Cut-off time notice */}
-      <div className="flex items-start gap-2.5 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
-        <ClockIcon className="mt-0.5 size-4 shrink-0 text-amber-600" />
-        <div>
-          <span className="font-medium">Payment cut-off times today:</span>{' '}
-          DBS SGD — <span>17:00 SGT</span> · DBS USD —{' '}
-          <span>11:30 SGT</span> · SCB — <span>15:30 SGT</span>.{' '}
-          Payments submitted after cut-off will be scheduled to the next business day.
-        </div>
-      </div>
-
-      {/* Filter chips */}
+      {/* Filter select */}
       <div className="flex flex-wrap items-center gap-2">
-        <FilterChip
-          active={filter === 'attention'}
-          onClick={() => setFilter('attention')}
-          label="Requires attention"
-          count={counts.attention}
-          tone="rose"
-        />
-        <FilterChip
-          active={filter === 'pending'}
-          onClick={() => setFilter('pending')}
-          label="Pending"
-          count={counts.pending}
-          tone="amber"
-        />
-        <FilterChip
-          active={filter === 'failed'}
-          onClick={() => setFilter('failed')}
-          label="Failed"
-          count={counts.failed}
-          tone="rose"
-        />
-        <FilterChip
-          active={filter === 'completed'}
-          onClick={() => setFilter('completed')}
-          label="Completed"
-          count={counts.completed}
-          tone="emerald"
-        />
-        <FilterChip
-          active={filter === 'all'}
-          onClick={() => setFilter('all')}
-          label="All"
-          count={counts.all}
-          tone="zinc"
-        />
+        <Select value={filter} onValueChange={(v) => setFilter(v as FilterKey)}>
+          <SelectTrigger size="sm" className="h-8 w-48 font-normal">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="attention">Requires attention ({counts.attention})</SelectItem>
+            <SelectItem value="pending">Pending ({counts.pending})</SelectItem>
+            <SelectItem value="failed">Failed ({counts.failed})</SelectItem>
+            <SelectItem value="completed">Completed ({counts.completed})</SelectItem>
+            <SelectItem value="all">All ({counts.all})</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Main table */}
@@ -719,51 +680,6 @@ function refundToPayment(r: SubmittedRefund): Payment {
     customerReference: r.originalTxnId ?? '',
     paymentDetails: r.reason,
   }
-}
-
-function FilterChip({
-  active,
-  onClick,
-  label,
-  count,
-  tone,
-}: {
-  active: boolean
-  onClick: () => void
-  label: string
-  count: number
-  tone: 'rose' | 'amber' | 'emerald' | 'zinc'
-}) {
-  const toneClasses: Record<typeof tone, string> = {
-    rose: active
-      ? 'border-rose-300 bg-rose-100 text-rose-800'
-      : 'border-rose-200 bg-rose-50/50 text-rose-700 hover:bg-rose-50',
-    amber: active
-      ? 'border-amber-300 bg-amber-100 text-amber-800'
-      : 'border-amber-200 bg-amber-50/50 text-amber-700 hover:bg-amber-50',
-    emerald: active
-      ? 'border-emerald-300 bg-emerald-100 text-emerald-800'
-      : 'border-emerald-200 bg-emerald-50/50 text-emerald-700 hover:bg-emerald-50',
-    zinc: active
-      ? 'border-zinc-300 bg-zinc-200 text-zinc-800'
-      : 'border-zinc-200 bg-zinc-50 text-zinc-700 hover:bg-zinc-100',
-  }
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[0.7rem] uppercase tracking-wider transition-colors',
-        toneClasses[tone],
-        active && 'ring-1 ring-inset ring-current/20',
-      )}
-    >
-      <span>{label}</span>
-      <span className="text-[0.7rem] tabular-nums opacity-80">
-        {count}
-      </span>
-    </button>
-  )
 }
 
 function PaymentStatusPill({ status }: { status: Payment['status'] }) {
@@ -1321,6 +1237,7 @@ function NewRefundFromTxn({ txn }: { txn: Txn | null }) {
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0.00"
                 className="font-mono"
+                disabled
               />
               <p className="text-xs text-muted-foreground">
                 Edit for a partial refund.
@@ -1382,6 +1299,7 @@ function NewRefundFromTxn({ txn }: { txn: Txn | null }) {
               value={receiverName}
               onChange={(e) => setReceiverName(e.target.value)}
               placeholder="Beneficiary account name"
+              disabled
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -1864,13 +1782,12 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
         <CardContent className="space-y-5 px-6 py-5">
           <div className="space-y-1">
             <div className="text-[0.7rem] font-medium uppercase tracking-wider text-muted-foreground">
-              Editable fields
+              Fields
             </div>
-            <p className="text-xs text-muted-foreground">
-              All fields are pre-filled from the original payment. Edit any
-              that need correcting before resubmitting.
-            </p>
           </div>
+          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+            Fields pre-filled from the original payment. Contact Acme Ops to modify routing details before retrying.
+          </p>
           <div className="space-y-1.5">
             <Label htmlFor="rcv-name">Receiver name</Label>
             <Input
@@ -1878,6 +1795,7 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
               value={receiverName}
               onChange={(e) => setReceiverName(e.target.value)}
               placeholder="Beneficiary account name"
+              disabled
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -1889,6 +1807,7 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
                 onChange={(e) => setReceiverBic(e.target.value)}
                 placeholder="DBSSSGSGXXX"
                 className="font-mono"
+                disabled
               />
             </div>
             <div className="space-y-1.5">
@@ -1899,6 +1818,7 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
                 onChange={(e) => setReceiverAccount(e.target.value)}
                 placeholder="0123456789"
                 className="font-mono"
+                disabled
               />
             </div>
           </div>
@@ -1911,6 +1831,7 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
                 onChange={(e) => setReceiverRouting(e.target.value)}
                 placeholder="004"
                 className="font-mono"
+                disabled
               />
             </div>
             <div className="space-y-1.5">
@@ -1923,6 +1844,7 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0.00"
                 className="font-mono"
+                disabled
               />
             </div>
           </div>

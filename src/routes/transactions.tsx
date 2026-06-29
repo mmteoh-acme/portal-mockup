@@ -47,7 +47,6 @@ import {
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
@@ -295,10 +294,6 @@ export function TransactionsPage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Transactions</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Search and reconcile across your bank rails for{' '}
-            <span className="font-medium text-foreground">{entity.name}</span>.
-          </p>
         </div>
         <Button
           variant="outline"
@@ -494,34 +489,31 @@ export function TransactionsPage() {
             <Table className="w-full table-fixed">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                  <TableHead className="w-44 text-[0.7rem] uppercase tracking-wider">
                     Transaction ID
                   </TableHead>
-                  <TableHead className="text-right text-[0.7rem] uppercase tracking-wider">
+                  <TableHead className="w-28 text-right text-[0.7rem] uppercase tracking-wider">
                     Amount
                   </TableHead>
-                  <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                  <TableHead className="w-20 text-[0.7rem] uppercase tracking-wider">
                     Currency
                   </TableHead>
-                  <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                  <TableHead className="w-32 text-[0.7rem] uppercase tracking-wider">
                     Transaction date
                   </TableHead>
-                  <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                  <TableHead className="w-36 text-[0.7rem] uppercase tracking-wider">
                     Sender name
                   </TableHead>
-                  <TableHead className="text-[0.7rem] uppercase tracking-wider">
-                    Sender bank
-                  </TableHead>
-                  <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                  <TableHead className="w-36 text-[0.7rem] uppercase tracking-wider">
                     Customer reference
                   </TableHead>
-                  <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                  <TableHead className="w-36 text-[0.7rem] uppercase tracking-wider">
                     Bank reference
                   </TableHead>
-                  <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                  <TableHead className="w-28 text-[0.7rem] uppercase tracking-wider">
                     Transaction type
                   </TableHead>
-                  <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                  <TableHead className="w-32 text-[0.7rem] uppercase tracking-wider">
                     Created at
                   </TableHead>
                   <TableHead className="w-12 text-[0.7rem] uppercase tracking-wider">
@@ -569,12 +561,6 @@ export function TransactionsPage() {
                       title={t.senderName}
                     >
                       {t.senderName}
-                    </TableCell>
-                    <TableCell
-                      className="max-w-[8rem] truncate text-xs"
-                      title={t.senderBank}
-                    >
-                      {t.senderBank}
                     </TableCell>
                     <TableCell
                       className="max-w-[9rem] truncate"
@@ -638,7 +624,7 @@ export function TransactionsPage() {
                 {filtered.length === 0 && (
                   <TableRow>
                     <TableCell
-                      colSpan={11}
+                      colSpan={10}
                       className="py-10 text-center text-sm text-muted-foreground"
                     >
                       {rows.length === 0
@@ -691,10 +677,6 @@ export function TransactionsPage() {
             <>
               <SheetHeader>
                 <SheetTitle className="font-mono">{openTxn.id}</SheetTitle>
-                <SheetDescription>
-                  Transaction detail — surfaced verbatim from{' '}
-                  {openTxn.dataSource}.
-                </SheetDescription>
               </SheetHeader>
               <div className="grid grid-cols-2 gap-x-6 gap-y-4 px-4 pb-6">
                 <Field label="Direction">
