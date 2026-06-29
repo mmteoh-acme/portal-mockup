@@ -451,7 +451,7 @@ function PaymentsMain() {
                   const refund = refundMap.get(p.id) ?? null
                   const retry = retryMap.get(p.id) ?? null
                   const isFailed = p.status === 'FAILED'
-                  const attention = paymentRequiresAttention(p)
+
                   const isPendingRefund =
                     refund?.status === 'Pending approval'
                   const isPendingRetry =
