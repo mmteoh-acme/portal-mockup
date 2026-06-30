@@ -340,14 +340,14 @@ export const webhooks = [
     id: 'wh_01',
     url: 'https://ops.acme.com/webhooks/payments',
     events: 'payment.*, refund.*',
-    status: 'Degraded',
+    status: 'Healthy',
     lastDelivery: '3 min ago',
   },
   {
     id: 'wh_02',
     url: 'https://ops.acme.com/webhooks/transactions',
     events: 'transaction.posted',
-    status: 'Degraded',
+    status: 'Healthy',
     lastDelivery: '38 min ago',
   },
 ]
