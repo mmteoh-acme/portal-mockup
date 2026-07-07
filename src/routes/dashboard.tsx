@@ -1,3 +1,4 @@
+import * as React from 'react'
 import { LandmarkIcon, PlusIcon } from 'lucide-react'
 import {
   Card,
@@ -6,6 +7,13 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -26,9 +34,14 @@ import {
 import { useEntity } from '@/lib/entity-context'
 import {
   entityAccounts,
+  entityBalanceHistory,
+  entityBalancesByCurrency,
   entityKpis,
+  formatCompactMoney,
+  formatMoney,
   paymentAnalytics,
   successRateByType,
+  type Entity,
 } from '@/data/fixtures'
 
 const COLOR_API = 'var(--chart-3)'
@@ -36,6 +49,168 @@ const COLOR_BATCH = 'var(--chart-2)'
 const COLOR_COMPLETED = 'var(--chart-2)'
 const COLOR_PENDING = 'var(--chart-4)'
 const COLOR_FAILED = 'var(--chart-1)'
+
+const BANK_COLORS = [
+  'var(--chart-3)',
+  'var(--chart-2)',
+  'var(--chart-4)',
+  'var(--chart-5)',
+]
+
+const BALANCES_AS_OF = 'Jun 1, 2026, 09:00 AM SGT'
+
+// Balance Stats + daily Balances chart, grouped by currency and bank.
+function BalancesModule({ entity }: { entity: Entity }) {
+  const groups = React.useMemo(() => entityBalancesByCurrency(entity), [entity])
+  const history = React.useMemo(() => entityBalanceHistory(entity), [entity])
+  const [currency, setCurrency] = React.useState(
+    () => groups[0]?.currency ?? 'SGD',
+  )
+  const [bankFilter, setBankFilter] = React.useState('all')
+
+  const group = groups.find((g) => g.currency === currency) ?? groups[0]
+  const hist = history.find((h) => h.currency === currency) ?? history[0]
+  if (!group || !hist) return null
+
+  const bankNames = hist.bankNames
+  const visibleBanks =
+    bankFilter === 'all'
+      ? bankNames
+      : bankNames.filter((b) => b === bankFilter)
+  const series = visibleBanks.map((b) => ({
+    key: b,
+    label: b,
+    color: BANK_COLORS[bankNames.indexOf(b) % BANK_COLORS.length],
+  }))
+  const chartData = hist.days.map((d) => ({
+    label: d.label,
+    values: Object.fromEntries(
+      visibleBanks.map((b) => [b, d.perBank[b] ?? 0]),
+    ),
+  }))
+
+  const currencySelect = (
+    <Select
+      value={currency}
+      onValueChange={(v) => {
+        setCurrency(v)
+        setBankFilter('all')
+      }}
+    >
+      <SelectTrigger size="sm" className="h-8 w-24 font-normal">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {groups.map((g) => (
+          <SelectItem key={g.currency} value={g.currency}>
+            {g.currency}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
+
+  return (
+    <>
+      {/* Balance Stats */}
+      <Card className="py-0">
+        <CardContent className="px-6 py-5">
+          <div className="flex items-start justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">Balance Stats</h2>
+              <p className="text-xs text-muted-foreground">
+                As of: {BALANCES_AS_OF}
+              </p>
+            </div>
+            {currencySelect}
+          </div>
+          <div className="mt-5 grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div>
+              <div className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">
+                Available balance
+              </div>
+              <div className="mt-1 text-3xl font-semibold tabular-nums">
+                {formatMoney(group.currency, group.available)}
+              </div>
+            </div>
+            <div className="sm:border-l sm:pl-6">
+              <div className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">
+                Prior-day balance
+              </div>
+              <div className="mt-1 text-3xl font-semibold tabular-nums">
+                {formatMoney(group.currency, group.priorDay)}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Balances chart */}
+      <Card className="py-0">
+        <CardContent className="px-6 py-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold">Balances</h2>
+              <p className="text-xs text-muted-foreground">
+                As of: {BALANCES_AS_OF}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Select value="closing" onValueChange={() => {}}>
+                <SelectTrigger size="sm" className="h-8 font-normal">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="closing">Closing Available</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={bankFilter} onValueChange={setBankFilter}>
+                <SelectTrigger size="sm" className="h-8 font-normal">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All banks</SelectItem>
+                  {bankNames.map((b) => (
+                    <SelectItem key={b} value={b}>
+                      {b}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value="past10" onValueChange={() => {}}>
+                <SelectTrigger size="sm" className="h-8 font-normal">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="past10">Past 10 Days</SelectItem>
+                </SelectContent>
+              </Select>
+              {currencySelect}
+            </div>
+          </div>
+          <div className="mt-4 overflow-x-auto">
+            <StackedBarChart
+              data={chartData}
+              series={series}
+              height={280}
+              totalFormatter={(total) =>
+                formatCompactMoney(group.currency, total)
+              }
+            />
+          </div>
+          <div className="mt-2">
+            <ChartLegend
+              items={bankNames.map((b) => ({
+                label: b,
+                color: BANK_COLORS[bankNames.indexOf(b) % BANK_COLORS.length],
+              }))}
+            />
+          </div>
+        </CardContent>
+      </Card>
+    </>
+  )
+}
 
 export function DashboardPage() {
   const { entity } = useEntity()
@@ -106,6 +281,9 @@ export function DashboardPage() {
               </Card>
             ))}
           </div>
+
+          {/* Balances — grouped by currency, bank, account */}
+          <BalancesModule entity={entity} />
 
           {/* Payment volume over time */}
           <ChartCardShell

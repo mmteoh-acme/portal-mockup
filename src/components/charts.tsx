@@ -14,6 +14,19 @@ const CHART_COLORS = [
   'var(--chart-5)',
 ]
 
+// Compact axis labels: 20000000 -> "20M", 4500 -> "4.5K".
+function compactTick(v: number): string {
+  if (v >= 1_000_000) {
+    const m = v / 1_000_000
+    return `${m % 1 === 0 ? m : m.toFixed(1)}M`
+  }
+  if (v >= 10_000) {
+    const k = v / 1_000
+    return `${k % 1 === 0 ? k : k.toFixed(1)}K`
+  }
+  return String(Math.round(v))
+}
+
 function niceMax(value: number): number {
   if (value <= 0) return 1
   const pow = Math.pow(10, Math.floor(Math.log10(value)))
@@ -54,16 +67,19 @@ export function StackedBarChart({
   data,
   series,
   height = 240,
+  totalFormatter,
 }: {
   data: { label: string; values: Record<string, number> }[]
   series: { key: string; label: string; color: string }[]
   height?: number
+  /** When provided, renders the stack total above each bar. */
+  totalFormatter?: (total: number) => string
 }) {
   const W = 720
   const H = height
   const padL = 40
   const padR = 16
-  const padT = 12
+  const padT = totalFormatter ? 24 : 12
   const padB = 56
 
   const totals = data.map((d) =>
@@ -106,7 +122,7 @@ export function StackedBarChart({
               className="fill-muted-foreground"
               style={{ fontSize: 10 }}
             >
-              {Math.round(tv)}
+              {compactTick(tv)}
             </text>
           </g>
         )
@@ -114,7 +130,9 @@ export function StackedBarChart({
 
       {data.map((d, i) => {
         const cx = padL + bandW * i + bandW / 2
+        const total = series.reduce((s, ser) => s + (d.values[ser.key] ?? 0), 0)
         let yCursor = padT + plotH
+        const barTop = padT + plotH - (total / max) * plotH
         return (
           <g key={d.label}>
             {series.map((ser) => {
@@ -135,6 +153,17 @@ export function StackedBarChart({
                 </rect>
               )
             })}
+            {totalFormatter && total > 0 && (
+              <text
+                x={cx}
+                y={barTop - 6}
+                textAnchor="middle"
+                className="fill-foreground"
+                style={{ fontSize: 10, fontWeight: 600 }}
+              >
+                {totalFormatter(total)}
+              </text>
+            )}
             <text
               x={cx}
               y={H - padB + 16}
@@ -204,7 +233,7 @@ export function BarChart({
               className="fill-muted-foreground"
               style={{ fontSize: 10 }}
             >
-              {Math.round(tv)}
+              {compactTick(tv)}
               {unit}
             </text>
           </g>
@@ -311,7 +340,7 @@ export function LineChart({
               className="fill-muted-foreground"
               style={{ fontSize: 10 }}
             >
-              {Math.round(tv)}
+              {compactTick(tv)}
             </text>
           </g>
         )

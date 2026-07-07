@@ -297,6 +297,69 @@ export function entityBalancesByCurrency(entity: Entity): CurrencyBalanceGroup[]
     .sort((a, b) => a.currency.localeCompare(b.currency))
 }
 
+// Compact money for chart labels, e.g. "S$15.4M", "S$172K".
+export function formatCompactMoney(currency: string, amount: number): string {
+  const symbol = CURRENCY_SYMBOLS[currency] ?? currency
+  if (amount >= 1_000_000) return `${symbol}${(amount / 1_000_000).toFixed(1)}M`
+  if (amount >= 1_000) return `${symbol}${Math.round(amount / 1_000)}K`
+  return `${symbol}${Math.round(amount)}`
+}
+
+// Daily closing-available balance history per currency, ending on the mock
+// "today" (1 Jun 2026). Today = live available, yesterday = prior-day; earlier
+// days get a deterministic wobble so the chart has realistic shape.
+export type BalanceHistoryDay = {
+  label: string
+  perBank: Record<string, number>
+  total: number
+}
+
+export type CurrencyBalanceHistory = {
+  currency: string
+  bankNames: string[]
+  days: BalanceHistoryDay[]
+}
+
+export function entityBalanceHistory(
+  entity: Entity,
+  numDays = 10,
+): CurrencyBalanceHistory[] {
+  const groups = entityBalancesByCurrency(entity)
+  const today = new Date(2026, 5, 1) // 1 Jun 2026 — mock "today"
+
+  return groups.map((g) => {
+    const seed = g.currency
+      .split('')
+      .reduce((s, ch) => s + ch.charCodeAt(0), 0)
+    const days: BalanceHistoryDay[] = []
+    for (let i = numDays - 1; i >= 0; i--) {
+      const d = new Date(today)
+      d.setDate(d.getDate() - i)
+      const label = `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`
+      const perBank: Record<string, number> = {}
+      for (const [bi, b] of g.banks.entries()) {
+        let value: number
+        if (i === 0) value = b.available
+        else if (i === 1) value = b.priorDay
+        else {
+          const wobble =
+            0.035 * Math.sin(seed + bi * 2.3 + i * 1.7) +
+            0.015 * Math.sin(seed * 0.7 + i * 3.1)
+          value = b.priorDay * (1 + wobble)
+        }
+        perBank[b.bankName] = Math.round(value * 100) / 100
+      }
+      const total = Object.values(perBank).reduce((s, v) => s + v, 0)
+      days.push({ label, perBank, total })
+    }
+    return {
+      currency: g.currency,
+      bankNames: g.banks.map((b) => b.bankName),
+      days,
+    }
+  })
+}
+
 export type KpiCard = {
   label: string
   value: string
