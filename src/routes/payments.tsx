@@ -218,6 +218,33 @@ function buildPaymentRawPayload(
   return JSON.stringify(payload, null, 2)
 }
 
+// Build a synthetic failed Payment from an exception row (return / reversal)
+// so it can be processed through the retry-payment page.
+function exceptionToPayment(e: UnprocessedRefund): Payment {
+  const amount = e.amount.replace(/[^\d.,]/g, '').trim()
+  return {
+    id: e.originalTxnId,
+    amount,
+    createdAt: e.date,
+    currency: 'SGD',
+    senderAccountId: 'intacc_0KT8ZSCRKXP0O',
+    status: 'FAILED',
+    type: 'FAST',
+    updatedAt: e.date,
+    organizationId: 'org_0KV2Y7N26Q6JR',
+    mode: 'LIVE',
+    receiverBank: '',
+    receiverName: e.customer,
+    receiverBankAccountNumber: '',
+    receiverLocalRoutingIdentifier: '',
+    resultCode:
+      e.kind === 'reprocess' ? 'RETURNED_BY_BENEFICIARY_BANK' : 'FLAGGED_AS_RETURN',
+    underlyingErrorMessage: e.reason,
+    customerReference: '',
+    paymentDetails: '',
+  }
+}
+
 export function PaymentsPage() {
   const search = useRouterState({
     select: (s) =>
@@ -228,6 +255,7 @@ export function PaymentsPage() {
       },
   })
   const { entity } = useEntity()
+  const storeDeposits = useUnprocessedDeposits()
 
   if (search?.action === 'new-refund') {
     const txn = entity
@@ -237,8 +265,14 @@ export function PaymentsPage() {
   }
 
   if (search?.action === 'retry-payment') {
-    const p =
-      allPayments.find((x) => x.id === search.paymentId) ?? null
+    let p = allPayments.find((x) => x.id === search.paymentId) ?? null
+    if (!p) {
+      // Exceptions (returns / reversals) are processed through the same page.
+      const exc = [...storeDeposits, ...unprocessedRefunds].find(
+        (e) => e.originalTxnId === search.paymentId,
+      )
+      if (exc) p = exceptionToPayment(exc)
+    }
     return <NewRetryFromPayment payment={p} />
   }
 
@@ -938,8 +972,9 @@ function PaymentsMain() {
                 Exceptions requiring review ({allUnprocessed.length})
               </div>
               <p className="mt-1 text-sm text-muted-foreground">
-                Returned payments awaiting reprocessing and suspicious credits
-                awaiting refund. Actions go through maker-checker.
+                Transactions flagged as Returns (suspicious credits) or
+                Reversals (returned payments). Processing goes through the
+                retry payment flow with maker-checker approval.
               </p>
             </div>
             <NewRefundDialog
@@ -1008,7 +1043,7 @@ function PaymentsMain() {
                               : 'inline-flex items-center rounded border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[0.65rem] font-medium uppercase tracking-wider text-amber-700'
                           }
                         >
-                          {r.kind === 'reprocess' ? 'Reprocess' : 'Refund'}
+                          {r.kind === 'reprocess' ? 'Reversal' : 'Return'}
                         </span>
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
@@ -1018,31 +1053,22 @@ function PaymentsMain() {
                         {r.date}
                       </TableCell>
                       <TableCell className="text-right">
-                        {r.kind === 'reprocess' ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              toast.success('Reprocess submitted', {
-                                description: `${r.originalTxnId} — resubmission awaiting checker approval.`,
-                              })
-                            }}
-                          >
-                            <RotateCcwIcon className="size-3.5" />
-                            Reprocess
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setRefundRow(r)
-                              setRefundOpen(true)
-                            }}
-                          >
-                            Add bene details
-                          </Button>
-                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            navigate({
+                              to: '/payments',
+                              search: {
+                                action: 'retry-payment',
+                                paymentId: r.originalTxnId,
+                              },
+                            })
+                          }
+                        >
+                          <RotateCcwIcon className="size-3.5" />
+                          {r.kind === 'reprocess' ? 'Process reversal' : 'Process return'}
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -2701,6 +2727,7 @@ function NewPaymentPage() {
 function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
   const navigate = useNavigate()
   const { user } = useUser()
+  const { entity } = useEntity()
 
   const goBack = () =>
     navigate({
@@ -2712,7 +2739,11 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
       },
     })
 
-  const [retryMode, setRetryMode] = React.useState<'original' | 'recreate'>('original')
+  // Exceptions (returns/reversals) arrive without receiver details — start
+  // those in recreate mode so the fields are editable.
+  const [retryMode, setRetryMode] = React.useState<'original' | 'recreate'>(
+    payment?.receiverBankAccountNumber ? 'original' : 'recreate',
+  )
   const [receiverName, setReceiverName] = React.useState(
     payment?.receiverName ?? '',
   )
@@ -2731,6 +2762,61 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
   const [notes, setNotes] = React.useState('')
   const [attachedFiles, setAttachedFiles] = React.useState<File[]>([])
   const fileInputRef = React.useRef<HTMLInputElement>(null)
+
+  // Originating account — defaults to the original payment's sender account,
+  // but the user can pick a different one (same as the create payment page).
+  const senderAccounts = React.useMemo(
+    () => (entity ? entityAccounts(entity) : []),
+    [entity],
+  )
+  const [senderAccountId, setSenderAccountId] = React.useState(
+    () =>
+      senderAccounts.find((a) => a.id === payment?.senderAccountId)?.id ??
+      senderAccounts[0]?.id ??
+      '',
+  )
+  const senderAccount =
+    senderAccounts.find((a) => a.id === senderAccountId) ?? null
+  const [fetchedBalance, setFetchedBalance] = React.useState<Account | null>(
+    null,
+  )
+  const [balancesAsOf, setBalancesAsOf] = React.useState('')
+  const [loadingBalances, setLoadingBalances] = React.useState(false)
+
+  const getBalance = () => {
+    if (loadingBalances || !senderAccount) return
+    setLoadingBalances(true)
+    window.setTimeout(() => {
+      setFetchedBalance(senderAccount)
+      setBalancesAsOf(
+        `${new Date().toLocaleString('en-SG', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true,
+        })} SGT`,
+      )
+      setLoadingBalances(false)
+      toast.success('Balance retrieved', {
+        description: `${senderAccount.name} — latest available balance fetched from the bank.`,
+      })
+    }, 900)
+  }
+
+  const effectiveAmount =
+    retryMode === 'original' ? (payment?.amount ?? '') : amount
+  const effAmountNum = Number(effectiveAmount.replace(/,/g, ''))
+  const sufficiency =
+    fetchedBalance &&
+    effectiveAmount.trim() !== '' &&
+    !isNaN(effAmountNum) &&
+    effAmountNum > 0
+      ? fetchedBalance.lastBalance >= effAmountNum
+        ? 'sufficient'
+        : 'insufficient'
+      : null
 
   if (!payment || payment.status !== 'FAILED') {
     return (
@@ -2896,6 +2982,102 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
           <ContextRow label="Date of request">
             <span className="text-sm">{todayDisplay()}</span>
           </ContextRow>
+        </CardContent>
+      </Card>
+
+      {/* Originating account — same flow as the create payment page */}
+      <Card>
+        <CardContent className="space-y-4 px-6 py-5">
+          <div className="space-y-1">
+            <div className="text-[0.7rem] font-medium uppercase tracking-wider text-muted-foreground">
+              Originating account
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Defaults to the original payment's account — change it if the
+              retry should pay from a different account. Get its balance to
+              confirm sufficient funds (billed per call).
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Select
+              value={senderAccountId}
+              onValueChange={(v) => {
+                setSenderAccountId(v)
+                setFetchedBalance(null)
+              }}
+            >
+              <SelectTrigger className="w-full max-w-md">
+                <SelectValue placeholder="Select the account to pay from *" />
+              </SelectTrigger>
+              <SelectContent>
+                {senderAccounts.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.name} · {a.number} · {a.currency}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 gap-1.5"
+              onClick={getBalance}
+              disabled={!senderAccount || loadingBalances}
+            >
+              {loadingBalances ? (
+                <RefreshCwIcon className="size-3.5 animate-spin" />
+              ) : (
+                <WalletIcon className="size-3.5" />
+              )}
+              {loadingBalances ? 'Retrieving…' : 'Get balance'}
+            </Button>
+          </div>
+          {senderAccount && (
+            <p className="font-mono text-[0.68rem] text-muted-foreground">
+              {senderAccount.id} · Acct {senderAccount.number} · BIC{' '}
+              {senderAccount.swiftBic || '—'} · IBAN {senderAccount.iban || '—'}
+              {senderAccount.id === payment.senderAccountId
+                ? ' · original account'
+                : ''}
+            </p>
+          )}
+          {fetchedBalance && (
+            <div className="space-y-2 rounded-md border bg-muted/20 px-4 py-3">
+              <div className="flex items-center justify-between gap-4 text-sm">
+                <div>
+                  <span className="font-medium">{fetchedBalance.name}</span>
+                  <span className="ml-2 text-[0.65rem] uppercase tracking-wider text-muted-foreground">
+                    Available balance
+                  </span>
+                </div>
+                <span className="text-lg font-semibold tabular-nums whitespace-nowrap">
+                  {formatMoney(fetchedBalance.currency, fetchedBalance.lastBalance)}
+                </span>
+              </div>
+              {sufficiency === 'sufficient' && (
+                <div className="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+                  ✓ Sufficient funds — available balance covers{' '}
+                  {formatMoney(fetchedBalance.currency, effAmountNum)}.
+                </div>
+              )}
+              {sufficiency === 'insufficient' && (
+                <div className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-800">
+                  ✕ Insufficient funds — the retry amount{' '}
+                  {formatMoney(fetchedBalance.currency, effAmountNum)} exceeds
+                  the available balance. Top up the account or reduce the
+                  amount.
+                </div>
+              )}
+              {sufficiency === null && (
+                <p className="text-[0.7rem] text-muted-foreground">
+                  Enter a retry amount to check fund sufficiency.
+                </p>
+              )}
+              <p className="text-[0.65rem] text-muted-foreground">
+                As of: {balancesAsOf}
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
