@@ -342,10 +342,6 @@ function PaymentsMain() {
   const [filterDateTo, setFilterDateTo] = React.useState('')
   const [page, setPage] = React.useState(1)
   const [selected, setSelected] = React.useState<Payment | null>(null)
-  const [refundOpen, setRefundOpen] = React.useState(false)
-  const [refundRow, setRefundRow] = React.useState<UnprocessedRefund | null>(
-    null,
-  )
   const storeDeposits = useUnprocessedDeposits()
   const allUnprocessed = React.useMemo(
     () => [...storeDeposits, ...unprocessedRefunds],
@@ -982,38 +978,17 @@ function PaymentsMain() {
           </Card>
         </TabsContent>
 
-        {/* Pending review — transactions flagged as returns/reversals */}
+        {/* Pending review — credit transactions flagged for return */}
         <TabsContent value="exceptions" className="space-y-3 pt-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-[0.7rem] font-medium uppercase tracking-wider text-muted-foreground">
-                Pending review ({allUnprocessed.length})
-              </div>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Credit transactions flagged for return — payment orders the
-                bank rejected and returned as a separate credit line. Resubmit
-                the payment; processing goes through maker-checker approval.
-              </p>
+          <div>
+            <div className="text-[0.7rem] font-medium uppercase tracking-wider text-muted-foreground">
+              Pending review ({allUnprocessed.length})
             </div>
-            <NewRefundDialog
-              open={refundOpen && refundRow === null}
-              onOpenChange={(o) => {
-                if (!o) setRefundRow(null)
-                setRefundOpen(o)
-              }}
-              row={null}
-              trigger={
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setRefundRow(null)
-                    setRefundOpen(true)
-                  }}
-                >
-                  <PlusIcon /> New refund
-                </Button>
-              }
-            />
+            <p className="mt-1 text-sm text-muted-foreground">
+              Credit transactions flagged for return — payment orders the
+              bank rejected and returned as a separate credit line. Resubmit
+              the payment; processing goes through maker-checker approval.
+            </p>
           </div>
           <Card>
             <CardContent className="p-0">
@@ -1101,17 +1076,6 @@ function PaymentsMain() {
             </CardContent>
           </Card>
 
-          {refundRow && (
-            <NewRefundDialog
-              open={refundOpen && refundRow !== null}
-              onOpenChange={(o) => {
-                setRefundOpen(o)
-                if (!o) setRefundRow(null)
-              }}
-              row={refundRow}
-              trigger={null}
-            />
-          )}
         </TabsContent>
       </Tabs>
 
@@ -1977,160 +1941,6 @@ function ContextRow({
   )
 }
 
-// ---------------------------------------------------------------------------
-// NewRefundDialog (used by the unprocessed-deposits add-bene-details flow)
-// ---------------------------------------------------------------------------
-
-function NewRefundDialog({
-  open,
-  onOpenChange,
-  row,
-  trigger,
-}: {
-  open: boolean
-  onOpenChange: (o: boolean) => void
-  row: UnprocessedRefund | null
-  trigger: React.ReactNode
-}) {
-  const { user } = useUser()
-  const [accountName, setAccountName] = React.useState('')
-  const [accountNumber, setAccountNumber] = React.useState('')
-  const [bank, setBank] = React.useState('')
-  const [swift, setSwift] = React.useState('')
-  const [address, setAddress] = React.useState('')
-
-  const submit = () => {
-    const now = new Date()
-    const month = now.toLocaleString('en-US', { month: 'short' })
-    const day = now.getDate()
-    const year = now.getFullYear()
-    const hh = String(((now.getHours() + 11) % 12) + 1).padStart(2, '0')
-    const mm = String(now.getMinutes()).padStart(2, '0')
-    const ampm = now.getHours() >= 12 ? 'PM' : 'AM'
-    const submittedAt = `${month} ${day}, ${year} at ${hh}:${mm} ${ampm}`
-    const refundId = `rf_${Math.random().toString(36).slice(2, 14).toUpperCase()}`
-
-    addRefund({
-      id: refundId,
-      originalTxnId: row?.originalTxnId ?? null,
-      amount: row?.amount.replace(/[^\d.,]/g, '').trim() ?? '',
-      currency: 'SGD',
-      reason: row?.reason ?? 'Manual refund',
-      note: '',
-      receiverName: accountName,
-      receiverBic: swift,
-      receiverAccount: accountNumber,
-      address,
-      city: '',
-      country: '',
-      requester: user.name,
-      submittedAt,
-      status: 'Pending approval',
-    })
-
-    toast.success('Refund submitted', {
-      description: 'Awaiting checker approval.',
-    })
-    onOpenChange(false)
-    setAccountName('')
-    setAccountNumber('')
-    setBank('')
-    setSwift('')
-    setAddress('')
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
-      <DialogContent className="max-w-xl">
-        <DialogHeader>
-          <DialogTitle>New refund</DialogTitle>
-          <DialogDescription>
-            {row ? (
-              <>
-                Enter beneficiary details for{' '}
-                <Mono>{row.originalTxnId}</Mono> · {row.customer} ·{' '}
-                <span>{row.amount}</span>
-              </>
-            ) : (
-              'Enter beneficiary details to initiate a refund. Goes through maker-checker before Acme executes.'
-            )}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="grid gap-4 py-2">
-          <div className="grid gap-2">
-            <Label htmlFor="acct-name">Account name</Label>
-            <Input
-              id="acct-name"
-              value={accountName}
-              onChange={(e) => setAccountName(e.target.value)}
-              placeholder="Beneficiary account name"
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="acct-num">Account number</Label>
-            <Input
-              id="acct-num"
-              value={accountNumber}
-              onChange={(e) => setAccountNumber(e.target.value)}
-              className="font-mono"
-              placeholder="123-456789-0"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="bank">Bank</Label>
-              <Input
-                id="bank"
-                value={bank}
-                onChange={(e) => setBank(e.target.value)}
-                placeholder="DBS"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="swift">Swift code</Label>
-              <Input
-                id="swift"
-                value={swift}
-                onChange={(e) => setSwift(e.target.value)}
-                className="font-mono"
-                placeholder="DBSSSGSG"
-              />
-            </div>
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="addr">Beneficiary address</Label>
-            <Input
-              id="addr"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="1 Marina Bay, Singapore"
-            />
-          </div>
-        </div>
-
-        <div className="rounded-md border bg-muted/50 p-3">
-          <div className="flex items-center gap-2">
-            <ShieldCheckIcon className="size-4 text-muted-foreground" />
-            <MonoLabel>Maker-checker preview</MonoLabel>
-          </div>
-          <p className="mt-2 text-sm">
-            Submitted by <span className="font-medium">Ming Miin</span> → Awaiting
-            approval from checker.
-          </p>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={submit}>Submit for approval</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  )
-}
 
 // ---------------------------------------------------------------------------
 // New payment (full page, ?action=new-payment)
