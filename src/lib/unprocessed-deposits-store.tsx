@@ -3,7 +3,7 @@ import type { UnprocessedRefund } from '@/data/fixtures'
 
 // Session-scoped store of transactions an operator has flagged as exceptions
 // from the Transactions page (returned payments to reprocess, suspicious
-// credits to refund). These surface in the Exceptions tab on the Payments page.
+// credits to refund). These surface in the Pending review tab on the Payments page.
 
 const STORAGE_KEY = 'portal-mockup:unprocessedDeposits'
 const EVENT = 'portal-mockup:unprocessed-deposits-updated'

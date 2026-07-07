@@ -285,14 +285,14 @@ export function TransactionsPage() {
       kind,
     })
     if (added) {
-      toast.success('Flagged as exception', {
+      toast.success('Flagged for review', {
         description:
           kind === 'refund'
-            ? `${t.id} moved to the Exceptions tab on the Payments page for refund review.`
-            : `${t.id} moved to the Exceptions tab on the Payments page for reprocessing.`,
+            ? `${t.id} moved to the Pending review tab on the Payments page for refund review.`
+            : `${t.id} moved to the Pending review tab on the Payments page for reprocessing.`,
       })
     } else {
-      toast.info('Already in exceptions', {
+      toast.info('Already pending review', {
         description: `${t.id} is already awaiting review.`,
       })
     }

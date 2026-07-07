@@ -289,6 +289,8 @@ export function PaymentsPage() {
 
 const PAYMENT_TYPES = ['FAST', 'TT', 'SEPA', 'ACH', 'FPS', 'INTERNAL'] as const
 const CURRENCIES = ['SGD', 'USD', 'EUR', 'GBP', 'HKD'] as const
+// Who bears bank charges on TT payments.
+const CHARGE_BEARERS = ['SENDER', 'RECEIVER', 'SHARED'] as const
 
 const BANK_FILTER_OPTIONS = [
   { value: 'DBS', label: 'DBS', accountIds: ['intacc_0KT8ZSCRKXP0O', 'intacc_0KT8ZSDEKXCAN'] },
@@ -493,10 +495,10 @@ function PaymentsMain() {
             Completed ({counts.completed})
           </TabsTrigger>
           <TabsTrigger value="review">
-            Pending review ({pendingReview.length})
+            Pending approval ({pendingReview.length})
           </TabsTrigger>
           <TabsTrigger value="exceptions">
-            Exceptions ({allUnprocessed.length})
+            Pending review ({allUnprocessed.length})
           </TabsTrigger>
         </TabsList>
 
@@ -821,15 +823,16 @@ function PaymentsMain() {
       </Card>
         </TabsContent>
 
-        {/* Pending review — maker-checker queue for the checker role */}
+        {/* Pending approval — maker-checker queue for the checker role */}
         <TabsContent value="review" className="space-y-3 pt-4">
           <div>
             <div className="text-[0.7rem] font-medium uppercase tracking-wider text-muted-foreground">
-              Pending review ({pendingReview.length})
+              Pending approval ({pendingReview.length})
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
-              Refunds and retries submitted by makers, awaiting checker
-              approval. Makers cannot approve their own submissions.
+              Payments, refunds, retries, returns, and reversals submitted by
+              makers — a checker must approve or reject them. Makers cannot
+              approve their own submissions.
             </p>
           </div>
           {user.role !== 'CHECKER' && (
@@ -979,13 +982,12 @@ function PaymentsMain() {
           </Card>
         </TabsContent>
 
-        {/* Exceptions — transactions flagged for review: returned payments to
-            reprocess, suspicious credits to refund */}
+        {/* Pending review — transactions flagged as returns/reversals */}
         <TabsContent value="exceptions" className="space-y-3 pt-4">
           <div className="flex items-center justify-between">
             <div>
               <div className="text-[0.7rem] font-medium uppercase tracking-wider text-muted-foreground">
-                Exceptions requiring review ({allUnprocessed.length})
+                Pending review ({allUnprocessed.length})
               </div>
               <p className="mt-1 text-sm text-muted-foreground">
                 Transactions flagged as Returns (suspicious credits) or
@@ -1094,7 +1096,7 @@ function PaymentsMain() {
                         colSpan={7}
                         className="py-10 text-center text-sm text-muted-foreground"
                       >
-                        No exceptions — nothing needs review right now.
+                        Nothing pending review right now.
                       </TableCell>
                     </TableRow>
                   )}
@@ -2168,6 +2170,7 @@ function NewPaymentPage() {
   const [amount, setAmount] = React.useState('')
   const [currency, setCurrency] = React.useState<string>('SGD')
   const [paymentType, setPaymentType] = React.useState<string>('FAST')
+  const [chargeBearer, setChargeBearer] = React.useState<string>('SENDER')
   const [notes, setNotes] = React.useState('')
   const [attachedFiles, setAttachedFiles] = React.useState<File[]>([])
   const fileInputRef = React.useRef<HTMLInputElement>(null)
@@ -2565,6 +2568,25 @@ function NewPaymentPage() {
               </Select>
             </div>
           </div>
+          {paymentType === 'TT' && (
+            <div className="space-y-1.5">
+              <Label>Bank charge bearer</Label>
+              <Select value={chargeBearer} onValueChange={setChargeBearer}>
+                <SelectTrigger className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CHARGE_BEARERS.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[0.7rem] text-muted-foreground">
+                Who bears the bank charges for this TT payment — you (SENDER),
+                the beneficiary (RECEIVER), or split (SHARED).
+              </p>
+            </div>
+          )}
           <div className="space-y-1.5">
             <Label>Notes</Label>
             <Textarea
@@ -2831,6 +2853,7 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
   const [amount, setAmount] = React.useState(payment?.amount ?? '')
   const [currency, setCurrency] = React.useState(payment?.currency ?? 'SGD')
   const [paymentType, setPaymentType] = React.useState(payment?.type ?? 'FAST')
+  const [chargeBearer, setChargeBearer] = React.useState<string>('SENDER')
   const [notes, setNotes] = React.useState('')
   const [attachedFiles, setAttachedFiles] = React.useState<File[]>([])
   const fileInputRef = React.useRef<HTMLInputElement>(null)
@@ -3297,6 +3320,23 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
                   </Select>
                 </div>
               </div>
+              {paymentType === 'TT' && (
+                <div className="space-y-1.5">
+                  <Label>Bank charge bearer</Label>
+                  <Select value={chargeBearer} onValueChange={setChargeBearer}>
+                    <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {CHARGE_BEARERS.map((c) => (
+                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[0.7rem] text-muted-foreground">
+                    Who bears the bank charges for this TT payment — you
+                    (SENDER), the beneficiary (RECEIVER), or split (SHARED).
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
