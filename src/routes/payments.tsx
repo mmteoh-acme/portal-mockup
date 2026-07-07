@@ -253,7 +253,7 @@ export function PaymentsPage() {
 // Create payment dialog
 // ---------------------------------------------------------------------------
 
-const PAYMENT_TYPES = ['FAST', 'SWIFT', 'SEPA', 'ACH', 'FPS', 'INTERNAL'] as const
+const PAYMENT_TYPES = ['FAST', 'TT', 'SEPA', 'ACH', 'FPS', 'INTERNAL'] as const
 const CURRENCIES = ['SGD', 'USD', 'EUR', 'GBP', 'HKD'] as const
 
 const BANK_FILTER_OPTIONS = [
@@ -2073,16 +2073,56 @@ function NewPaymentPage() {
   const { entity } = useEntity()
 
   const [linkedId, setLinkedId] = React.useState('')
+  const [linkQuery, setLinkQuery] = React.useState('')
   const [receiverName, setReceiverName] = React.useState('')
   const [receiverBic, setReceiverBic] = React.useState('')
   const [receiverAccount, setReceiverAccount] = React.useState('')
   const [receiverRouting, setReceiverRouting] = React.useState('')
+  // Receiver address — required/optional per the SCB SG payment rules
+  // (docs.tryacme.com/guides/scb-sg-api-payments): city + country required.
+  const [addrLine1, setAddrLine1] = React.useState('')
+  const [addrLine2, setAddrLine2] = React.useState('')
+  const [addrCity, setAddrCity] = React.useState('')
+  const [addrState, setAddrState] = React.useState('')
+  const [addrPostal, setAddrPostal] = React.useState('')
+  const [addrCountry, setAddrCountry] = React.useState('SG')
   const [amount, setAmount] = React.useState('')
   const [currency, setCurrency] = React.useState<string>('SGD')
   const [paymentType, setPaymentType] = React.useState<string>('FAST')
   const [notes, setNotes] = React.useState('')
   const [attachedFiles, setAttachedFiles] = React.useState<File[]>([])
   const fileInputRef = React.useRef<HTMLInputElement>(null)
+
+  // Look up existing transactions and payments to link this payment to.
+  const linkResults = React.useMemo(() => {
+    const needle = linkQuery.trim().toLowerCase()
+    if (!needle) return []
+    const txns = (entity ? entityTransactions(entity) : [])
+      .filter(
+        (t) =>
+          t.id.toLowerCase().includes(needle) ||
+          t.senderName.toLowerCase().includes(needle),
+      )
+      .map((t) => ({
+        id: t.id,
+        kind: 'TXN' as const,
+        label: t.senderName,
+        amount: `${t.currency} ${t.amount}`,
+      }))
+    const pymts = allPayments
+      .filter(
+        (p) =>
+          p.id.toLowerCase().includes(needle) ||
+          p.receiverName.toLowerCase().includes(needle),
+      )
+      .map((p) => ({
+        id: p.id,
+        kind: 'PYMT' as const,
+        label: p.receiverName,
+        amount: `${p.currency} ${p.amount}`,
+      }))
+    return [...txns, ...pymts].slice(0, 6)
+  }, [entity, linkQuery])
 
   // Balances are fetched on demand — the balances API is billed per call.
   const [balances, setBalances] = React.useState<Account[] | null>(null)
@@ -2121,7 +2161,9 @@ function NewPaymentPage() {
     receiverName.trim() !== '' &&
     amount.trim() !== '' &&
     receiverAccount.trim() !== '' &&
-    receiverBic.trim() !== ''
+    receiverBic.trim() !== '' &&
+    addrCity.trim() !== '' &&
+    addrCountry.trim() !== ''
 
   const submit = () => {
     toast.success('Payment submitted for approval', {
@@ -2179,15 +2221,72 @@ function NewPaymentPage() {
             <span className="text-sm">{todayDisplay()}</span>
           </ContextRow>
           <ContextRow label="Link to transaction / payment ID">
-            <Input
-              value={linkedId}
-              onChange={(e) => setLinkedId(e.target.value)}
-              placeholder="txn_01J9KA2M3X4P5 or pymt_..."
-              className="h-8 max-w-xs font-mono text-sm"
-            />
+            {linkedId ? (
+              <div className="inline-flex items-center gap-2 rounded border bg-muted/40 px-2.5 py-1.5">
+                <Mono>{linkedId}</Mono>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLinkedId('')
+                    setLinkQuery('')
+                  }}
+                  className="rounded p-0.5 hover:bg-muted"
+                  aria-label="Remove linked record"
+                >
+                  <XIcon className="size-3 text-muted-foreground" />
+                </button>
+              </div>
+            ) : (
+              <div className="max-w-md space-y-1">
+                <Input
+                  value={linkQuery}
+                  onChange={(e) => setLinkQuery(e.target.value)}
+                  placeholder="Search by txn / payment ID or counterparty name…"
+                  className="h-8 text-sm"
+                />
+                {linkResults.length > 0 && (
+                  <div className="divide-y overflow-hidden rounded-md border bg-background shadow-sm">
+                    {linkResults.map((r) => (
+                      <button
+                        key={r.id}
+                        type="button"
+                        className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-muted/40"
+                        onClick={() => {
+                          setLinkedId(r.id)
+                          setLinkQuery('')
+                        }}
+                      >
+                        <span
+                          className={
+                            r.kind === 'TXN'
+                              ? 'shrink-0 rounded border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[0.6rem] font-medium uppercase tracking-wider text-blue-700'
+                              : 'shrink-0 rounded border border-violet-200 bg-violet-50 px-1.5 py-0.5 text-[0.6rem] font-medium uppercase tracking-wider text-violet-700'
+                          }
+                        >
+                          {r.kind}
+                        </span>
+                        <Mono className="shrink-0 text-[0.7rem]">{r.id}</Mono>
+                        <span className="min-w-0 flex-1 truncate text-xs">
+                          {r.label}
+                        </span>
+                        <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                          {r.amount}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {linkQuery.trim() !== '' && linkResults.length === 0 && (
+                  <p className="text-[0.7rem] text-muted-foreground">
+                    No matching transactions or payments.
+                  </p>
+                )}
+              </div>
+            )}
           </ContextRow>
           <p className="text-[0.7rem] text-muted-foreground">
-            Optional — attach this payment to an existing transaction or payment record.
+            Optional — search and select an existing transaction or payment to
+            link this payment to.
           </p>
         </CardContent>
       </Card>
@@ -2220,24 +2319,30 @@ function NewPaymentPage() {
             </Button>
           </div>
           {balances && (
-            <div className="space-y-1.5 rounded-md border bg-muted/20 px-4 py-3">
+            <div className="divide-y rounded-md border bg-muted/20 px-4">
               {balances.map((a) => (
                 <div
                   key={a.id}
-                  className="flex items-center justify-between gap-4 text-sm"
+                  className="flex items-center justify-between gap-4 py-2.5 text-sm"
                 >
-                  <div className="min-w-0">
-                    <span>{a.name}</span>
-                    <span className="ml-2 font-mono text-[0.7rem] text-muted-foreground">
-                      {a.id}
-                    </span>
+                  <div className="min-w-0 space-y-0.5">
+                    <div>
+                      <span className="font-medium">{a.name}</span>
+                      <span className="ml-2 font-mono text-[0.7rem] text-muted-foreground">
+                        {a.id}
+                      </span>
+                    </div>
+                    <div className="font-mono text-[0.68rem] text-muted-foreground">
+                      Acct {a.number} · BIC {a.swiftBic || '—'} · IBAN{' '}
+                      {a.iban || '—'}
+                    </div>
                   </div>
                   <span className="tabular-nums font-medium whitespace-nowrap">
                     {formatMoney(a.currency, a.lastBalance)}
                   </span>
                 </div>
               ))}
-              <p className="pt-1 text-[0.65rem] text-muted-foreground">
+              <p className="py-2 text-[0.65rem] text-muted-foreground">
                 As of: {balancesAsOf}
               </p>
             </div>
@@ -2340,6 +2445,96 @@ function NewPaymentPage() {
               placeholder="004"
               className="font-mono"
             />
+          </div>
+
+          {/* Receiver address — required/optional per SCB SG payment rules */}
+          <div className="space-y-1 pt-2">
+            <div className="text-[0.7rem] font-medium uppercase tracking-wider text-muted-foreground">
+              Receiver address
+            </div>
+            <p className="text-xs text-muted-foreground">
+              City and country are required. Other fields are optional but
+              improve straight-through processing.
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <Label>
+              Address line 1{' '}
+              <span className="font-normal text-muted-foreground">(optional)</span>
+            </Label>
+            <Input
+              value={addrLine1}
+              onChange={(e) => setAddrLine1(e.target.value)}
+              placeholder="20 Main Street"
+              maxLength={70}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>
+              Address line 2{' '}
+              <span className="font-normal text-muted-foreground">(optional)</span>
+            </Label>
+            <Input
+              value={addrLine2}
+              onChange={(e) => setAddrLine2(e.target.value)}
+              placeholder="Unit #03-45"
+              maxLength={70}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label>
+                City <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                value={addrCity}
+                onChange={(e) => setAddrCity(e.target.value)}
+                placeholder="Singapore"
+                maxLength={35}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>
+                State{' '}
+                <span className="font-normal text-muted-foreground">(optional)</span>
+              </Label>
+              <Input
+                value={addrState}
+                onChange={(e) => setAddrState(e.target.value)}
+                placeholder=""
+                maxLength={35}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label>
+                Postal code{' '}
+                <span className="font-normal text-muted-foreground">(optional)</span>
+              </Label>
+              <Input
+                value={addrPostal}
+                onChange={(e) => setAddrPostal(e.target.value)}
+                placeholder="11111"
+                maxLength={16}
+                className="font-mono"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>
+                Country <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                value={addrCountry}
+                onChange={(e) => setAddrCountry(e.target.value.toUpperCase())}
+                placeholder="SG"
+                maxLength={2}
+                className="w-24 font-mono uppercase"
+              />
+              <p className="text-[0.65rem] text-muted-foreground">
+                ISO 3166-1 alpha-2 code
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>
