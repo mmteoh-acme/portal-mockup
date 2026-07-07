@@ -94,6 +94,9 @@ export function StackedBarChart({
   const ticks = 4
   const tickVals = Array.from({ length: ticks + 1 }, (_, i) => (max / ticks) * i)
 
+  // Thin out x labels when there are many bars (e.g. 30-day view).
+  const labelEvery = data.length > 12 ? Math.ceil(data.length / 10) : 1
+
   return (
     <svg
       viewBox={`0 0 ${W} ${H}`}
@@ -164,15 +167,17 @@ export function StackedBarChart({
                 {totalFormatter(total)}
               </text>
             )}
-            <text
-              x={cx}
-              y={H - padB + 16}
-              textAnchor="middle"
-              className="fill-foreground"
-              style={{ fontSize: 11 }}
-            >
-              {d.label}
-            </text>
+            {i % labelEvery === 0 && (
+              <text
+                x={cx}
+                y={H - padB + 16}
+                textAnchor="middle"
+                className="fill-foreground"
+                style={{ fontSize: 11 }}
+              >
+                {d.label}
+              </text>
+            )}
           </g>
         )
       })}

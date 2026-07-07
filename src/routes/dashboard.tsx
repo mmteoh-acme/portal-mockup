@@ -132,7 +132,11 @@ function BalancesModule({
   sideChart?: React.ReactNode
 }) {
   const groups = React.useMemo(() => entityBalancesByCurrency(entity), [entity])
-  const history = React.useMemo(() => entityBalanceHistory(entity), [entity])
+  const [histRange, setHistRange] = React.useState<'10d' | '30d'>('10d')
+  const history = React.useMemo(
+    () => entityBalanceHistory(entity, histRange === '30d' ? 30 : 10),
+    [entity, histRange],
+  )
   const [currency, setCurrency] = React.useState(
     () => groups[0]?.currency ?? 'SGD',
   )
@@ -296,12 +300,16 @@ function BalancesModule({
                     ))}
                   </SelectContent>
                 </Select>
-                <Select value="past10" onValueChange={() => {}}>
+                <Select
+                  value={histRange}
+                  onValueChange={(v) => setHistRange(v as '10d' | '30d')}
+                >
                   <SelectTrigger size="sm" className="h-8 font-normal">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="past10">Past 10 Days</SelectItem>
+                    <SelectItem value="10d">Past 10 Days</SelectItem>
+                    <SelectItem value="30d">Past 30 Days</SelectItem>
                   </SelectContent>
                 </Select>
                 {currencySelect}
@@ -312,8 +320,10 @@ function BalancesModule({
                 data={chartData}
                 series={series}
                 height={280}
-                totalFormatter={(total) =>
-                  formatCompactMoney(group.currency, total)
+                totalFormatter={
+                  histRange === '10d'
+                    ? (total) => formatCompactMoney(group.currency, total)
+                    : undefined
                 }
               />
             </div>
