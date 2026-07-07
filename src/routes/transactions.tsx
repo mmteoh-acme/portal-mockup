@@ -146,6 +146,79 @@ function parseTxnDate(raw: string): Date | null {
   return isNaN(d.getTime()) ? null : d
 }
 
+// Display date "1 Jun, 2026" → ISO "2026-06-01".
+function isoTxnDate(raw: string): string {
+  const d = parseTxnDate(raw)
+  if (!d) return raw
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${m}-${day}`
+}
+
+// Reconstruct the raw API payload for a transaction, mirroring the
+// GET /transactions response shape surfaced by the Acme API.
+function buildRawPayload(
+  t: Txn,
+  origin: { number: string; bic: string } | undefined,
+): string {
+  const date = isoTxnDate(t.transactionDate)
+  const acctSvcrRef = t.bankRef.replace(/\D/g, '') || '133042890'
+  const payload = {
+    data: [
+      {
+        id: t.id,
+        dataSource: t.dataSource,
+        transactionType: t.transactionType,
+        transactionStatus: 'BOOKED',
+        bankReference: t.bankRef,
+        transactionReferences: [
+          {
+            dataSource: 'CAMT053',
+            name: 'acctSvcrRef',
+            value: acctSvcrRef,
+          },
+        ],
+        customerReference: t.customerRef,
+        remittanceInformation: t.remittanceInfo,
+        additionalInformation: t.additionalInformation,
+        amount: Number(t.amount.replace(/,/g, '')),
+        currency: t.currency,
+        direction: t.direction,
+        currencyExchange: {
+          sourceCurrency: t.currency,
+          targetCurrency: 'USD',
+          exchangeRate: 0.770742,
+        },
+        counterparty: {
+          name: t.senderName,
+          bank: t.senderBank || null,
+          localRoutingIdentifier: '003',
+          bankName: t.senderBank || null,
+          bankAccountNumber: null,
+        },
+        bankAccount: {
+          id: t.internalAccountId,
+          bank: origin?.bic ?? null,
+          bankAccountNumber: origin?.number ?? null,
+        },
+        virtualAccountNumber: null,
+        transactionDate: date,
+        bookingDate: {
+          date,
+          time: '12:34:56.789',
+          offset: '+08:00',
+          tz: 'Asia/Singapore',
+        },
+        statementId: 'stmt_0KP0KSCSSM7V8',
+        createdAt: `${date}T00:00:00.000000Z`,
+        updatedAt: `${date}T00:00:00.000000Z`,
+      },
+    ],
+    hasMore: true,
+  }
+  return JSON.stringify(payload, null, 2)
+}
+
 function inRange(dateStr: string, range: DateRange | undefined): boolean {
   if (!range?.from) return true
   const d = parseTxnDate(dateStr)
@@ -193,6 +266,7 @@ export function TransactionsPage() {
   const [accountId, setAccountId] = React.useState<string>('all')
   const [direction, setDirection] = React.useState<DirectionFilter>('all')
   const [currency, setCurrency] = React.useState<CurrencyFilter>('all')
+  const [txnType, setTxnType] = React.useState<string>('all')
   const [openTxn, setOpenTxn] = React.useState<Txn | null>(null)
   const [page, setPage] = React.useState(1)
 
@@ -203,10 +277,18 @@ export function TransactionsPage() {
     return Array.from(set).sort()
   }, [rows])
 
+  // Distinct transaction types (ACT, FAST, MEPS, OTHERS, …) for the Type filter.
+  const txnTypes = React.useMemo<string[]>(() => {
+    const set = new Set<string>()
+    for (const r of rows) if (r.transactionType) set.add(r.transactionType)
+    return Array.from(set).sort()
+  }, [rows])
+
   React.useEffect(() => {
     setSelectedBanks(new Set(bankNames))
     setAccountId('all')
     setCurrency('all')
+    setTxnType('all')
   }, [entity?.id, bankNames])
 
   // Map each entity account id → its bank's name. Used by the Bank filter to
@@ -228,6 +310,20 @@ export function TransactionsPage() {
     for (const b of entity?.banks ?? []) {
       for (const a of b.accounts) {
         map[a.id] = a.name
+      }
+    }
+    return map
+  }, [entity?.banks])
+
+  // Map each entity account id → originating account number + bank BIC.
+  // Used by the Originating account / Originating bank table columns.
+  const accountIdToOrigin = React.useMemo<
+    Record<string, { number: string; bic: string }>
+  >(() => {
+    const map: Record<string, { number: string; bic: string }> = {}
+    for (const b of entity?.banks ?? []) {
+      for (const a of b.accounts) {
+        map[a.id] = { number: a.number, bic: a.swiftBic }
       }
     }
     return map
@@ -255,15 +351,16 @@ export function TransactionsPage() {
       if (accountId !== 'all' && t.internalAccountId !== accountId) return false
       if (direction !== 'all' && t.direction !== direction) return false
       if (currency !== 'all' && t.currency !== currency) return false
+      if (txnType !== 'all' && t.transactionType !== txnType) return false
       return true
     })
-  }, [rows, q, dateRange, selectedBanks, accountId, direction, currency, accountIdToBankName])
+  }, [rows, q, dateRange, selectedBanks, accountId, direction, currency, txnType, accountIdToBankName])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
 
   React.useEffect(() => {
     setPage(1)
-  }, [q, dateRange, selectedBanks, accountId, direction, currency, entity?.id])
+  }, [q, dateRange, selectedBanks, accountId, direction, currency, txnType, entity?.id])
 
   React.useEffect(() => {
     if (page > totalPages) setPage(totalPages)
@@ -479,6 +576,23 @@ export function TransactionsPage() {
                 ))}
               </SelectContent>
             </Select>
+
+            <Select value={txnType} onValueChange={setTxnType}>
+              <SelectTrigger size="sm" className="h-8 gap-2 font-normal">
+                <span className="text-[0.7rem] uppercase tracking-wider text-muted-foreground">
+                  Type:
+                </span>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                {txnTypes.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {t}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       )}
@@ -503,6 +617,12 @@ export function TransactionsPage() {
                   </TableHead>
                   <TableHead className="w-36 text-[0.7rem] uppercase tracking-wider">
                     Counterparty
+                  </TableHead>
+                  <TableHead className="w-32 text-[0.7rem] uppercase tracking-wider">
+                    Originating account #
+                  </TableHead>
+                  <TableHead className="w-32 text-[0.7rem] uppercase tracking-wider">
+                    Originating bank
                   </TableHead>
                   <TableHead className="w-36 text-[0.7rem] uppercase tracking-wider">
                     Customer reference
@@ -561,6 +681,12 @@ export function TransactionsPage() {
                       title={t.senderName}
                     >
                       {t.senderName}
+                    </TableCell>
+                    <TableCell className="font-mono text-[0.72rem] text-muted-foreground whitespace-nowrap">
+                      {accountIdToOrigin[t.internalAccountId]?.number || '—'}
+                    </TableCell>
+                    <TableCell className="font-mono text-[0.72rem] text-muted-foreground whitespace-nowrap">
+                      {accountIdToOrigin[t.internalAccountId]?.bic || '—'}
                     </TableCell>
                     <TableCell
                       className="max-w-[9rem] truncate"
@@ -636,7 +762,7 @@ export function TransactionsPage() {
                 {filtered.length === 0 && (
                   <TableRow>
                     <TableCell
-                      colSpan={10}
+                      colSpan={12}
                       className="py-10 text-center text-sm text-muted-foreground"
                     >
                       {rows.length === 0
@@ -748,6 +874,14 @@ export function TransactionsPage() {
                   <p className="break-words text-sm text-foreground/90">
                     {openTxn.remittanceInfo || '—'}
                   </p>
+                </Field>
+                <Field label="Raw payload" className="col-span-2">
+                  <pre className="max-h-96 overflow-auto rounded border bg-muted/30 p-3 font-mono text-[0.7rem] leading-relaxed text-foreground/90">
+                    {buildRawPayload(
+                      openTxn,
+                      accountIdToOrigin[openTxn.internalAccountId],
+                    )}
+                  </pre>
                 </Field>
               </div>
             </>
