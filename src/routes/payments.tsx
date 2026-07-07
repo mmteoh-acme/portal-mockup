@@ -11,6 +11,8 @@ import {
   RotateCcwIcon,
   PaperclipIcon,
   XIcon,
+  WalletIcon,
+  RefreshCwIcon,
 } from 'lucide-react'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { Card, CardContent } from '@/components/ui/card'
@@ -78,9 +80,12 @@ import {
 import { useUnprocessedDeposits } from '@/lib/unprocessed-deposits-store'
 import {
   allPayments,
+  entityAccounts,
   entityTransactions,
+  formatMoney,
   paymentRequiresAttention,
   unprocessedRefunds,
+  type Account,
   type Payment,
   type Txn,
   type UnprocessedRefund,
@@ -120,6 +125,97 @@ function parsePaymentDate(s: string): Date | null {
 function todayDisplay(): string {
   const d = new Date('2026-06-01T00:00:00')
   return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`
+}
+
+// Display date "17 May, 2026, 02:04" → ISO "2026-05-17".
+function isoPaymentDate(raw: string): string {
+  const d = parsePaymentDate(raw)
+  if (!d) return raw
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${m}-${day}`
+}
+
+// Reconstruct the raw API payload for a payment, mirroring the
+// GET /payments/{id} response shape surfaced by the Acme API.
+function buildPaymentRawPayload(
+  p: Payment,
+  refund: SubmittedRefund | null,
+  retry: SubmittedRetry | null,
+): string {
+  const created = isoPaymentDate(p.createdAt)
+  const updated = isoPaymentDate(p.updatedAt || p.createdAt)
+  const pending = refund ?? retry
+  const status = pending
+    ? pending.status === 'Pending approval'
+      ? 'PENDING_APPROVAL'
+      : pending.status === 'Approved'
+        ? 'COMPLETED'
+        : 'REJECTED'
+    : p.status
+  const payload = {
+    id: p.id,
+    type: p.type,
+    amount: Number(p.amount.replace(/,/g, '')) || p.amount,
+    currency: p.currency,
+    customerReference: p.customerReference || null,
+    bankReference: null,
+    paymentDetails: p.paymentDetails || null,
+    senderAccountId: p.senderAccountId || null,
+    senderAccountCurrency: p.currency,
+    bankChargeBearer: 'SENDER',
+    receiver: {
+      name: p.receiverName || null,
+      bank: p.receiverBank || null,
+      localRoutingIdentifier: p.receiverLocalRoutingIdentifier || null,
+      bankAccountNumber: p.receiverBankAccountNumber || null,
+      iban: null,
+      proxyType: null,
+      proxyValue: null,
+      address: {
+        line1: null,
+        line2: null,
+        city: 'Singapore',
+        state: '',
+        postalCode: null,
+        country: 'Singapore',
+      },
+    },
+    currencyExchange: null,
+    status,
+    ...(pending
+      ? {
+          review: {
+            requestedBy: pending.requester,
+            approvedAt:
+              pending.status === 'Approved'
+                ? (pending.reviewer?.at ?? null)
+                : null,
+            approvedBy:
+              pending.status === 'Approved'
+                ? (pending.reviewer?.name ?? null)
+                : null,
+            rejectedAt:
+              pending.status === 'Rejected'
+                ? (pending.reviewer?.at ?? null)
+                : null,
+            rejectedBy:
+              pending.status === 'Rejected'
+                ? (pending.reviewer?.name ?? null)
+                : null,
+            rejectionReason: null,
+            expiresAt: `${created}T23:59:59Z`,
+          },
+        }
+      : {}),
+    paymentAdviceEmails: ['finance@tryacme.com'],
+    ...(p.status === 'FAILED' && p.resultCode
+      ? { resultCode: p.resultCode }
+      : {}),
+    createdAt: `${created}T00:00:00.000000Z`,
+    updatedAt: `${updated}T00:00:00.000000Z`,
+  }
+  return JSON.stringify(payload, null, 2)
 }
 
 export function PaymentsPage() {
@@ -197,9 +293,12 @@ function PaymentsMain() {
   const submittedRetries = useSubmittedRetries()
   const { user } = useUser()
   const navigate = useNavigate()
-  const [tab, setTab] = React.useState<FilterKey | 'exceptions'>('all')
-  // Status filter derived from the active tab; exceptions tab has no status.
-  const filter: FilterKey = tab === 'exceptions' ? 'all' : tab
+  const [tab, setTab] = React.useState<
+    FilterKey | 'exceptions' | 'review'
+  >('all')
+  // Status filter derived from the active tab; non-status tabs use 'all'.
+  const filter: FilterKey =
+    tab === 'exceptions' || tab === 'review' ? 'all' : tab
   const [filterCurrency, setFilterCurrency] = React.useState('')
   const [filterBank, setFilterBank] = React.useState('')
   const [filterAccount, setFilterAccount] = React.useState('')
@@ -215,6 +314,35 @@ function PaymentsMain() {
   const allUnprocessed = React.useMemo(
     () => [...storeDeposits, ...unprocessedRefunds],
     [storeDeposits],
+  )
+
+  // Maker-checker queue: submitted refunds/retries still awaiting a checker.
+  const pendingReview = React.useMemo(
+    () => [
+      ...submittedRefunds
+        .filter((r) => r.status === 'Pending approval')
+        .map((r) => ({
+          id: r.id,
+          kind: 'Refund' as const,
+          amount: r.amount,
+          currency: r.currency,
+          receiverName: r.receiverName,
+          requester: r.requester,
+          submittedAt: r.submittedAt,
+        })),
+      ...submittedRetries
+        .filter((r) => r.status === 'Pending approval')
+        .map((r) => ({
+          id: r.id,
+          kind: 'Retry' as const,
+          amount: r.amount,
+          currency: r.currency,
+          receiverName: r.receiverName,
+          requester: r.requester,
+          submittedAt: r.submittedAt,
+        })),
+    ],
+    [submittedRefunds, submittedRetries],
   )
 
   // Lookup map: payment row id -> underlying refund (for refund-specific UI).
@@ -309,7 +437,9 @@ function PaymentsMain() {
 
       <Tabs
         value={tab}
-        onValueChange={(v) => setTab(v as FilterKey | 'exceptions')}
+        onValueChange={(v) =>
+          setTab(v as FilterKey | 'exceptions' | 'review')
+        }
       >
         <TabsList>
           <TabsTrigger value="all">All ({counts.all})</TabsTrigger>
@@ -318,12 +448,18 @@ function PaymentsMain() {
           <TabsTrigger value="completed">
             Completed ({counts.completed})
           </TabsTrigger>
+          <TabsTrigger value="review">
+            Pending review ({pendingReview.length})
+          </TabsTrigger>
           <TabsTrigger value="exceptions">
             Exceptions ({allUnprocessed.length})
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value={tab === 'exceptions' ? '__payments' : tab} className="space-y-6 pt-4">
+        <TabsContent
+          value={tab === 'exceptions' || tab === 'review' ? '__payments' : tab}
+          className="space-y-6 pt-4"
+        >
       {/* Filters */}
       <div className="flex flex-wrap items-end gap-2">
         <div className="flex flex-col gap-1">
@@ -484,7 +620,7 @@ function PaymentsMain() {
                         )}
                       </TableCell>
                       <TableCell className="max-w-[220px]">
-                        {p.resultCode ? (
+                        {p.status === 'FAILED' && p.resultCode ? (
                           <span className="text-[0.7rem] uppercase tracking-wider text-muted-foreground">
                             {p.resultCode}
                           </span>
@@ -639,6 +775,158 @@ function PaymentsMain() {
           )}
         </CardContent>
       </Card>
+        </TabsContent>
+
+        {/* Pending review — maker-checker queue for the checker role */}
+        <TabsContent value="review" className="space-y-3 pt-4">
+          <div>
+            <div className="text-[0.7rem] font-medium uppercase tracking-wider text-muted-foreground">
+              Pending review ({pendingReview.length})
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Refunds and retries submitted by makers, awaiting checker
+              approval. Makers cannot approve their own submissions.
+            </p>
+          </div>
+          {user.role !== 'CHECKER' && (
+            <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2.5 text-xs text-amber-800">
+              <AlertCircleIcon className="mt-0.5 size-4 shrink-0" />
+              <span>
+                You're acting as a{' '}
+                <span className="font-medium uppercase tracking-wider">
+                  {user.role}
+                </span>
+                . Switch to{' '}
+                <span className="font-medium uppercase tracking-wider">
+                  CHECKER
+                </span>{' '}
+                from the profile menu to approve or reject these requests.
+              </span>
+            </div>
+          )}
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                      Request ID
+                    </TableHead>
+                    <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                      Type
+                    </TableHead>
+                    <TableHead className="text-right text-[0.7rem] uppercase tracking-wider">
+                      Amount
+                    </TableHead>
+                    <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                      Receiver
+                    </TableHead>
+                    <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                      Requested by
+                    </TableHead>
+                    <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                      Submitted at
+                    </TableHead>
+                    <TableHead className="w-[170px]"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pendingReview.map((r) => {
+                    const canAct =
+                      user.role === 'CHECKER' && r.requester !== user.name
+                    const approve = () => {
+                      if (r.kind === 'Retry') {
+                        approveRetry(r.id, { name: user.name, role: user.role })
+                      } else {
+                        approveRefund(r.id, { name: user.name, role: user.role })
+                      }
+                      toast.success(`${r.kind} approved`, {
+                        description: `${r.id} — approved by ${user.name}`,
+                      })
+                    }
+                    const reject = () => {
+                      if (r.kind === 'Retry') {
+                        rejectRetry(r.id, { name: user.name, role: user.role })
+                      } else {
+                        rejectRefund(r.id, { name: user.name, role: user.role })
+                      }
+                      toast.success(`${r.kind} rejected`, {
+                        description: `${r.id} — rejected by ${user.name}`,
+                      })
+                    }
+                    return (
+                      <TableRow key={r.id}>
+                        <TableCell>
+                          <Mono>{r.id}</Mono>
+                        </TableCell>
+                        <TableCell>
+                          <span
+                            className={
+                              r.kind === 'Retry'
+                                ? 'inline-flex items-center rounded border border-blue-300 bg-blue-50 px-1.5 py-0.5 text-[0.65rem] font-medium uppercase tracking-wider text-blue-700'
+                                : 'inline-flex items-center rounded border border-violet-300 bg-violet-50 px-1.5 py-0.5 text-[0.65rem] font-medium uppercase tracking-wider text-violet-700'
+                            }
+                          >
+                            {r.kind}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right text-sm tabular-nums whitespace-nowrap">
+                          {r.amount} {r.currency}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {r.receiverName || '—'}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {r.requester}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                          {r.submittedAt}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Button
+                              size="sm"
+                              className="h-7 px-2"
+                              disabled={!canAct}
+                              title={
+                                canAct
+                                  ? undefined
+                                  : r.requester === user.name
+                                    ? 'Makers cannot approve their own submissions'
+                                    : 'Only checkers can approve'
+                              }
+                              onClick={approve}
+                            >
+                              Approve
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 px-2"
+                              disabled={!canAct}
+                              onClick={reject}
+                            >
+                              Reject
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                  {pendingReview.length === 0 && (
+                    <TableRow>
+                      <TableCell
+                        colSpan={7}
+                        className="py-10 text-center text-sm text-muted-foreground"
+                      >
+                        No requests awaiting review.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Exceptions — transactions flagged for review: returned payments to
@@ -1124,7 +1412,7 @@ function PaymentDetailSheet({
                 <DetailRow
                   label="Result code"
                   value={
-                    payment.resultCode ? (
+                    payment.status === 'FAILED' && payment.resultCode ? (
                       <span className="text-xs uppercase tracking-wider">
                         {payment.resultCode}
                       </span>
@@ -1133,7 +1421,7 @@ function PaymentDetailSheet({
                     )
                   }
                 />
-                {payment.underlyingErrorMessage && (
+                {payment.status === 'FAILED' && payment.underlyingErrorMessage && (
                   <div className="mt-2 space-y-1">
                     <MonoLabel>Underlying error message</MonoLabel>
                     <pre className="whitespace-pre-wrap rounded-md border bg-muted/40 p-3 font-mono text-[0.7rem] text-foreground/90">
@@ -1191,6 +1479,12 @@ function PaymentDetailSheet({
                     </span>
                   }
                 />
+              </DetailSection>
+
+              <DetailSection title="Raw payload">
+                <pre className="max-h-96 overflow-auto rounded border bg-muted/30 p-3 font-mono text-[0.7rem] leading-relaxed text-foreground/90">
+                  {buildPaymentRawPayload(payment, refund, retry)}
+                </pre>
               </DetailSection>
 
               {paymentRequiresAttention(payment) && (
@@ -1776,6 +2070,7 @@ function NewRefundDialog({
 function NewPaymentPage() {
   const navigate = useNavigate()
   const { user } = useUser()
+  const { entity } = useEntity()
 
   const [linkedId, setLinkedId] = React.useState('')
   const [receiverName, setReceiverName] = React.useState('')
@@ -1788,6 +2083,33 @@ function NewPaymentPage() {
   const [notes, setNotes] = React.useState('')
   const [attachedFiles, setAttachedFiles] = React.useState<File[]>([])
   const fileInputRef = React.useRef<HTMLInputElement>(null)
+
+  // Balances are fetched on demand — the balances API is billed per call.
+  const [balances, setBalances] = React.useState<Account[] | null>(null)
+  const [balancesAsOf, setBalancesAsOf] = React.useState('')
+  const [loadingBalances, setLoadingBalances] = React.useState(false)
+
+  const getBalances = () => {
+    if (loadingBalances) return
+    setLoadingBalances(true)
+    window.setTimeout(() => {
+      setBalances(entity ? entityAccounts(entity) : [])
+      setBalancesAsOf(
+        `${new Date().toLocaleString('en-SG', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true,
+        })} SGT`,
+      )
+      setLoadingBalances(false)
+      toast.success('Balances retrieved', {
+        description: 'Latest available balances fetched from the bank.',
+      })
+    }, 900)
+  }
 
   const goBack = () =>
     navigate({
@@ -1867,6 +2189,59 @@ function NewPaymentPage() {
           <p className="text-[0.7rem] text-muted-foreground">
             Optional — attach this payment to an existing transaction or payment record.
           </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="space-y-4 px-6 py-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="space-y-1">
+              <div className="text-[0.7rem] font-medium uppercase tracking-wider text-muted-foreground">
+                Sender account balances
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Check available balances before executing a payment. The
+                balances API is billed per call, so retrieval is on demand.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5"
+              onClick={getBalances}
+              disabled={loadingBalances}
+            >
+              {loadingBalances ? (
+                <RefreshCwIcon className="size-3.5 animate-spin" />
+              ) : (
+                <WalletIcon className="size-3.5" />
+              )}
+              {loadingBalances ? 'Retrieving…' : 'Get balances'}
+            </Button>
+          </div>
+          {balances && (
+            <div className="space-y-1.5 rounded-md border bg-muted/20 px-4 py-3">
+              {balances.map((a) => (
+                <div
+                  key={a.id}
+                  className="flex items-center justify-between gap-4 text-sm"
+                >
+                  <div className="min-w-0">
+                    <span>{a.name}</span>
+                    <span className="ml-2 font-mono text-[0.7rem] text-muted-foreground">
+                      {a.id}
+                    </span>
+                  </div>
+                  <span className="tabular-nums font-medium whitespace-nowrap">
+                    {formatMoney(a.currency, a.lastBalance)}
+                  </span>
+                </div>
+              ))}
+              <p className="pt-1 text-[0.65rem] text-muted-foreground">
+                As of: {balancesAsOf}
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
