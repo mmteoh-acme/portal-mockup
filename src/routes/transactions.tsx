@@ -635,40 +635,40 @@ export function TransactionsPage() {
             <Table className="w-full table-fixed">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-44 text-[0.7rem] uppercase tracking-wider">
+                  <TableHead className="w-32 text-[0.7rem] uppercase tracking-wider whitespace-normal leading-snug">
                     Transaction ID
                   </TableHead>
-                  <TableHead className="w-28 text-right text-[0.7rem] uppercase tracking-wider">
+                  <TableHead className="w-28 text-right text-[0.7rem] uppercase tracking-wider whitespace-normal leading-snug">
                     Amount
                   </TableHead>
-                  <TableHead className="w-20 text-[0.7rem] uppercase tracking-wider">
+                  <TableHead className="w-20 text-[0.7rem] uppercase tracking-wider whitespace-normal leading-snug">
                     Currency
                   </TableHead>
-                  <TableHead className="w-32 text-[0.7rem] uppercase tracking-wider">
+                  <TableHead className="w-32 text-[0.7rem] uppercase tracking-wider whitespace-normal leading-snug">
                     Transaction date
                   </TableHead>
-                  <TableHead className="w-36 text-[0.7rem] uppercase tracking-wider">
+                  <TableHead className="w-36 text-[0.7rem] uppercase tracking-wider whitespace-normal leading-snug">
                     Counterparty
                   </TableHead>
-                  <TableHead className="w-32 text-[0.7rem] uppercase tracking-wider">
+                  <TableHead className="w-32 text-[0.7rem] uppercase tracking-wider whitespace-normal leading-snug">
                     Originating account #
                   </TableHead>
-                  <TableHead className="w-32 text-[0.7rem] uppercase tracking-wider">
+                  <TableHead className="w-32 text-[0.7rem] uppercase tracking-wider whitespace-normal leading-snug">
                     Originating bank
                   </TableHead>
-                  <TableHead className="w-36 text-[0.7rem] uppercase tracking-wider">
+                  <TableHead className="w-36 text-[0.7rem] uppercase tracking-wider whitespace-normal leading-snug">
                     Customer reference
                   </TableHead>
-                  <TableHead className="w-36 text-[0.7rem] uppercase tracking-wider">
+                  <TableHead className="w-36 text-[0.7rem] uppercase tracking-wider whitespace-normal leading-snug">
                     Bank reference
                   </TableHead>
-                  <TableHead className="w-28 text-[0.7rem] uppercase tracking-wider">
+                  <TableHead className="w-28 text-[0.7rem] uppercase tracking-wider whitespace-normal leading-snug">
                     Transaction type
                   </TableHead>
-                  <TableHead className="w-32 text-[0.7rem] uppercase tracking-wider">
+                  <TableHead className="w-32 text-[0.7rem] uppercase tracking-wider whitespace-normal leading-snug">
                     Created at
                   </TableHead>
-                  <TableHead className="w-12 text-[0.7rem] uppercase tracking-wider">
+                  <TableHead className="w-12 text-[0.7rem] uppercase tracking-wider whitespace-normal leading-snug">
                     Actions
                   </TableHead>
                 </TableRow>
@@ -680,8 +680,8 @@ export function TransactionsPage() {
                     className="cursor-pointer"
                     onClick={() => setOpenTxn(t)}
                   >
-                    <TableCell className="max-w-[12rem]">
-                      <Mono>{t.id}</Mono>
+                    <TableCell className="max-w-[8rem]" title={t.id}>
+                      <Mono className="block max-w-full truncate">{t.id}</Mono>
                       {accountIdToName[t.internalAccountId] && (
                         <div className="mt-0.5 truncate text-[0.7rem] text-muted-foreground">
                           {accountIdToName[t.internalAccountId]}
