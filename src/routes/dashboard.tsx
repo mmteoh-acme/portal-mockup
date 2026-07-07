@@ -28,15 +28,12 @@ import { MonoLabel, StatusPill } from '@/components/mono'
 import {
   BarChart,
   StackedBarChart,
-  HStackedBarChart,
   LineChart,
   ChartLegend,
   ChartCardShell,
 } from '@/components/charts'
 import { useEntity } from '@/lib/entity-context'
 import {
-  API_USAGE_PATHS,
-  apiKeyUsage,
   entityAccounts,
   entityBalanceHistory,
   entityBalancesByCurrency,
@@ -62,65 +59,6 @@ const BANK_COLORS = [
 ]
 
 const BALANCES_AS_OF = 'Jun 1, 2026, 09:00 AM SGT'
-
-// Canonical-path colors for the API volume chart.
-const PATH_COLORS = [
-  'var(--chart-3)', // get:/transactions
-  '#c084fc', // get:/payments/:id
-  '#f87171', // post:/payments
-  '#fb923c', // post:/payments/:id/approve
-  '#facc15', // post:/accounts/:id/balance
-  'var(--chart-2)', // get:/internal-accounts
-]
-
-// API key usage by canonical path — same card format as the Balances chart.
-function ApiVolumeCard() {
-  const [range, setRange] = React.useState<'10d' | '1m'>('10d')
-  const rows = React.useMemo(() => apiKeyUsage(range), [range])
-  const series = API_USAGE_PATHS.map((p, i) => ({
-    key: p,
-    label: p,
-    color: PATH_COLORS[i % PATH_COLORS.length],
-  }))
-
-  return (
-    <Card className="py-0">
-      <CardContent className="px-6 py-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold">API volume</h2>
-            <p className="text-xs text-muted-foreground">
-              API key usage by service (canonical path)
-            </p>
-          </div>
-          <Select
-            value={range}
-            onValueChange={(v) => setRange(v as '10d' | '1m')}
-          >
-            <SelectTrigger size="sm" className="h-8 font-normal">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="10d">Past 10 Days</SelectItem>
-              <SelectItem value="1m">Past 1 Month</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="mt-4 overflow-x-auto">
-          <HStackedBarChart
-            data={rows.map((r) => ({ label: r.key, values: r.counts }))}
-            series={series}
-          />
-        </div>
-        <div className="mt-3">
-          <ChartLegend
-            items={series.map((s) => ({ label: s.label, color: s.color }))}
-          />
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
 
 // Balance Stats + daily Balances chart, grouped by currency and bank.
 // `sideChart` renders next to the Balances chart in a 2-up grid.
@@ -456,9 +394,6 @@ export function DashboardPage() {
               </ChartCardShell>
             }
           />
-
-          {/* API volume by key and canonical path */}
-          <ApiVolumeCard />
 
           {/* Volume by bank + success rate by type */}
           <div className="grid gap-4 lg:grid-cols-2">

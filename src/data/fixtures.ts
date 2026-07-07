@@ -499,6 +499,49 @@ export const apiKeys: ApiKey[] = [
     updatedAt: '2026-05-26T15:18:00',
     createdAt: '2025-09-04T16:43:00',
   },
+  {
+    id: 'ak_04',
+    name: 'acme-payment-maker-live-key',
+    key: 'sk_live_8mKwP2*******************************4Xr9',
+    mode: 'LIVE',
+    enabled: true,
+    access: [
+      { group: 'Payments', authorities: ['Outbound payments', 'Payments batch'] },
+      { group: 'Transactions', authorities: ['Transaction reports and feeds'] },
+      { group: 'Refunds', authorities: ['Refunds'] },
+    ],
+    lastUsed: '2026-06-01T14:28:00',
+    updatedAt: '2026-04-09T17:37:00',
+    createdAt: '2026-04-09T17:37:00',
+  },
+  {
+    id: 'ak_05',
+    name: 'acme-payment-checker-live-key',
+    key: 'sk_live_5tQnR7*******************************9Zw2',
+    mode: 'LIVE',
+    enabled: true,
+    access: [
+      { group: 'Payments', authorities: ['Payments checker — approve/reject'] },
+      { group: 'Transactions', authorities: ['Transaction reports and feeds'] },
+    ],
+    lastUsed: '2026-06-01T14:32:00',
+    updatedAt: '2026-04-09T17:36:00',
+    createdAt: '2026-04-09T17:36:00',
+  },
+  {
+    id: 'ak_06',
+    name: 'acme-admin-portal-key',
+    key: 'sk_live_2vBcH4*******************************7Ln5',
+    mode: 'LIVE',
+    enabled: true,
+    access: [
+      { group: 'Transactions', authorities: ['Transaction reports and feeds', 'Account balance lookup'] },
+      { group: 'Payments', authorities: ['PayNow QR and MAX CI'] },
+    ],
+    lastUsed: '2026-05-30T16:45:00',
+    updatedAt: '2026-01-20T21:47:00',
+    createdAt: '2026-01-20T21:47:00',
+  },
 ]
 
 export const webhooks = [
