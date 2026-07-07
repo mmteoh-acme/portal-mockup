@@ -270,6 +270,34 @@ export function TransactionsPage() {
   const [openTxn, setOpenTxn] = React.useState<Txn | null>(null)
   const [page, setPage] = React.useState(1)
 
+  // Flag a transaction into the Exceptions queue (Payments page). Shared by
+  // the row actions menu and the detail sheet Actions button.
+  const flagException = (t: Txn, kind: 'refund' | 'reprocess') => {
+    const added = addUnprocessedDeposit({
+      originalTxnId: t.id,
+      customer: t.senderName,
+      amount: `${t.currency} ${t.amount}`,
+      reason:
+        kind === 'refund'
+          ? 'Suspicious credit — refund required'
+          : 'Returned by beneficiary bank — reprocess required',
+      date: t.transactionDate,
+      kind,
+    })
+    if (added) {
+      toast.success('Flagged as exception', {
+        description:
+          kind === 'refund'
+            ? `${t.id} moved to the Exceptions tab on the Payments page for refund review.`
+            : `${t.id} moved to the Exceptions tab on the Payments page for reprocessing.`,
+      })
+    } else {
+      toast.info('Already in exceptions', {
+        description: `${t.id} is already awaiting review.`,
+      })
+    }
+  }
+
   // Distinct currencies present in this entity's transactions, for the Currency filter.
   const currencies = React.useMemo<string[]>(() => {
     const set = new Set<string>()
@@ -731,50 +759,14 @@ export function TransactionsPage() {
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
-                            onSelect={() => {
-                              const added = addUnprocessedDeposit({
-                                originalTxnId: t.id,
-                                customer: t.senderName,
-                                amount: `${t.currency} ${t.amount}`,
-                                reason: 'Suspicious credit — refund required',
-                                date: t.transactionDate,
-                                kind: 'refund',
-                              })
-                              if (added) {
-                                toast.success('Flagged as exception', {
-                                  description: `${t.id} moved to the Exceptions tab on the Payments page for refund review.`,
-                                })
-                              } else {
-                                toast.info('Already in exceptions', {
-                                  description: `${t.id} is already awaiting review.`,
-                                })
-                              }
-                            }}
+                            onSelect={() => flagException(t, 'refund')}
                             disabled={t.direction !== 'CREDIT'}
                           >
                             <FlagIcon className="size-3.5" />
                             Flag: suspicious credit — refund
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onSelect={() => {
-                              const added = addUnprocessedDeposit({
-                                originalTxnId: t.id,
-                                customer: t.senderName,
-                                amount: `${t.currency} ${t.amount}`,
-                                reason: 'Returned by beneficiary bank — reprocess required',
-                                date: t.transactionDate,
-                                kind: 'reprocess',
-                              })
-                              if (added) {
-                                toast.success('Flagged as exception', {
-                                  description: `${t.id} moved to the Exceptions tab on the Payments page for reprocessing.`,
-                                })
-                              } else {
-                                toast.info('Already in exceptions', {
-                                  description: `${t.id} is already awaiting review.`,
-                                })
-                              }
-                            }}
+                            onSelect={() => flagException(t, 'reprocess')}
                             disabled={t.direction !== 'DEBIT'}
                           >
                             <FlagIcon className="size-3.5" />
@@ -842,7 +834,54 @@ export function TransactionsPage() {
               <SheetHeader>
                 <SheetTitle className="font-mono">{openTxn.id}</SheetTitle>
               </SheetHeader>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-4 px-4 pb-6">
+              {/* Headline + prominent Actions — mirrors the row actions menu */}
+              <div className="flex flex-wrap items-start justify-between gap-3 border-b px-4 pb-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl font-bold tracking-tight tabular-nums">
+                      {openTxn.direction === 'CREDIT' ? '+' : '-'}{' '}
+                      {openTxn.amount} {openTxn.currency}
+                    </span>
+                    <span
+                      className={
+                        openTxn.direction === 'CREDIT'
+                          ? 'inline-flex items-center rounded border border-emerald-300 bg-emerald-50 px-1.5 py-0.5 text-[0.65rem] font-medium uppercase tracking-wider text-emerald-700'
+                          : 'inline-flex items-center rounded border border-zinc-300 bg-zinc-100 px-1.5 py-0.5 text-[0.65rem] font-medium uppercase tracking-wider text-zinc-700'
+                      }
+                    >
+                      {openTxn.direction}
+                    </span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {openTxn.senderName} · {openTxn.transactionDate}
+                  </div>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button className="gap-1.5">
+                      Actions
+                      <ChevronDownIcon className="size-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-64">
+                    <DropdownMenuItem
+                      onSelect={() => flagException(openTxn, 'refund')}
+                      disabled={openTxn.direction !== 'CREDIT'}
+                    >
+                      <FlagIcon className="size-3.5" />
+                      Flag: suspicious credit — refund
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={() => flagException(openTxn, 'reprocess')}
+                      disabled={openTxn.direction !== 'DEBIT'}
+                    >
+                      <FlagIcon className="size-3.5" />
+                      Flag: returned payment — reprocess
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-4 px-4 pb-6 pt-4">
                 <Field label="Direction">
                   <span className="text-sm">{openTxn.direction}</span>
                 </Field>
