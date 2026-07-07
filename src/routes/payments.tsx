@@ -72,10 +72,13 @@ import {
   allPayments,
   entityAccounts,
   entityTransactions,
+  expiredApprovalsSeed,
   formatMoney,
   paymentRequiresAttention,
+  rejectedApprovalsSeed,
   unprocessedRefunds,
   type Account,
+  type ApprovalRecord,
   type Payment,
   type Txn,
   type UnprocessedRefund,
@@ -282,6 +285,33 @@ const CURRENCIES = ['SGD', 'USD', 'EUR', 'GBP', 'HKD'] as const
 // Who bears bank charges on TT payments.
 const CHARGE_BEARERS = ['SENDER', 'RECEIVER', 'SHARED'] as const
 
+// ISO purpose-of-payment codes required on outbound payments.
+const PAYMENT_PURPOSES = [
+  { code: 'SUPP', label: 'SUPP — Supplier payment' },
+  { code: 'SALA', label: 'SALA — Salary payment' },
+  { code: 'TRAD', label: 'TRAD — Trade settlement' },
+  { code: 'INTC', label: 'INTC — Intra-company transfer' },
+  { code: 'DIVI', label: 'DIVI — Dividend' },
+  { code: 'RFND', label: 'RFND — Refund / return of funds' },
+  { code: 'OTHR', label: 'OTHR — Other' },
+] as const
+
+const RETURN_REASONS = [
+  'Wrong beneficiary account',
+  'Duplicate payment',
+  'Customer requested return',
+  'Funds not expected — unidentified sender',
+  'Other',
+] as const
+
+// Unique customer reference for a new payment request.
+function generateCustomerRef(): string {
+  return `ACME-${Date.now().toString(36).toUpperCase()}-${Math.random()
+    .toString(36)
+    .slice(2, 6)
+    .toUpperCase()}`
+}
+
 const BANK_FILTER_OPTIONS = [
   { value: 'DBS', label: 'DBS', accountIds: ['intacc_0KT8ZSCRKXP0O', 'intacc_0KT8ZSDEKXCAN'] },
   { value: 'CIMB', label: 'CIMB', accountIds: ['intacc_0KERZSCDKXV0O'] },
@@ -320,11 +350,12 @@ function PaymentsMain() {
   const { user } = useUser()
   const navigate = useNavigate()
   const [tab, setTab] = React.useState<
-    FilterKey | 'exceptions' | 'review'
+    FilterKey | 'exceptions' | 'review' | 'rejected' | 'expired'
   >('all')
   // Status filter derived from the active tab; non-status tabs use 'all'.
-  const filter: FilterKey =
-    tab === 'exceptions' || tab === 'review' ? 'all' : tab
+  const isStatusTab = (t: string): t is FilterKey =>
+    t === 'all' || t === 'pending' || t === 'failed' || t === 'completed'
+  const filter: FilterKey = isStatusTab(tab) ? tab : 'all'
   const [filterCurrency, setFilterCurrency] = React.useState('')
   const [filterBank, setFilterBank] = React.useState('')
   const [filterAccount, setFilterAccount] = React.useState('')
@@ -376,6 +407,49 @@ function PaymentsMain() {
     ],
     [submittedRefunds, submittedRetries],
   )
+
+  // Requests rejected by approvers — seeded examples plus live rejections.
+  const rejectedApprovals = React.useMemo<ApprovalRecord[]>(
+    () => [
+      ...submittedRefunds
+        .filter((r) => r.status === 'Rejected')
+        .map((r) => ({
+          id: r.id,
+          kind: 'Refund' as const,
+          amount: r.amount,
+          currency: r.currency,
+          receiverName: r.receiverName,
+          requester: r.requester,
+          submittedAt: r.submittedAt,
+          reviewedBy: r.reviewer?.name,
+          reviewedAt: r.reviewer?.at,
+          rejectionReason: 'Rejected by checker',
+        })),
+      ...submittedRetries
+        .filter((r) => r.status === 'Rejected')
+        .map((r) => ({
+          id: r.id,
+          kind:
+            r.kind === 'payment'
+              ? ('Payment' as const)
+              : r.kind === 'return'
+                ? ('Return' as const)
+                : ('Retry' as const),
+          amount: r.amount,
+          currency: r.currency,
+          receiverName: r.receiverName,
+          requester: r.requester,
+          submittedAt: r.submittedAt,
+          reviewedBy: r.reviewer?.name,
+          reviewedAt: r.reviewer?.at,
+          rejectionReason: 'Rejected by checker',
+        })),
+      ...rejectedApprovalsSeed,
+    ],
+    [submittedRefunds, submittedRetries],
+  )
+
+  const expiredApprovals = expiredApprovalsSeed
 
   // Lookup map: payment row id -> underlying refund (for refund-specific UI).
   const refundMap = React.useMemo(() => {
@@ -470,7 +544,7 @@ function PaymentsMain() {
       <Tabs
         value={tab}
         onValueChange={(v) =>
-          setTab(v as FilterKey | 'exceptions' | 'review')
+          setTab(v as FilterKey | 'exceptions' | 'review' | 'rejected' | 'expired')
         }
       >
         <TabsList>
@@ -486,10 +560,16 @@ function PaymentsMain() {
           <TabsTrigger value="exceptions">
             Pending review ({allUnprocessed.length})
           </TabsTrigger>
+          <TabsTrigger value="rejected">
+            Rejected by approvers ({rejectedApprovals.length})
+          </TabsTrigger>
+          <TabsTrigger value="expired">
+            Approval expired ({expiredApprovals.length})
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent
-          value={tab === 'exceptions' || tab === 'review' ? '__payments' : tab}
+          value={isStatusTab(tab) ? tab : '__payments'}
           className="space-y-6 pt-4"
         >
       {/* Filters */}
@@ -1044,9 +1124,7 @@ function PaymentsMain() {
                           }
                         >
                           <RotateCcwIcon className="size-3.5" />
-                          {r.kind === 'return'
-                            ? 'Resubmit payment'
-                            : 'Process refund reversal'}
+                          Initiate return
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -1066,6 +1144,175 @@ function PaymentsMain() {
             </CardContent>
           </Card>
 
+        </TabsContent>
+
+        {/* Rejected by approvers */}
+        <TabsContent value="rejected" className="space-y-3 pt-4">
+          <div>
+            <div className="text-[0.7rem] font-medium uppercase tracking-wider text-muted-foreground">
+              Rejected by approvers ({rejectedApprovals.length})
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Requests a checker rejected during maker-checker review. Submit a
+              new request to try again.
+            </p>
+          </div>
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                      Request ID
+                    </TableHead>
+                    <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                      Type
+                    </TableHead>
+                    <TableHead className="text-right text-[0.7rem] uppercase tracking-wider">
+                      Amount
+                    </TableHead>
+                    <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                      Receiver
+                    </TableHead>
+                    <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                      Requested by
+                    </TableHead>
+                    <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                      Rejected by
+                    </TableHead>
+                    <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                      Rejection reason
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rejectedApprovals.map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell>
+                        <Mono>{r.id}</Mono>
+                      </TableCell>
+                      <TableCell>
+                        <span className="inline-flex items-center rounded border border-zinc-300 bg-zinc-100 px-1.5 py-0.5 text-[0.65rem] font-medium uppercase tracking-wider text-zinc-700">
+                          {r.kind}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right text-sm tabular-nums whitespace-nowrap">
+                        {r.amount} {r.currency}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {r.receiverName}
+                      </TableCell>
+                      <TableCell className="text-sm">{r.requester}</TableCell>
+                      <TableCell className="text-sm">
+                        {r.reviewedBy ?? '—'}
+                        {r.reviewedAt && (
+                          <div className="text-[0.7rem] text-muted-foreground">
+                            {r.reviewedAt}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="max-w-[260px] text-xs text-muted-foreground">
+                        {r.rejectionReason ?? '—'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {rejectedApprovals.length === 0 && (
+                    <TableRow>
+                      <TableCell
+                        colSpan={7}
+                        className="py-10 text-center text-sm text-muted-foreground"
+                      >
+                        No rejected requests.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Approval expired */}
+        <TabsContent value="expired" className="space-y-3 pt-4">
+          <div>
+            <div className="text-[0.7rem] font-medium uppercase tracking-wider text-muted-foreground">
+              Approval expired ({expiredApprovals.length})
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Requests that were not reviewed before the approval window
+              closed. Submit a new request to try again.
+            </p>
+          </div>
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                      Request ID
+                    </TableHead>
+                    <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                      Type
+                    </TableHead>
+                    <TableHead className="text-right text-[0.7rem] uppercase tracking-wider">
+                      Amount
+                    </TableHead>
+                    <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                      Receiver
+                    </TableHead>
+                    <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                      Requested by
+                    </TableHead>
+                    <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                      Submitted at
+                    </TableHead>
+                    <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                      Expired at
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {expiredApprovals.map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell>
+                        <Mono>{r.id}</Mono>
+                      </TableCell>
+                      <TableCell>
+                        <span className="inline-flex items-center rounded border border-zinc-300 bg-zinc-100 px-1.5 py-0.5 text-[0.65rem] font-medium uppercase tracking-wider text-zinc-700">
+                          {r.kind}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right text-sm tabular-nums whitespace-nowrap">
+                        {r.amount} {r.currency}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {r.receiverName}
+                      </TableCell>
+                      <TableCell className="text-sm">{r.requester}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                        {r.submittedAt}
+                      </TableCell>
+                      <TableCell className="text-xs whitespace-nowrap">
+                        <span className="rounded border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[0.65rem] font-medium text-amber-700">
+                          {r.expiresAt}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {expiredApprovals.length === 0 && (
+                    <TableRow>
+                      <TableCell
+                        colSpan={7}
+                        className="py-10 text-center text-sm text-muted-foreground"
+                      >
+                        No expired requests.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
@@ -1967,6 +2214,10 @@ function NewPaymentPage() {
   const [currency, setCurrency] = React.useState<string>('SGD')
   const [paymentType, setPaymentType] = React.useState<string>('FAST')
   const [chargeBearer, setChargeBearer] = React.useState<string>('SENDER')
+  const [purpose, setPurpose] = React.useState('')
+  const [customerRef, setCustomerRef] = React.useState(() =>
+    generateCustomerRef(),
+  )
   const [notes, setNotes] = React.useState('')
   const [attachedFiles, setAttachedFiles] = React.useState<File[]>([])
   const fileInputRef = React.useRef<HTMLInputElement>(null)
@@ -2054,7 +2305,9 @@ function NewPaymentPage() {
     receiverAccount.trim() !== '' &&
     receiverBic.trim() !== '' &&
     addrCity.trim() !== '' &&
-    addrCountry.trim() !== ''
+    addrCountry.trim() !== '' &&
+    purpose !== '' &&
+    customerRef.trim() !== ''
 
   const submit = () => {
     const now = new Date()
@@ -2082,6 +2335,8 @@ function NewPaymentPage() {
       submittedAt,
       status: 'Pending approval',
       kind: 'payment',
+      purpose,
+      customerReference: customerRef,
     })
 
     toast.success('Payment submitted for approval', {
@@ -2383,6 +2638,38 @@ function NewPaymentPage() {
               </p>
             </div>
           )}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label>
+                Purpose of payment <span className="text-destructive">*</span>
+              </Label>
+              <Select value={purpose} onValueChange={setPurpose}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a purpose code" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAYMENT_PURPOSES.map((p) => (
+                    <SelectItem key={p.code} value={p.code}>
+                      {p.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>
+                Customer reference <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                value={customerRef}
+                onChange={(e) => setCustomerRef(e.target.value)}
+                className="font-mono"
+              />
+              <p className="text-[0.65rem] text-muted-foreground">
+                Unique ID for this payment — pre-generated, editable.
+              </p>
+            </div>
+          </div>
           <div className="space-y-1.5">
             <Label>Notes</Label>
             <Textarea
@@ -2654,6 +2941,16 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
   const [attachedFiles, setAttachedFiles] = React.useState<File[]>([])
   const fileInputRef = React.useRef<HTMLInputElement>(null)
 
+  // Return flow: initiated from the Pending review tab — no failure context,
+  // and the operator must give a reason for the return.
+  const isReturn = payment?.resultCode === 'RETURNED_BY_BANK'
+  const [returnReason, setReturnReason] = React.useState('')
+  // Required payment information shared with the create payment page.
+  const [purpose, setPurpose] = React.useState(isReturn ? 'RFND' : '')
+  const [customerRef, setCustomerRef] = React.useState(() =>
+    generateCustomerRef(),
+  )
+
   // Originating account — defaults to the original payment's sender account,
   // but the user can pick a different one (same as the create payment page).
   const senderAccounts = React.useMemo(
@@ -2742,7 +3039,7 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
     )
   }
 
-  const canSubmit = retryMode === 'original'
+  const detailsOk = retryMode === 'original'
     ? true
     : (
       amount.trim().length > 0 &&
@@ -2751,6 +3048,11 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
       receiverAccount.trim().length > 0 &&
       receiverRouting.trim().length > 0
     )
+  const canSubmit =
+    detailsOk &&
+    purpose !== '' &&
+    customerRef.trim() !== '' &&
+    (!isReturn || returnReason !== '')
 
   const submit = () => {
     const now = new Date()
@@ -2793,6 +3095,9 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
       submittedAt,
       status: 'Pending approval',
       kind,
+      purpose,
+      customerReference: customerRef,
+      ...(isReturn ? { returnReason } : {}),
     })
 
     toast.success(
@@ -2820,13 +3125,13 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
         <div className="flex items-center gap-2">
           <RotateCcwIcon className="size-5 text-muted-foreground" />
           <h1 className="text-2xl font-bold tracking-tight">
-            Retry payment
+            {isReturn ? 'Initiate return' : 'Retry payment'}
           </h1>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
-          Resubmit a failed payment. Edit any beneficiary or routing details
-          that need correcting — the resubmission goes through maker-checker
-          approval.
+          {isReturn
+            ? 'Return the funds from a flagged credit transaction. Provide the reason for the return — the request goes through maker-checker approval.'
+            : 'Resubmit a failed payment. Edit any beneficiary or routing details that need correcting — the resubmission goes through maker-checker approval.'}
         </p>
       </div>
 
@@ -2838,7 +3143,7 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
             <span className="uppercase tracking-wider font-medium">CHECKER</span>{' '}
             — switch to{' '}
             <span className="uppercase tracking-wider font-medium">MAKER</span>{' '}
-            to submit retries.
+            to submit {isReturn ? 'returns' : 'retries'}.
           </span>
         </div>
       )}
@@ -2848,7 +3153,7 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
           <div className="text-[0.7rem] font-medium uppercase tracking-wider text-muted-foreground">
             Request context
           </div>
-          <ContextRow label="Original payment ID">
+          <ContextRow label={isReturn ? 'Original transaction ID' : 'Original payment ID'}>
             <Mono>{payment.id}</Mono>
           </ContextRow>
           <ContextRow label="Original amount">
@@ -2856,24 +3161,28 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
               {payment.amount} {payment.currency}
             </span>
           </ContextRow>
-          <ContextRow label="Original failure reason">
-            {payment.resultCode ? (
-              <span className="text-xs uppercase tracking-wider">
-                {payment.resultCode}
-              </span>
-            ) : (
-              <span className="text-muted-foreground">—</span>
-            )}
-          </ContextRow>
-          <ContextRow label="Original error message">
-            {payment.underlyingErrorMessage ? (
-              <pre className="whitespace-pre-wrap rounded-md border bg-muted/40 p-2 font-mono text-[0.7rem] text-foreground/90">
-                {payment.underlyingErrorMessage}
-              </pre>
-            ) : (
-              <span className="text-muted-foreground">—</span>
-            )}
-          </ContextRow>
+          {!isReturn && (
+            <>
+              <ContextRow label="Original failure reason">
+                {payment.resultCode ? (
+                  <span className="text-xs uppercase tracking-wider">
+                    {payment.resultCode}
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground">—</span>
+                )}
+              </ContextRow>
+              <ContextRow label="Original error message">
+                {payment.underlyingErrorMessage ? (
+                  <pre className="whitespace-pre-wrap rounded-md border bg-muted/40 p-2 font-mono text-[0.7rem] text-foreground/90">
+                    {payment.underlyingErrorMessage}
+                  </pre>
+                ) : (
+                  <span className="text-muted-foreground">—</span>
+                )}
+              </ContextRow>
+            </>
+          )}
           <ContextRow label="Original created at">
             <span className="text-xs">{payment.createdAt}</span>
           </ContextRow>
@@ -2990,7 +3299,58 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
       <Card>
         <CardContent className="space-y-5 px-6 py-5">
           <div className="text-[0.7rem] font-medium uppercase tracking-wider text-muted-foreground">
-            Retry options
+            {isReturn ? 'Return options' : 'Retry options'}
+          </div>
+          {isReturn && (
+            <div className="space-y-1.5">
+              <Label>
+                Reason of return <span className="text-destructive">*</span>
+              </Label>
+              <Select value={returnReason} onValueChange={setReturnReason}>
+                <SelectTrigger className="w-full max-w-md">
+                  <SelectValue placeholder="Select why the funds are being returned" />
+                </SelectTrigger>
+                <SelectContent>
+                  {RETURN_REASONS.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {r}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label>
+                Purpose of payment <span className="text-destructive">*</span>
+              </Label>
+              <Select value={purpose} onValueChange={setPurpose}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a purpose code" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAYMENT_PURPOSES.map((p) => (
+                    <SelectItem key={p.code} value={p.code}>
+                      {p.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>
+                Customer reference <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                value={customerRef}
+                onChange={(e) => setCustomerRef(e.target.value)}
+                className="font-mono"
+              />
+              <p className="text-[0.65rem] text-muted-foreground">
+                Unique ID for this payment — pre-generated, editable.
+              </p>
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <button
@@ -3005,7 +3365,9 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
             >
               <div className="text-sm font-medium">Use original details</div>
               <div className="mt-0.5 text-xs text-muted-foreground">
-                Resubmit with the same routing and receiver details from the failed payment.
+                {isReturn
+                  ? 'Return using the same routing and receiver details from the original transaction.'
+                  : 'Resubmit with the same routing and receiver details from the failed payment.'}
               </div>
             </button>
             <button
@@ -3224,7 +3586,11 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
           Submitted by{' '}
           <span className="font-medium text-foreground">{user.name}</span> →
           awaiting approval from a checker. Logged as a{' '}
-          {retryMode === 'original' ? 'retry with original details' : 'retry with updated details'}.
+          {isReturn
+            ? 'return of funds'
+            : retryMode === 'original'
+              ? 'retry with original details'
+              : 'retry with updated details'}.
         </div>
       </div>
 
@@ -3233,7 +3599,7 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
           Cancel
         </Button>
         <Button disabled={!canSubmit} onClick={submit}>
-          Submit retry request
+          {isReturn ? 'Submit return request' : 'Submit retry request'}
         </Button>
       </div>
     </div>

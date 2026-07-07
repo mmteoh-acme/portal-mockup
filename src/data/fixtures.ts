@@ -4214,6 +4214,72 @@ export type UnprocessedRefund = {
   kind?: 'reversal' | 'return'
 }
 
+// Maker-checker outcomes surfaced on the Payments page: requests rejected by
+// approvers, and requests whose approval window lapsed before review.
+export type ApprovalRecord = {
+  id: string
+  kind: 'Payment' | 'Retry' | 'Refund' | 'Return'
+  amount: string
+  currency: string
+  receiverName: string
+  requester: string
+  submittedAt: string
+  reviewedBy?: string
+  reviewedAt?: string
+  rejectionReason?: string
+  expiresAt?: string
+}
+
+export const rejectedApprovalsSeed: ApprovalRecord[] = [
+  {
+    id: 'pay_0QK3M8XR2VTN',
+    kind: 'Payment',
+    amount: '45,000',
+    currency: 'SGD',
+    receiverName: 'MR LO CHUN KIT',
+    requester: 'Ming Miin',
+    submittedAt: 'May 30, 2026 at 04:12 PM',
+    reviewedBy: 'Priya Lim',
+    reviewedAt: 'May 30, 2026 at 05:47 PM',
+    rejectionReason: 'Duplicate payment; please submit a new one.',
+  },
+  {
+    id: 'rf_0QK1B4WQ8HSD',
+    kind: 'Refund',
+    amount: '3,400',
+    currency: 'SGD',
+    receiverName: 'Alice Wong',
+    requester: 'Alice Wong',
+    submittedAt: 'May 28, 2026 at 09:02 AM',
+    reviewedBy: 'Priya Lim',
+    reviewedAt: 'May 28, 2026 at 11:30 AM',
+    rejectionReason: 'Beneficiary account name does not match the original transaction.',
+  },
+]
+
+export const expiredApprovalsSeed: ApprovalRecord[] = [
+  {
+    id: 'pay_0QJ9F2LC6MKW',
+    kind: 'Payment',
+    amount: '12,500',
+    currency: 'SGD',
+    receiverName: 'Tideline Maritime Pte Ltd',
+    requester: 'Ming Miin',
+    submittedAt: 'May 25, 2026 at 03:40 PM',
+    expiresAt: 'May 27, 2026 at 03:40 PM',
+  },
+  {
+    id: 'rty_0QJ7D8NV1XPZ',
+    kind: 'Retry',
+    amount: '7,257',
+    currency: 'SGD',
+    receiverName: 'MR TANG SAU LING',
+    requester: 'Gary Tan',
+    submittedAt: 'May 24, 2026 at 10:05 AM',
+    expiresAt: 'May 26, 2026 at 10:05 AM',
+  },
+]
+
 export const unprocessedRefunds: UnprocessedRefund[] = [
   {
     originalTxnId: 'txn_0QJ87FX8QDVV2',

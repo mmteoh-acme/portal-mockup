@@ -25,6 +25,9 @@ export type SubmittedRetry = {
   // What kind of payment request this is — retries, new payments, and
   // exception processing (returns/reversals) all flow through this store.
   kind?: 'retry' | 'payment' | 'return' | 'reversal'
+  purpose?: string
+  customerReference?: string
+  returnReason?: string
 }
 
 const STORAGE_KEY = 'portal-mockup:submittedRetries'
