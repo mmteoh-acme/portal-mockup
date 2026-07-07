@@ -8436,3 +8436,110 @@ export function successRateByType(): { type: string; successRate: number; total:
     }))
     .sort((a, b) => b.total - a.total)
 }
+
+// ---------------------------------------------------------------------------
+// API usage by key and canonical path, for the home-dashboard API volume chart
+// ---------------------------------------------------------------------------
+
+export const API_USAGE_PATHS = [
+  'get:/transactions',
+  'get:/payments/:id',
+  'post:/payments',
+  'post:/payments/:id/approve',
+  'post:/accounts/:id/balance',
+  'get:/internal-accounts',
+] as const
+
+export type ApiUsagePath = (typeof API_USAGE_PATHS)[number]
+
+export type ApiKeyUsageRow = {
+  key: string
+  counts: Record<ApiUsagePath, number>
+}
+
+const API_USAGE_10D: ApiKeyUsageRow[] = [
+  {
+    key: 'dev-acme-dbs-lv-live-key',
+    counts: {
+      'get:/transactions': 5240,
+      'get:/payments/:id': 1830,
+      'post:/payments': 940,
+      'post:/payments/:id/approve': 0,
+      'post:/accounts/:id/balance': 2130,
+      'get:/internal-accounts': 790,
+    },
+  },
+  {
+    key: 'acme-payment-maker-live-key',
+    counts: {
+      'get:/transactions': 880,
+      'get:/payments/:id': 2260,
+      'post:/payments': 3120,
+      'post:/payments/:id/approve': 0,
+      'post:/accounts/:id/balance': 410,
+      'get:/internal-accounts': 180,
+    },
+  },
+  {
+    key: 'acme-payment-checker-live-key',
+    counts: {
+      'get:/transactions': 320,
+      'get:/payments/:id': 2580,
+      'post:/payments': 0,
+      'post:/payments/:id/approve': 1930,
+      'post:/accounts/:id/balance': 260,
+      'get:/internal-accounts': 90,
+    },
+  },
+  {
+    key: 'acme-admin-portal-key',
+    counts: {
+      'get:/transactions': 610,
+      'get:/payments/:id': 340,
+      'post:/payments': 0,
+      'post:/payments/:id/approve': 0,
+      'post:/accounts/:id/balance': 480,
+      'get:/internal-accounts': 720,
+    },
+  },
+  {
+    key: 'dev-acme-dbs-test-key',
+    counts: {
+      'get:/transactions': 450,
+      'get:/payments/:id': 210,
+      'post:/payments': 180,
+      'post:/payments/:id/approve': 60,
+      'post:/accounts/:id/balance': 120,
+      'get:/internal-accounts': 70,
+    },
+  },
+]
+
+// Past-month volumes run ~3x the 10-day window with per-key variation.
+const MONTH_FACTORS: Record<string, number> = {
+  'dev-acme-dbs-lv-live-key': 3.1,
+  'acme-payment-maker-live-key': 2.8,
+  'acme-payment-checker-live-key': 2.9,
+  'acme-admin-portal-key': 3.4,
+  'dev-acme-dbs-test-key': 2.2,
+}
+
+export function apiKeyUsage(range: '10d' | '1m'): ApiKeyUsageRow[] {
+  const rows =
+    range === '10d'
+      ? API_USAGE_10D
+      : API_USAGE_10D.map((r) => ({
+          key: r.key,
+          counts: Object.fromEntries(
+            Object.entries(r.counts).map(([p, n]) => [
+              p,
+              Math.round(n * (MONTH_FACTORS[r.key] ?? 3)),
+            ]),
+          ) as Record<ApiUsagePath, number>,
+        }))
+  return [...rows].sort(
+    (a, b) =>
+      Object.values(b.counts).reduce((s, n) => s + n, 0) -
+      Object.values(a.counts).reduce((s, n) => s + n, 0),
+  )
+}

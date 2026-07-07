@@ -181,6 +181,88 @@ export function StackedBarChart({
 }
 
 // ---------------------------------------------------------------------------
+// Horizontal stacked bar chart — one row per item (e.g. API key), segments
+// per series, total label on the left and the item name overlaid on the bar.
+// ---------------------------------------------------------------------------
+
+function compactCount(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(2)}k`
+  return String(n)
+}
+
+export function HStackedBarChart({
+  data,
+  series,
+}: {
+  data: { label: string; values: Record<string, number> }[]
+  series: { key: string; label: string; color: string }[]
+}) {
+  const W = 720
+  const rowH = 26
+  const gap = 8
+  const padL = 56
+  const padR = 8
+  const padY = 4
+  const H = padY * 2 + data.length * (rowH + gap) - gap
+
+  const totals = data.map((d) =>
+    series.reduce((s, ser) => s + (d.values[ser.key] ?? 0), 0),
+  )
+  const max = Math.max(1, ...totals)
+  const plotW = W - padL - padR
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 'auto' }} role="img">
+      {data.map((d, i) => {
+        const y = padY + i * (rowH + gap)
+        const total = totals[i]
+        let xCursor = padL
+        return (
+          <g key={d.label}>
+            <text
+              x={padL - 8}
+              y={y + rowH / 2 + 3.5}
+              textAnchor="end"
+              className="fill-foreground"
+              style={{ fontSize: 11, fontWeight: 600 }}
+            >
+              {compactCount(total)}
+            </text>
+            {series.map((ser) => {
+              const v = d.values[ser.key] ?? 0
+              if (v <= 0) return null
+              const w = (v / max) * plotW
+              const x = xCursor
+              xCursor += w
+              return (
+                <rect
+                  key={ser.key}
+                  x={x}
+                  y={y}
+                  width={w}
+                  height={rowH}
+                  fill={ser.color}
+                >
+                  <title>{`${d.label} · ${ser.label}: ${v.toLocaleString()}`}</title>
+                </rect>
+              )
+            })}
+            <text
+              x={padL + 8}
+              y={y + rowH / 2 + 3.5}
+              className="fill-foreground"
+              style={{ fontSize: 11, fontWeight: 600 }}
+            >
+              {d.label}
+            </text>
+          </g>
+        )
+      })}
+    </svg>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Simple vertical bar chart (single series), optional value labels
 // ---------------------------------------------------------------------------
 
