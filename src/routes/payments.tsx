@@ -238,7 +238,7 @@ function exceptionToPayment(e: UnprocessedRefund): Payment {
     receiverBankAccountNumber: '',
     receiverLocalRoutingIdentifier: '',
     resultCode:
-      e.kind === 'reprocess' ? 'RETURNED_BY_BENEFICIARY_BANK' : 'FLAGGED_AS_RETURN',
+      e.kind === 'return' ? 'RETURNED_BY_BANK' : 'REFUND_REVERSAL',
     underlyingErrorMessage: e.reason,
     customerReference: '',
     paymentDetails: '',
@@ -990,9 +990,14 @@ function PaymentsMain() {
                 Pending review ({allUnprocessed.length})
               </div>
               <p className="mt-1 text-sm text-muted-foreground">
-                Transactions flagged as Returns (suspicious credits) or
-                Reversals (returned payments). Processing goes through the
-                retry payment flow with maker-checker approval.
+                Flagged credit transactions.{' '}
+                <span className="font-medium text-foreground">Reversal</span> —
+                reversal of a single payment order, processed as a refund
+                reversal to the client.{' '}
+                <span className="font-medium text-foreground">Return</span> — a
+                payment order the bank rejected and returned as a separate
+                credit line; resubmit the payment. Both go through
+                maker-checker approval.
               </p>
             </div>
             <NewRefundDialog
@@ -1056,12 +1061,12 @@ function PaymentsMain() {
                       <TableCell>
                         <span
                           className={
-                            r.kind === 'reprocess'
+                            r.kind === 'return'
                               ? 'inline-flex items-center rounded border border-blue-300 bg-blue-50 px-1.5 py-0.5 text-[0.65rem] font-medium uppercase tracking-wider text-blue-700'
                               : 'inline-flex items-center rounded border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[0.65rem] font-medium uppercase tracking-wider text-amber-700'
                           }
                         >
-                          {r.kind === 'reprocess' ? 'Reversal' : 'Return'}
+                          {r.kind === 'return' ? 'Return' : 'Reversal'}
                         </span>
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
@@ -1085,7 +1090,9 @@ function PaymentsMain() {
                           }
                         >
                           <RotateCcwIcon className="size-3.5" />
-                          {r.kind === 'reprocess' ? 'Process reversal' : 'Process return'}
+                          {r.kind === 'return'
+                            ? 'Resubmit payment'
+                            : 'Process refund reversal'}
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -2974,11 +2981,11 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
     const finalAmount = retryMode === 'original' ? payment.amount : amount
     const finalCurrency = retryMode === 'original' ? payment.currency : currency
     const finalType = retryMode === 'original' ? payment.type : paymentType
-    // Exception-derived payments carry their origin in resultCode.
+    // Flag-derived payments carry their origin in resultCode.
     const kind =
-      payment.resultCode === 'FLAGGED_AS_RETURN'
+      payment.resultCode === 'RETURNED_BY_BANK'
         ? ('return' as const)
-        : payment.resultCode === 'RETURNED_BY_BENEFICIARY_BANK'
+        : payment.resultCode === 'REFUND_REVERSAL'
           ? ('reversal' as const)
           : ('retry' as const)
 

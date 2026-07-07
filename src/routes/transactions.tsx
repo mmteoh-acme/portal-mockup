@@ -270,26 +270,30 @@ export function TransactionsPage() {
   const [openTxn, setOpenTxn] = React.useState<Txn | null>(null)
   const [page, setPage] = React.useState(1)
 
-  // Flag a transaction into the Exceptions queue (Payments page). Shared by
-  // the row actions menu and the detail sheet Actions button.
-  const flagException = (t: Txn, kind: 'refund' | 'reprocess') => {
+  // Flag a credit transaction into the Pending review queue (Payments page).
+  // Shared by the row actions menu and the detail sheet Actions button.
+  // - Reversal: reverse a single payment order — processed as a refund
+  //   reversal back to the client.
+  // - Return: the bank rejected a payment order and returned the funds as a
+  //   separate credit line — the payment needs to be resubmitted.
+  const flagException = (t: Txn, kind: 'reversal' | 'return') => {
     const added = addUnprocessedDeposit({
       originalTxnId: t.id,
       customer: t.senderName,
       amount: `${t.currency} ${t.amount}`,
       reason:
-        kind === 'refund'
-          ? 'Suspicious credit — refund required'
-          : 'Returned by beneficiary bank — reprocess required',
+        kind === 'reversal'
+          ? 'Refund reversal to client'
+          : 'Payment rejected — funds returned by bank, resubmission required',
       date: t.transactionDate,
       kind,
     })
     if (added) {
-      toast.success('Flagged for review', {
+      toast.success(kind === 'reversal' ? 'Flagged as Reversal' : 'Flagged as Return', {
         description:
-          kind === 'refund'
-            ? `${t.id} moved to the Pending review tab on the Payments page for refund review.`
-            : `${t.id} moved to the Pending review tab on the Payments page for reprocessing.`,
+          kind === 'reversal'
+            ? `${t.id} moved to the Pending review tab on the Payments page — process as a refund reversal to the client.`
+            : `${t.id} moved to the Pending review tab on the Payments page — resubmit the returned payment.`,
       })
     } else {
       toast.info('Already pending review', {
@@ -759,18 +763,18 @@ export function TransactionsPage() {
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
-                            onSelect={() => flagException(t, 'refund')}
+                            onSelect={() => flagException(t, 'reversal')}
+                            disabled={t.direction !== 'CREDIT'}
+                          >
+                            <FlagIcon className="size-3.5" />
+                            Flag as Reversal
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onSelect={() => flagException(t, 'return')}
                             disabled={t.direction !== 'CREDIT'}
                           >
                             <FlagIcon className="size-3.5" />
                             Flag as Return
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onSelect={() => flagException(t, 'reprocess')}
-                            disabled={t.direction !== 'DEBIT'}
-                          >
-                            <FlagIcon className="size-3.5" />
-                            Flag as Reversal
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -865,18 +869,18 @@ export function TransactionsPage() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-64">
                     <DropdownMenuItem
-                      onSelect={() => flagException(openTxn, 'refund')}
+                      onSelect={() => flagException(openTxn, 'reversal')}
+                      disabled={openTxn.direction !== 'CREDIT'}
+                    >
+                      <FlagIcon className="size-3.5" />
+                      Flag as Reversal
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={() => flagException(openTxn, 'return')}
                       disabled={openTxn.direction !== 'CREDIT'}
                     >
                       <FlagIcon className="size-3.5" />
                       Flag as Return
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onSelect={() => flagException(openTxn, 'reprocess')}
-                      disabled={openTxn.direction !== 'DEBIT'}
-                    >
-                      <FlagIcon className="size-3.5" />
-                      Flag as Reversal
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

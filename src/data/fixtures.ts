@@ -4201,16 +4201,19 @@ export function entityTransactions(entity: Entity): Txn[] {
   return ENTITY_TRANSACTIONS[entity.id] ?? []
 }
 
-// An exception: a transaction flagged into the review/triage queue — e.g. a
-// returned payment that needs reprocessing, or a suspicious inbound credit
-// that needs to be refunded.
+// A flagged credit transaction pending review:
+// - Reversal: reversal of a single payment order — a credit that must be
+//   processed as a refund reversal back to the client.
+// - Return: rejection of a single payment order — the originating bank
+//   returned the funds as a separate credit line; the payment needs to be
+//   resubmitted.
 export type UnprocessedRefund = {
   originalTxnId: string
   customer: string
   amount: string
   reason: string
   date: string
-  kind?: 'refund' | 'reprocess'
+  kind?: 'reversal' | 'return'
 }
 
 export const unprocessedRefunds: UnprocessedRefund[] = [
@@ -4218,25 +4221,25 @@ export const unprocessedRefunds: UnprocessedRefund[] = [
     originalTxnId: 'txn_0QJ87FX8QDVV2',
     customer: 'Vivien Tan',
     amount: 'S$ 12,000.00',
-    reason: 'Sender name unmatched — suspicious credit',
+    reason: 'Sender name unmatched — refund reversal to client',
     date: '2026-05-28',
-    kind: 'refund',
+    kind: 'reversal',
   },
   {
     originalTxnId: 'txn_0QJ4FX8RDVD3',
     customer: 'John Eames',
     amount: 'S$ 620.00',
-    reason: 'Incorrect account number',
+    reason: 'Incorrect account number — refund reversal to client',
     date: '2026-05-27',
-    kind: 'refund',
+    kind: 'reversal',
   },
   {
     originalTxnId: 'txn_0QJ2AX7PQCKR8',
     customer: 'Meridian Foods Pte Ltd',
     amount: 'S$ 8,140.00',
-    reason: 'Returned by beneficiary bank — reprocess required',
+    reason: 'Payment rejected — funds returned by bank, resubmission required',
     date: '2026-05-29',
-    kind: 'reprocess',
+    kind: 'return',
   },
 ]
 
