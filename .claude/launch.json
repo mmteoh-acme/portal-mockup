@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "portal-mockup",
-      "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["dev"],
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "--port", "3004"],
       "port": 3004
     }
   ]

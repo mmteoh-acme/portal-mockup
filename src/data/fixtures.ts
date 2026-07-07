@@ -10,6 +10,7 @@ export type Account = {
   name: string
   currency: string
   lastBalance: number
+  priorDayBalance: number
   status: 'ACTIVE' | 'INACTIVE'
   mode: 'LIVE' | 'TEST'
   swiftBic: string
@@ -55,6 +56,7 @@ export const COMPANY: Company = {
               name: 'Operating',
               currency: 'SGD',
               lastBalance: 8120442.18,
+              priorDayBalance: 8094310.55,
               status: 'ACTIVE',
               mode: 'LIVE',
               swiftBic: 'DBSSSGSGXXX',
@@ -67,6 +69,7 @@ export const COMPANY: Company = {
               name: 'Client Money Accounts',
               currency: 'SGD',
               lastBalance: 2415088.04,
+              priorDayBalance: 2415088.04,
               status: 'ACTIVE',
               mode: 'LIVE',
               swiftBic: 'DBSSSGSGXXX',
@@ -85,6 +88,7 @@ export const COMPANY: Company = {
               name: 'Settlement',
               currency: 'SGD',
               lastBalance: 4902118.85,
+              priorDayBalance: 4967500.10,
               status: 'ACTIVE',
               mode: 'LIVE',
               swiftBic: 'CIBBSGSGXXX',
@@ -110,6 +114,7 @@ export const COMPANY: Company = {
               name: 'USD Operating',
               currency: 'USD',
               lastBalance: 14820653.42,
+              priorDayBalance: 14688200.17,
               status: 'ACTIVE',
               mode: 'LIVE',
               swiftBic: 'DBSSSGSGXXX',
@@ -122,6 +127,7 @@ export const COMPANY: Company = {
               name: 'SGD Operating',
               currency: 'SGD',
               lastBalance: 6204881.55,
+              priorDayBalance: 6250120.90,
               status: 'ACTIVE',
               mode: 'LIVE',
               swiftBic: 'DBSSSGSGXXX',
@@ -134,6 +140,7 @@ export const COMPANY: Company = {
               name: 'USD Reserve',
               currency: 'USD',
               lastBalance: 2150400.12,
+              priorDayBalance: 2150400.12,
               status: 'ACTIVE',
               mode: 'LIVE',
               swiftBic: 'DBSSSGSGXXX',
@@ -146,6 +153,7 @@ export const COMPANY: Company = {
               name: 'SGD Receivables',
               currency: 'SGD',
               lastBalance: 4392108.74,
+              priorDayBalance: 4310876.33,
               status: 'ACTIVE',
               mode: 'LIVE',
               swiftBic: 'DBSSSGSGXXX',
@@ -158,6 +166,7 @@ export const COMPANY: Company = {
               name: 'USD Settlement',
               currency: 'USD',
               lastBalance: 9871502.88,
+              priorDayBalance: 9902744.61,
               status: 'ACTIVE',
               mode: 'LIVE',
               swiftBic: 'DBSSSGSGXXX',
@@ -170,6 +179,7 @@ export const COMPANY: Company = {
               name: 'SGD Reserve',
               currency: 'SGD',
               lastBalance: 1820744.30,
+              priorDayBalance: 1795002.48,
               status: 'ACTIVE',
               mode: 'LIVE',
               swiftBic: 'DBSSSGSGXXX',
@@ -210,6 +220,81 @@ export function formatSGD(amount: number): string {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`
+}
+
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  SGD: 'S$',
+  USD: 'US$',
+  EUR: '€',
+  GBP: '£',
+  HKD: 'HK$',
+}
+
+export function formatMoney(currency: string, amount: number): string {
+  const symbol = CURRENCY_SYMBOLS[currency] ?? currency
+  return `${symbol} ${amount.toLocaleString('en-SG', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`
+}
+
+// Balances grouped by currency -> bank -> accounts, with available (last)
+// and prior-day balances plus rollup totals at each level.
+export type BankBalanceGroup = {
+  bankId: string
+  bankName: string
+  accounts: Account[]
+  available: number
+  priorDay: number
+}
+
+export type CurrencyBalanceGroup = {
+  currency: string
+  available: number
+  priorDay: number
+  banks: BankBalanceGroup[]
+}
+
+export function entityBalancesByCurrency(entity: Entity): CurrencyBalanceGroup[] {
+  const currencyMap = new Map<string, Map<string, BankBalanceGroup>>()
+
+  for (const bank of entity.banks) {
+    for (const account of bank.accounts) {
+      let bankMap = currencyMap.get(account.currency)
+      if (!bankMap) {
+        bankMap = new Map()
+        currencyMap.set(account.currency, bankMap)
+      }
+      let group = bankMap.get(bank.id)
+      if (!group) {
+        group = {
+          bankId: bank.id,
+          bankName: bank.name,
+          accounts: [],
+          available: 0,
+          priorDay: 0,
+        }
+        bankMap.set(bank.id, group)
+      }
+      group.accounts.push(account)
+      group.available += account.lastBalance
+      group.priorDay += account.priorDayBalance
+    }
+  }
+
+  return [...currencyMap.entries()]
+    .map(([currency, bankMap]) => {
+      const banks = [...bankMap.values()].sort((a, b) =>
+        a.bankName.localeCompare(b.bankName),
+      )
+      return {
+        currency,
+        banks,
+        available: banks.reduce((s, b) => s + b.available, 0),
+        priorDay: banks.reduce((s, b) => s + b.priorDay, 0),
+      }
+    })
+    .sort((a, b) => a.currency.localeCompare(b.currency))
 }
 
 export type KpiCard = {

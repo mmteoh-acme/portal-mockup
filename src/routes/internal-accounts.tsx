@@ -17,7 +17,145 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { useEntity } from '@/lib/entity-context'
-import { entityAccounts, type Account } from '@/data/fixtures'
+import {
+  entityAccounts,
+  entityBalancesByCurrency,
+  formatMoney,
+  type Account,
+} from '@/data/fixtures'
+
+function DeltaTag({
+  currency,
+  available,
+  priorDay,
+}: {
+  currency: string
+  available: number
+  priorDay: number
+}) {
+  const delta = available - priorDay
+  if (Math.abs(delta) < 0.005) {
+    return <span className="text-xs text-muted-foreground">No change</span>
+  }
+  const up = delta > 0
+  return (
+    <span
+      className={`text-xs tabular-nums ${up ? 'text-emerald-700' : 'text-rose-600'}`}
+    >
+      {up ? '+' : '−'} {formatMoney(currency, Math.abs(delta))}
+    </span>
+  )
+}
+
+function BalancesSection({
+  groups,
+}: {
+  groups: ReturnType<typeof entityBalancesByCurrency>
+}) {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-baseline justify-between">
+        <div>
+          <h2 className="text-sm font-semibold">Balances</h2>
+          <p className="text-xs text-muted-foreground">
+            As of: Jun 1, 2026, 09:00 AM SGT · grouped by currency, bank, and
+            account
+          </p>
+        </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        {groups.map((g) => (
+          <Card key={g.currency} className="py-0">
+            <CardContent className="p-0">
+              {/* Currency rollup */}
+              <div className="flex flex-wrap items-end justify-between gap-3 border-b bg-muted/30 px-5 py-4">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center rounded-full bg-background px-2 py-0.5 font-mono text-[0.7rem] font-medium ring-1 ring-inset ring-border">
+                    {g.currency}
+                  </span>
+                  <DeltaTag
+                    currency={g.currency}
+                    available={g.available}
+                    priorDay={g.priorDay}
+                  />
+                </div>
+                <div className="flex gap-8">
+                  <div>
+                    <div className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">
+                      Available balance
+                    </div>
+                    <div className="text-lg font-semibold tabular-nums">
+                      {formatMoney(g.currency, g.available)}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">
+                      Prior-day balance
+                    </div>
+                    <div className="text-lg font-semibold tabular-nums text-muted-foreground">
+                      {formatMoney(g.currency, g.priorDay)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Banks -> accounts */}
+              <div className="flex justify-between px-5 pb-1 pt-3 text-[0.65rem] uppercase tracking-wider text-muted-foreground">
+                <span>Bank / account</span>
+                <div className="flex gap-8">
+                  <span className="w-36 text-right">Available</span>
+                  <span className="w-36 text-right">Prior-day</span>
+                </div>
+              </div>
+              <div className="divide-y">
+                {g.banks.map((b) => (
+                  <div key={b.bankId} className="px-5 py-3">
+                    <div className="flex items-center justify-between py-1">
+                      <div className="flex items-center gap-2">
+                        <LandmarkIcon className="size-3.5 text-muted-foreground" />
+                        <span className="text-sm font-medium">{b.bankName}</span>
+                      </div>
+                      <div className="flex gap-8 text-sm tabular-nums">
+                        <span className="w-36 text-right font-medium">
+                          {formatMoney(g.currency, b.available)}
+                        </span>
+                        <span className="w-36 text-right text-muted-foreground">
+                          {formatMoney(g.currency, b.priorDay)}
+                        </span>
+                      </div>
+                    </div>
+                    {b.accounts.map((a) => (
+                      <div
+                        key={a.id}
+                        className="flex items-center justify-between py-1.5 pl-6"
+                      >
+                        <div className="min-w-0">
+                          <span className="text-sm">{a.name}</span>
+                          <span className="ml-2 font-mono text-[0.7rem] text-muted-foreground">
+                            ···{a.number.slice(-4)}
+                          </span>
+                        </div>
+                        <div className="flex gap-8 text-sm tabular-nums">
+                          <span className="w-36 text-right">
+                            {formatMoney(g.currency, a.lastBalance)}
+                          </span>
+                          <span className="w-36 text-right text-muted-foreground">
+                            {formatMoney(g.currency, a.priorDayBalance)}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 function formatCreated(iso: string): string {
   if (!iso) return '—'
@@ -140,6 +278,16 @@ function AccountDetailSheet({
                       {account.iban || '—'}
                     </div>
                   </DetailField>
+                  <DetailField label="Available balance">
+                    <div className="text-sm font-medium tabular-nums">
+                      {formatMoney(account.currency, account.lastBalance)}
+                    </div>
+                  </DetailField>
+                  <DetailField label="Prior-day balance">
+                    <div className="text-sm tabular-nums text-muted-foreground">
+                      {formatMoney(account.currency, account.priorDayBalance)}
+                    </div>
+                  </DetailField>
                 </div>
               </SectionCard>
 
@@ -181,6 +329,7 @@ export function InternalAccountsPage() {
 
   if (!entity) return null
   const accounts = entityAccounts(entity)
+  const balanceGroups = entityBalancesByCurrency(entity)
 
   return (
     <div className="space-y-6">
@@ -214,6 +363,8 @@ export function InternalAccountsPage() {
           </CardContent>
         </Card>
       ) : (
+        <>
+        {balanceGroups.length > 0 && <BalancesSection groups={balanceGroups} />}
         <Card>
           <CardContent className="p-0">
             <Table>
@@ -264,6 +415,7 @@ export function InternalAccountsPage() {
             </Table>
           </CardContent>
         </Card>
+        </>
       )}
 
       <AccountDetailSheet
