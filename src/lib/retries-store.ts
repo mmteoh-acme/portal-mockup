@@ -22,6 +22,9 @@ export type SubmittedRetry = {
   submittedAt: string
   status: 'Pending approval' | 'Approved' | 'Rejected'
   reviewer?: RetryReviewer
+  // What kind of payment request this is — retries, new payments, and
+  // exception processing (returns/reversals) all flow through this store.
+  kind?: 'retry' | 'payment' | 'return' | 'reversal'
 }
 
 const STORAGE_KEY = 'portal-mockup:submittedRetries'

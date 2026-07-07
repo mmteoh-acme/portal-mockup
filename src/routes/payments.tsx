@@ -350,14 +350,16 @@ function PaymentsMain() {
     [storeDeposits],
   )
 
-  // Maker-checker queue: submitted refunds/retries still awaiting a checker.
+  // Maker-checker queue: everything submitted by makers still awaiting a
+  // checker — refunds, new payments, retries, returns, and reversals.
   const pendingReview = React.useMemo(
     () => [
       ...submittedRefunds
         .filter((r) => r.status === 'Pending approval')
         .map((r) => ({
           id: r.id,
-          kind: 'Refund' as const,
+          kind: 'Refund',
+          store: 'refund' as const,
           amount: r.amount,
           currency: r.currency,
           receiverName: r.receiverName,
@@ -368,7 +370,15 @@ function PaymentsMain() {
         .filter((r) => r.status === 'Pending approval')
         .map((r) => ({
           id: r.id,
-          kind: 'Retry' as const,
+          kind:
+            r.kind === 'payment'
+              ? 'Payment'
+              : r.kind === 'return'
+                ? 'Return'
+                : r.kind === 'reversal'
+                  ? 'Reversal'
+                  : 'Retry',
+          store: 'retry' as const,
           amount: r.amount,
           currency: r.currency,
           receiverName: r.receiverName,
@@ -869,7 +879,7 @@ function PaymentsMain() {
                     const canAct =
                       user.role === 'CHECKER' && r.requester !== user.name
                     const approve = () => {
-                      if (r.kind === 'Retry') {
+                      if (r.store === 'retry') {
                         approveRetry(r.id, { name: user.name, role: user.role })
                       } else {
                         approveRefund(r.id, { name: user.name, role: user.role })
@@ -879,7 +889,7 @@ function PaymentsMain() {
                       })
                     }
                     const reject = () => {
-                      if (r.kind === 'Retry') {
+                      if (r.store === 'retry') {
                         rejectRetry(r.id, { name: user.name, role: user.role })
                       } else {
                         rejectRefund(r.id, { name: user.name, role: user.role })
@@ -888,6 +898,16 @@ function PaymentsMain() {
                         description: `${r.id} — rejected by ${user.name}`,
                       })
                     }
+                    const kindPill =
+                      r.kind === 'Retry'
+                        ? 'border-blue-300 bg-blue-50 text-blue-700'
+                        : r.kind === 'Payment'
+                          ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                          : r.kind === 'Return'
+                            ? 'border-amber-300 bg-amber-50 text-amber-700'
+                            : r.kind === 'Reversal'
+                              ? 'border-sky-300 bg-sky-50 text-sky-700'
+                              : 'border-violet-300 bg-violet-50 text-violet-700'
                     return (
                       <TableRow key={r.id}>
                         <TableCell>
@@ -895,11 +915,7 @@ function PaymentsMain() {
                         </TableCell>
                         <TableCell>
                           <span
-                            className={
-                              r.kind === 'Retry'
-                                ? 'inline-flex items-center rounded border border-blue-300 bg-blue-50 px-1.5 py-0.5 text-[0.65rem] font-medium uppercase tracking-wider text-blue-700'
-                                : 'inline-flex items-center rounded border border-violet-300 bg-violet-50 px-1.5 py-0.5 text-[0.65rem] font-medium uppercase tracking-wider text-violet-700'
-                            }
+                            className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[0.65rem] font-medium uppercase tracking-wider ${kindPill}`}
                           >
                             {r.kind}
                           </span>
@@ -1978,6 +1994,7 @@ function NewRefundDialog({
   row: UnprocessedRefund | null
   trigger: React.ReactNode
 }) {
+  const { user } = useUser()
   const [accountName, setAccountName] = React.useState('')
   const [accountNumber, setAccountNumber] = React.useState('')
   const [bank, setBank] = React.useState('')
@@ -1985,6 +2002,34 @@ function NewRefundDialog({
   const [address, setAddress] = React.useState('')
 
   const submit = () => {
+    const now = new Date()
+    const month = now.toLocaleString('en-US', { month: 'short' })
+    const day = now.getDate()
+    const year = now.getFullYear()
+    const hh = String(((now.getHours() + 11) % 12) + 1).padStart(2, '0')
+    const mm = String(now.getMinutes()).padStart(2, '0')
+    const ampm = now.getHours() >= 12 ? 'PM' : 'AM'
+    const submittedAt = `${month} ${day}, ${year} at ${hh}:${mm} ${ampm}`
+    const refundId = `rf_${Math.random().toString(36).slice(2, 14).toUpperCase()}`
+
+    addRefund({
+      id: refundId,
+      originalTxnId: row?.originalTxnId ?? null,
+      amount: row?.amount.replace(/[^\d.,]/g, '').trim() ?? '',
+      currency: 'SGD',
+      reason: row?.reason ?? 'Manual refund',
+      note: '',
+      receiverName: accountName,
+      receiverBic: swift,
+      receiverAccount: accountNumber,
+      address,
+      city: '',
+      country: '',
+      requester: user.name,
+      submittedAt,
+      status: 'Pending approval',
+    })
+
     toast.success('Refund submitted', {
       description: 'Awaiting checker approval.',
     })
@@ -2213,6 +2258,33 @@ function NewPaymentPage() {
     addrCountry.trim() !== ''
 
   const submit = () => {
+    const now = new Date()
+    const month = now.toLocaleString('en-US', { month: 'short' })
+    const day = now.getDate()
+    const year = now.getFullYear()
+    const hh = String(((now.getHours() + 11) % 12) + 1).padStart(2, '0')
+    const mm = String(now.getMinutes()).padStart(2, '0')
+    const ampm = now.getHours() >= 12 ? 'PM' : 'AM'
+    const submittedAt = `${month} ${day}, ${year} at ${hh}:${mm} ${ampm}`
+    const payId = `pay_${Math.random().toString(36).slice(2, 14).toUpperCase()}`
+
+    addRetry({
+      id: payId,
+      originalPaymentId: linkedId,
+      amount,
+      currency,
+      receiverName,
+      receiverBankBic: receiverBic,
+      receiverAccountNumber: receiverAccount,
+      receiverLocalRoutingIdentifier: receiverRouting,
+      type: paymentType,
+      notes,
+      requester: user.name,
+      submittedAt,
+      status: 'Pending approval',
+      kind: 'payment',
+    })
+
     toast.success('Payment submitted for approval', {
       description: `${receiverName} · ${amount} ${currency} — awaiting checker approval.`,
     })
@@ -2879,6 +2951,13 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
     const finalAmount = retryMode === 'original' ? payment.amount : amount
     const finalCurrency = retryMode === 'original' ? payment.currency : currency
     const finalType = retryMode === 'original' ? payment.type : paymentType
+    // Exception-derived payments carry their origin in resultCode.
+    const kind =
+      payment.resultCode === 'FLAGGED_AS_RETURN'
+        ? ('return' as const)
+        : payment.resultCode === 'RETURNED_BY_BENEFICIARY_BANK'
+          ? ('reversal' as const)
+          : ('retry' as const)
 
     addRetry({
       id: retryId,
@@ -2894,11 +2973,19 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
       requester: user.name,
       submittedAt,
       status: 'Pending approval',
+      kind,
     })
 
-    toast.success('Retry submitted', {
-      description: `${payment.id} — awaiting maker-checker approval`,
-    })
+    toast.success(
+      kind === 'return'
+        ? 'Return submitted'
+        : kind === 'reversal'
+          ? 'Reversal submitted'
+          : 'Retry submitted',
+      {
+        description: `${payment.id} — awaiting maker-checker approval`,
+      },
+    )
     goBack()
   }
 
