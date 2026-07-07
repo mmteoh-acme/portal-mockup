@@ -1069,7 +1069,7 @@ function PaymentsMain() {
                       Original txn
                     </TableHead>
                     <TableHead className="text-[0.7rem] uppercase tracking-wider">
-                      Customer
+                      Counterparty
                     </TableHead>
                     <TableHead className="text-[0.7rem] uppercase tracking-wider">
                       Amount
@@ -1096,14 +1096,8 @@ function PaymentsMain() {
                         {r.amount}
                       </TableCell>
                       <TableCell>
-                        <span
-                          className={
-                            r.kind === 'return'
-                              ? 'inline-flex items-center rounded border border-blue-300 bg-blue-50 px-1.5 py-0.5 text-[0.65rem] font-medium uppercase tracking-wider text-blue-700'
-                              : 'inline-flex items-center rounded border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[0.65rem] font-medium uppercase tracking-wider text-amber-700'
-                          }
-                        >
-                          {r.kind === 'return' ? 'Return' : 'Reversal'}
+                        <span className="inline-flex items-center rounded border border-blue-300 bg-blue-50 px-1.5 py-0.5 text-[0.65rem] font-medium uppercase tracking-wider text-blue-700">
+                          Return
                         </span>
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
