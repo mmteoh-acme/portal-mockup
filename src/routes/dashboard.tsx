@@ -60,13 +60,23 @@ const BANK_COLORS = [
 const BALANCES_AS_OF = 'Jun 1, 2026, 09:00 AM SGT'
 
 // Balance Stats + daily Balances chart, grouped by currency and bank.
-function BalancesModule({ entity }: { entity: Entity }) {
+// `sideChart` renders next to the Balances chart in a 2-up grid.
+function BalancesModule({
+  entity,
+  sideChart,
+}: {
+  entity: Entity
+  sideChart?: React.ReactNode
+}) {
   const groups = React.useMemo(() => entityBalancesByCurrency(entity), [entity])
   const history = React.useMemo(() => entityBalanceHistory(entity), [entity])
   const [currency, setCurrency] = React.useState(
     () => groups[0]?.currency ?? 'SGD',
   )
   const [bankFilter, setBankFilter] = React.useState('all')
+  const [balanceType, setBalanceType] = React.useState<'available' | 'ledger'>(
+    'available',
+  )
 
   const group = groups.find((g) => g.currency === currency) ?? groups[0]
   const hist = history.find((h) => h.currency === currency) ?? history[0]
@@ -82,12 +92,15 @@ function BalancesModule({ entity }: { entity: Entity }) {
     label: b,
     color: BANK_COLORS[bankNames.indexOf(b) % BANK_COLORS.length],
   }))
-  const chartData = hist.days.map((d) => ({
-    label: d.label,
-    values: Object.fromEntries(
-      visibleBanks.map((b) => [b, d.perBank[b] ?? 0]),
-    ),
-  }))
+  const chartData = hist.days.map((d) => {
+    const source = balanceType === 'ledger' ? d.perBankLedger : d.perBank
+    return {
+      label: d.label,
+      values: Object.fromEntries(
+        visibleBanks.map((b) => [b, source[b] ?? 0]),
+      ),
+    }
+  })
 
   const currencySelect = (
     <Select
@@ -145,69 +158,78 @@ function BalancesModule({ entity }: { entity: Entity }) {
         </CardContent>
       </Card>
 
-      {/* Balances chart */}
-      <Card className="py-0">
-        <CardContent className="px-6 py-5">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-semibold">Balances</h2>
-              <p className="text-xs text-muted-foreground">
-                As of: {BALANCES_AS_OF}
-              </p>
+      {/* Balances chart — side by side with the companion chart */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card className="py-0">
+          <CardContent className="px-6 py-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold">Balances</h2>
+                <p className="text-xs text-muted-foreground">
+                  As of: {BALANCES_AS_OF}
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Select
+                  value={balanceType}
+                  onValueChange={(v) =>
+                    setBalanceType(v as 'available' | 'ledger')
+                  }
+                >
+                  <SelectTrigger size="sm" className="h-8 font-normal">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="available">Closing Available</SelectItem>
+                    <SelectItem value="ledger">Closing Ledger</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={bankFilter} onValueChange={setBankFilter}>
+                  <SelectTrigger size="sm" className="h-8 font-normal">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All banks</SelectItem>
+                    {bankNames.map((b) => (
+                      <SelectItem key={b} value={b}>
+                        {b}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value="past10" onValueChange={() => {}}>
+                  <SelectTrigger size="sm" className="h-8 font-normal">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="past10">Past 10 Days</SelectItem>
+                  </SelectContent>
+                </Select>
+                {currencySelect}
+              </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Select value="closing" onValueChange={() => {}}>
-                <SelectTrigger size="sm" className="h-8 font-normal">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="closing">Closing Available</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={bankFilter} onValueChange={setBankFilter}>
-                <SelectTrigger size="sm" className="h-8 font-normal">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All banks</SelectItem>
-                  {bankNames.map((b) => (
-                    <SelectItem key={b} value={b}>
-                      {b}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value="past10" onValueChange={() => {}}>
-                <SelectTrigger size="sm" className="h-8 font-normal">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="past10">Past 10 Days</SelectItem>
-                </SelectContent>
-              </Select>
-              {currencySelect}
+            <div className="mt-4 overflow-x-auto">
+              <StackedBarChart
+                data={chartData}
+                series={series}
+                height={280}
+                totalFormatter={(total) =>
+                  formatCompactMoney(group.currency, total)
+                }
+              />
             </div>
-          </div>
-          <div className="mt-4 overflow-x-auto">
-            <StackedBarChart
-              data={chartData}
-              series={series}
-              height={280}
-              totalFormatter={(total) =>
-                formatCompactMoney(group.currency, total)
-              }
-            />
-          </div>
-          <div className="mt-2">
-            <ChartLegend
-              items={bankNames.map((b) => ({
-                label: b,
-                color: BANK_COLORS[bankNames.indexOf(b) % BANK_COLORS.length],
-              }))}
-            />
-          </div>
-        </CardContent>
-      </Card>
+            <div className="mt-2">
+              <ChartLegend
+                items={bankNames.map((b) => ({
+                  label: b,
+                  color: BANK_COLORS[bankNames.indexOf(b) % BANK_COLORS.length],
+                }))}
+              />
+            </div>
+          </CardContent>
+        </Card>
+        {sideChart}
+      </div>
     </>
   )
 }
@@ -282,46 +304,49 @@ export function DashboardPage() {
             ))}
           </div>
 
-          {/* Balances — grouped by currency, bank, account */}
-          <BalancesModule entity={entity} />
-
-          {/* Payment volume over time */}
-          <ChartCardShell
-            title="Payment volume over time"
-            legend={
-              <ChartLegend
-                items={[
-                  { label: 'Completed', color: COLOR_COMPLETED },
-                  { label: 'Pending', color: COLOR_PENDING },
-                  { label: 'Failed', color: COLOR_FAILED },
-                ]}
-              />
+          {/* Balances (stats + chart) with payment volume alongside */}
+          <BalancesModule
+            entity={entity}
+            sideChart={
+              <ChartCardShell
+                title="Payment volume over time"
+                legend={
+                  <ChartLegend
+                    items={[
+                      { label: 'Completed', color: COLOR_COMPLETED },
+                      { label: 'Pending', color: COLOR_PENDING },
+                      { label: 'Failed', color: COLOR_FAILED },
+                    ]}
+                  />
+                }
+              >
+                <LineChart
+                  height={360}
+                  xLabels={analytics.byMonth.map((m) => m.label)}
+                  series={[
+                    {
+                      key: 'completed',
+                      label: 'Completed',
+                      color: COLOR_COMPLETED,
+                      values: analytics.byMonth.map((m) => m.completed),
+                    },
+                    {
+                      key: 'pending',
+                      label: 'Pending',
+                      color: COLOR_PENDING,
+                      values: analytics.byMonth.map((m) => m.pending),
+                    },
+                    {
+                      key: 'failed',
+                      label: 'Failed',
+                      color: COLOR_FAILED,
+                      values: analytics.byMonth.map((m) => m.failed),
+                    },
+                  ]}
+                />
+              </ChartCardShell>
             }
-          >
-            <LineChart
-              xLabels={analytics.byMonth.map((m) => m.label)}
-              series={[
-                {
-                  key: 'completed',
-                  label: 'Completed',
-                  color: COLOR_COMPLETED,
-                  values: analytics.byMonth.map((m) => m.completed),
-                },
-                {
-                  key: 'pending',
-                  label: 'Pending',
-                  color: COLOR_PENDING,
-                  values: analytics.byMonth.map((m) => m.pending),
-                },
-                {
-                  key: 'failed',
-                  label: 'Failed',
-                  color: COLOR_FAILED,
-                  values: analytics.byMonth.map((m) => m.failed),
-                },
-              ]}
-            />
-          </ChartCardShell>
+          />
 
           {/* Volume by bank + success rate by type */}
           <div className="grid gap-4 lg:grid-cols-2">

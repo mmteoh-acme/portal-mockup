@@ -325,6 +325,10 @@ export type BalanceHistoryDay = {
   label: string
   perBank: Record<string, number>
   total: number
+  // Closing ledger view — includes holds and uncleared items, so it sits
+  // slightly above closing available.
+  perBankLedger: Record<string, number>
+  totalLedger: number
 }
 
 export type CurrencyBalanceHistory = {
@@ -350,6 +354,7 @@ export function entityBalanceHistory(
       d.setDate(d.getDate() - i)
       const label = `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`
       const perBank: Record<string, number> = {}
+      const perBankLedger: Record<string, number> = {}
       for (const [bi, b] of g.banks.entries()) {
         let value: number
         if (i === 0) value = b.available
@@ -361,9 +366,17 @@ export function entityBalanceHistory(
           value = b.priorDay * (1 + wobble)
         }
         perBank[b.bankName] = Math.round(value * 100) / 100
+        // Ledger runs a hair above available (holds + uncleared items).
+        const ledgerLift = 0.008 + 0.006 * (0.5 + 0.5 * Math.sin(seed * 1.3 + bi + i * 2.4))
+        perBankLedger[b.bankName] =
+          Math.round(value * (1 + ledgerLift) * 100) / 100
       }
       const total = Object.values(perBank).reduce((s, v) => s + v, 0)
-      days.push({ label, perBank, total })
+      const totalLedger = Object.values(perBankLedger).reduce(
+        (s, v) => s + v,
+        0,
+      )
+      days.push({ label, perBank, total, perBankLedger, totalLedger })
     }
     return {
       currency: g.currency,
