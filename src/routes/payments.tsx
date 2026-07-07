@@ -2072,6 +2072,14 @@ function NewPaymentPage() {
   const { user } = useUser()
   const { entity } = useEntity()
 
+  const senderAccounts = React.useMemo(
+    () => (entity ? entityAccounts(entity) : []),
+    [entity],
+  )
+  const [senderAccountId, setSenderAccountId] = React.useState('')
+  const senderAccount =
+    senderAccounts.find((a) => a.id === senderAccountId) ?? null
+
   const [linkedId, setLinkedId] = React.useState('')
   const [linkQuery, setLinkQuery] = React.useState('')
   const [receiverName, setReceiverName] = React.useState('')
@@ -2158,6 +2166,7 @@ function NewPaymentPage() {
     })
 
   const canSubmit =
+    senderAccountId !== '' &&
     receiverName.trim() !== '' &&
     amount.trim() !== '' &&
     receiverAccount.trim() !== '' &&
@@ -2320,30 +2329,46 @@ function NewPaymentPage() {
           </div>
           {balances && (
             <div className="divide-y rounded-md border bg-muted/20 px-4">
-              {balances.map((a) => (
-                <div
-                  key={a.id}
-                  className="flex items-center justify-between gap-4 py-2.5 text-sm"
-                >
-                  <div className="min-w-0 space-y-0.5">
-                    <div>
-                      <span className="font-medium">{a.name}</span>
-                      <span className="ml-2 font-mono text-[0.7rem] text-muted-foreground">
-                        {a.id}
-                      </span>
+              {balances.map((a) => {
+                const isSelected = senderAccountId === a.id
+                return (
+                  <button
+                    key={a.id}
+                    type="button"
+                    onClick={() => {
+                      setSenderAccountId(a.id)
+                      setCurrency(a.currency)
+                    }}
+                    className={cn(
+                      'flex w-full items-center justify-between gap-4 py-2.5 text-left text-sm transition-colors hover:bg-muted/40',
+                      isSelected && 'bg-primary/5',
+                    )}
+                  >
+                    <div className="min-w-0 space-y-0.5">
+                      <div>
+                        <span className="font-medium">{a.name}</span>
+                        <span className="ml-2 font-mono text-[0.7rem] text-muted-foreground">
+                          {a.id}
+                        </span>
+                        {isSelected && (
+                          <span className="ml-2 rounded border border-emerald-300 bg-emerald-50 px-1.5 py-0.5 text-[0.6rem] font-medium uppercase tracking-wider text-emerald-700">
+                            Paying from
+                          </span>
+                        )}
+                      </div>
+                      <div className="font-mono text-[0.68rem] text-muted-foreground">
+                        Acct {a.number} · BIC {a.swiftBic || '—'} · IBAN{' '}
+                        {a.iban || '—'}
+                      </div>
                     </div>
-                    <div className="font-mono text-[0.68rem] text-muted-foreground">
-                      Acct {a.number} · BIC {a.swiftBic || '—'} · IBAN{' '}
-                      {a.iban || '—'}
-                    </div>
-                  </div>
-                  <span className="tabular-nums font-medium whitespace-nowrap">
-                    {formatMoney(a.currency, a.lastBalance)}
-                  </span>
-                </div>
-              ))}
+                    <span className="tabular-nums font-medium whitespace-nowrap">
+                      {formatMoney(a.currency, a.lastBalance)}
+                    </span>
+                  </button>
+                )
+              })}
               <p className="py-2 text-[0.65rem] text-muted-foreground">
-                As of: {balancesAsOf}
+                As of: {balancesAsOf} · Click an account to pay from it.
               </p>
             </div>
           )}
@@ -2354,6 +2379,36 @@ function NewPaymentPage() {
         <CardContent className="space-y-5 px-6 py-5">
           <div className="text-[0.7rem] font-medium uppercase tracking-wider text-muted-foreground">
             Payment details
+          </div>
+          <div className="space-y-1.5">
+            <Label>
+              Originating account <span className="text-destructive">*</span>
+            </Label>
+            <Select
+              value={senderAccountId}
+              onValueChange={(v) => {
+                setSenderAccountId(v)
+                const acct = senderAccounts.find((a) => a.id === v)
+                if (acct) setCurrency(acct.currency)
+              }}
+            >
+              <SelectTrigger className="w-full max-w-md">
+                <SelectValue placeholder="Select the account to pay from" />
+              </SelectTrigger>
+              <SelectContent>
+                {senderAccounts.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.name} · {a.number} · {a.currency}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {senderAccount && (
+              <p className="font-mono text-[0.68rem] text-muted-foreground">
+                {senderAccount.id} · BIC {senderAccount.swiftBic || '—'} ·
+                Available {formatMoney(senderAccount.currency, senderAccount.lastBalance)}
+              </p>
+            )}
           </div>
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-1.5">
