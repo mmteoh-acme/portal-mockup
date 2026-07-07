@@ -2132,16 +2132,19 @@ function NewPaymentPage() {
     return [...txns, ...pymts].slice(0, 6)
   }, [entity, linkQuery])
 
-  // Balances are fetched on demand — the balances API is billed per call.
-  const [balances, setBalances] = React.useState<Account[] | null>(null)
+  // Balance is fetched on demand for the selected account only — the
+  // balances API is billed per call.
+  const [fetchedBalance, setFetchedBalance] = React.useState<Account | null>(
+    null,
+  )
   const [balancesAsOf, setBalancesAsOf] = React.useState('')
   const [loadingBalances, setLoadingBalances] = React.useState(false)
 
-  const getBalances = () => {
-    if (loadingBalances) return
+  const getBalance = () => {
+    if (loadingBalances || !senderAccount) return
     setLoadingBalances(true)
     window.setTimeout(() => {
-      setBalances(entity ? entityAccounts(entity) : [])
+      setFetchedBalance(senderAccount)
       setBalancesAsOf(
         `${new Date().toLocaleString('en-SG', {
           month: 'short',
@@ -2153,11 +2156,20 @@ function NewPaymentPage() {
         })} SGT`,
       )
       setLoadingBalances(false)
-      toast.success('Balances retrieved', {
-        description: 'Latest available balances fetched from the bank.',
+      toast.success('Balance retrieved', {
+        description: `${senderAccount.name} — latest available balance fetched from the bank.`,
       })
     }, 900)
   }
+
+  // Sufficiency check against the entered amount, once a balance is fetched.
+  const amountNum = Number(amount.replace(/,/g, ''))
+  const sufficiency =
+    fetchedBalance && amount.trim() !== '' && !isNaN(amountNum) && amountNum > 0
+      ? fetchedBalance.lastBalance >= amountNum
+        ? 'sufficient'
+        : 'insufficient'
+      : null
 
   const goBack = () =>
     navigate({
@@ -2302,73 +2314,96 @@ function NewPaymentPage() {
 
       <Card>
         <CardContent className="space-y-4 px-6 py-5">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="space-y-1">
-              <div className="text-[0.7rem] font-medium uppercase tracking-wider text-muted-foreground">
-                Sender account balances
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Check available balances before executing a payment. The
-                balances API is billed per call, so retrieval is on demand.
-              </p>
+          <div className="space-y-1">
+            <div className="text-[0.7rem] font-medium uppercase tracking-wider text-muted-foreground">
+              Originating account
             </div>
+            <p className="text-xs text-muted-foreground">
+              1. Select the account to pay from · 2. Get its balance to confirm
+              sufficient funds before submitting. The balances API is billed
+              per call, so retrieval is on demand.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Select
+              value={senderAccountId}
+              onValueChange={(v) => {
+                setSenderAccountId(v)
+                setFetchedBalance(null)
+                const acct = senderAccounts.find((a) => a.id === v)
+                if (acct) setCurrency(acct.currency)
+              }}
+            >
+              <SelectTrigger className="w-full max-w-md">
+                <SelectValue placeholder="Select the account to pay from *" />
+              </SelectTrigger>
+              <SelectContent>
+                {senderAccounts.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.name} · {a.number} · {a.currency}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button
               variant="outline"
               size="sm"
-              className="h-8 gap-1.5"
-              onClick={getBalances}
-              disabled={loadingBalances}
+              className="h-9 gap-1.5"
+              onClick={getBalance}
+              disabled={!senderAccount || loadingBalances}
+              title={
+                senderAccount
+                  ? undefined
+                  : 'Select an originating account first'
+              }
             >
               {loadingBalances ? (
                 <RefreshCwIcon className="size-3.5 animate-spin" />
               ) : (
                 <WalletIcon className="size-3.5" />
               )}
-              {loadingBalances ? 'Retrieving…' : 'Get balances'}
+              {loadingBalances ? 'Retrieving…' : 'Get balance'}
             </Button>
           </div>
-          {balances && (
-            <div className="divide-y rounded-md border bg-muted/20 px-4">
-              {balances.map((a) => {
-                const isSelected = senderAccountId === a.id
-                return (
-                  <button
-                    key={a.id}
-                    type="button"
-                    onClick={() => {
-                      setSenderAccountId(a.id)
-                      setCurrency(a.currency)
-                    }}
-                    className={cn(
-                      'flex w-full items-center justify-between gap-4 py-2.5 text-left text-sm transition-colors hover:bg-muted/40',
-                      isSelected && 'bg-primary/5',
-                    )}
-                  >
-                    <div className="min-w-0 space-y-0.5">
-                      <div>
-                        <span className="font-medium">{a.name}</span>
-                        <span className="ml-2 font-mono text-[0.7rem] text-muted-foreground">
-                          {a.id}
-                        </span>
-                        {isSelected && (
-                          <span className="ml-2 rounded border border-emerald-300 bg-emerald-50 px-1.5 py-0.5 text-[0.6rem] font-medium uppercase tracking-wider text-emerald-700">
-                            Paying from
-                          </span>
-                        )}
-                      </div>
-                      <div className="font-mono text-[0.68rem] text-muted-foreground">
-                        Acct {a.number} · BIC {a.swiftBic || '—'} · IBAN{' '}
-                        {a.iban || '—'}
-                      </div>
-                    </div>
-                    <span className="tabular-nums font-medium whitespace-nowrap">
-                      {formatMoney(a.currency, a.lastBalance)}
-                    </span>
-                  </button>
-                )
-              })}
-              <p className="py-2 text-[0.65rem] text-muted-foreground">
-                As of: {balancesAsOf} · Click an account to pay from it.
+          {senderAccount && (
+            <p className="font-mono text-[0.68rem] text-muted-foreground">
+              {senderAccount.id} · Acct {senderAccount.number} · BIC{' '}
+              {senderAccount.swiftBic || '—'} · IBAN {senderAccount.iban || '—'}
+            </p>
+          )}
+          {fetchedBalance && (
+            <div className="space-y-2 rounded-md border bg-muted/20 px-4 py-3">
+              <div className="flex items-center justify-between gap-4 text-sm">
+                <div>
+                  <span className="font-medium">{fetchedBalance.name}</span>
+                  <span className="ml-2 text-[0.65rem] uppercase tracking-wider text-muted-foreground">
+                    Available balance
+                  </span>
+                </div>
+                <span className="text-lg font-semibold tabular-nums whitespace-nowrap">
+                  {formatMoney(fetchedBalance.currency, fetchedBalance.lastBalance)}
+                </span>
+              </div>
+              {sufficiency === 'sufficient' && (
+                <div className="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+                  ✓ Sufficient funds — available balance covers{' '}
+                  {formatMoney(fetchedBalance.currency, amountNum)}.
+                </div>
+              )}
+              {sufficiency === 'insufficient' && (
+                <div className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-800">
+                  ✕ Insufficient funds — the payment amount{' '}
+                  {formatMoney(fetchedBalance.currency, amountNum)} exceeds the
+                  available balance. Top up the account or reduce the amount.
+                </div>
+              )}
+              {sufficiency === null && (
+                <p className="text-[0.7rem] text-muted-foreground">
+                  Enter a payment amount below to check fund sufficiency.
+                </p>
+              )}
+              <p className="text-[0.65rem] text-muted-foreground">
+                As of: {balancesAsOf}
               </p>
             </div>
           )}
@@ -2380,36 +2415,21 @@ function NewPaymentPage() {
           <div className="text-[0.7rem] font-medium uppercase tracking-wider text-muted-foreground">
             Payment details
           </div>
-          <div className="space-y-1.5">
-            <Label>
-              Originating account <span className="text-destructive">*</span>
-            </Label>
-            <Select
-              value={senderAccountId}
-              onValueChange={(v) => {
-                setSenderAccountId(v)
-                const acct = senderAccounts.find((a) => a.id === v)
-                if (acct) setCurrency(acct.currency)
-              }}
-            >
-              <SelectTrigger className="w-full max-w-md">
-                <SelectValue placeholder="Select the account to pay from" />
-              </SelectTrigger>
-              <SelectContent>
-                {senderAccounts.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.name} · {a.number} · {a.currency}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {senderAccount && (
-              <p className="font-mono text-[0.68rem] text-muted-foreground">
-                {senderAccount.id} · BIC {senderAccount.swiftBic || '—'} ·
-                Available {formatMoney(senderAccount.currency, senderAccount.lastBalance)}
-              </p>
-            )}
-          </div>
+          {senderAccount ? (
+            <p className="text-xs text-muted-foreground">
+              Paying from{' '}
+              <span className="font-medium text-foreground">
+                {senderAccount.name}
+              </span>{' '}
+              <span className="font-mono text-[0.7rem]">
+                ({senderAccount.number})
+              </span>
+            </p>
+          ) : (
+            <p className="text-xs text-amber-700">
+              Select an originating account above before submitting.
+            </p>
+          )}
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-1.5">
               <Label>Amount</Label>
