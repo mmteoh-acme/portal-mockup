@@ -289,7 +289,7 @@ export function TransactionsPage() {
       kind,
     })
     if (added) {
-      toast.success(kind === 'reversal' ? 'Flagged as Reversal' : 'Flagged as Return', {
+      toast.success(kind === 'reversal' ? 'Flagged as Reversal' : 'Flagged for return', {
         description:
           kind === 'reversal'
             ? `${t.id} moved to the Pending review tab on the Payments page — process as a refund reversal to the client.`
@@ -763,18 +763,11 @@ export function TransactionsPage() {
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
-                            onSelect={() => flagException(t, 'reversal')}
-                            disabled={t.direction !== 'CREDIT'}
-                          >
-                            <FlagIcon className="size-3.5" />
-                            Flag as Reversal
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
                             onSelect={() => flagException(t, 'return')}
                             disabled={t.direction !== 'CREDIT'}
                           >
                             <FlagIcon className="size-3.5" />
-                            Flag as Return
+                            Flag for return
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -869,18 +862,11 @@ export function TransactionsPage() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-64">
                     <DropdownMenuItem
-                      onSelect={() => flagException(openTxn, 'reversal')}
-                      disabled={openTxn.direction !== 'CREDIT'}
-                    >
-                      <FlagIcon className="size-3.5" />
-                      Flag as Reversal
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
                       onSelect={() => flagException(openTxn, 'return')}
                       disabled={openTxn.direction !== 'CREDIT'}
                     >
                       <FlagIcon className="size-3.5" />
-                      Flag as Return
+                      Flag for return
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

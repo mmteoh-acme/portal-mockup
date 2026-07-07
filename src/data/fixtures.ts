@@ -4201,12 +4201,10 @@ export function entityTransactions(entity: Entity): Txn[] {
   return ENTITY_TRANSACTIONS[entity.id] ?? []
 }
 
-// A flagged credit transaction pending review:
-// - Reversal: reversal of a single payment order — a credit that must be
-//   processed as a refund reversal back to the client.
-// - Return: rejection of a single payment order — the originating bank
-//   returned the funds as a separate credit line; the payment needs to be
-//   resubmitted.
+// A flagged credit transaction pending review.
+// Return: rejection of a single payment order — the originating bank
+// returned the funds as a separate credit line; the payment needs to be
+// resubmitted.
 export type UnprocessedRefund = {
   originalTxnId: string
   customer: string
@@ -4221,17 +4219,17 @@ export const unprocessedRefunds: UnprocessedRefund[] = [
     originalTxnId: 'txn_0QJ87FX8QDVV2',
     customer: 'Vivien Tan',
     amount: 'S$ 12,000.00',
-    reason: 'Sender name unmatched — refund reversal to client',
+    reason: 'Payment rejected — funds returned by bank, resubmission required',
     date: '2026-05-28',
-    kind: 'reversal',
+    kind: 'return',
   },
   {
     originalTxnId: 'txn_0QJ4FX8RDVD3',
     customer: 'John Eames',
     amount: 'S$ 620.00',
-    reason: 'Incorrect account number — refund reversal to client',
+    reason: 'Payment rejected — funds returned by bank, resubmission required',
     date: '2026-05-27',
-    kind: 'reversal',
+    kind: 'return',
   },
   {
     originalTxnId: 'txn_0QJ2AX7PQCKR8',

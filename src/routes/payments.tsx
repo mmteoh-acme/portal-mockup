@@ -990,14 +990,9 @@ function PaymentsMain() {
                 Pending review ({allUnprocessed.length})
               </div>
               <p className="mt-1 text-sm text-muted-foreground">
-                Flagged credit transactions.{' '}
-                <span className="font-medium text-foreground">Reversal</span> —
-                reversal of a single payment order, processed as a refund
-                reversal to the client.{' '}
-                <span className="font-medium text-foreground">Return</span> — a
-                payment order the bank rejected and returned as a separate
-                credit line; resubmit the payment. Both go through
-                maker-checker approval.
+                Credit transactions flagged for return — payment orders the
+                bank rejected and returned as a separate credit line. Resubmit
+                the payment; processing goes through maker-checker approval.
               </p>
             </div>
             <NewRefundDialog
@@ -1035,10 +1030,7 @@ function PaymentsMain() {
                       Amount
                     </TableHead>
                     <TableHead className="text-[0.7rem] uppercase tracking-wider">
-                      Exception type
-                    </TableHead>
-                    <TableHead className="text-[0.7rem] uppercase tracking-wider">
-                      Reason
+                      Type
                     </TableHead>
                     <TableHead className="text-[0.7rem] uppercase tracking-wider">
                       Date
@@ -1070,9 +1062,6 @@ function PaymentsMain() {
                         </span>
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
-                        {r.reason}
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
                         {r.date}
                       </TableCell>
                       <TableCell className="text-right">
@@ -1100,7 +1089,7 @@ function PaymentsMain() {
                   {allUnprocessed.length === 0 && (
                     <TableRow>
                       <TableCell
-                        colSpan={7}
+                        colSpan={6}
                         className="py-10 text-center text-sm text-muted-foreground"
                       >
                         Nothing pending review right now.
