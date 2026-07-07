@@ -55,6 +55,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import { Mono, MonoLabel } from '@/components/mono'
 import { cn } from '@/lib/utils'
@@ -304,6 +305,15 @@ function PaymentsMain() {
         <NewPaymentButton />
       </div>
 
+      <Tabs defaultValue="payments">
+        <TabsList>
+          <TabsTrigger value="payments">Payments</TabsTrigger>
+          <TabsTrigger value="exceptions">
+            Exceptions ({allUnprocessed.length})
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="payments" className="space-y-6 pt-4">
       {/* Filters */}
       <div className="flex flex-wrap items-end gap-2">
         <div className="flex flex-col gap-1">
@@ -633,18 +643,19 @@ function PaymentsMain() {
           )}
         </CardContent>
       </Card>
+        </TabsContent>
 
-      {/* Unprocessed deposits awaiting refund (carry-over from old Refunds tab) */}
-      {allUnprocessed.length > 0 && (
-        <div className="space-y-3">
+        {/* Exceptions — transactions flagged for review: returned payments to
+            reprocess, suspicious credits to refund */}
+        <TabsContent value="exceptions" className="space-y-3 pt-4">
           <div className="flex items-center justify-between">
             <div>
               <div className="text-[0.7rem] font-medium uppercase tracking-wider text-muted-foreground">
-                Unprocessed deposits awaiting refund ({allUnprocessed.length})
+                Exceptions requiring review ({allUnprocessed.length})
               </div>
               <p className="mt-1 text-sm text-muted-foreground">
-                Beneficiary details missing. Enter bene details to submit a
-                refund through maker-checker.
+                Returned payments awaiting reprocessing and suspicious credits
+                awaiting refund. Actions go through maker-checker.
               </p>
             </div>
             <NewRefundDialog
@@ -682,12 +693,15 @@ function PaymentsMain() {
                       Amount
                     </TableHead>
                     <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                      Exception type
+                    </TableHead>
+                    <TableHead className="text-[0.7rem] uppercase tracking-wider">
                       Reason
                     </TableHead>
                     <TableHead className="text-[0.7rem] uppercase tracking-wider">
                       Date
                     </TableHead>
-                    <TableHead className="w-[140px]"></TableHead>
+                    <TableHead className="w-[150px]"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -702,6 +716,17 @@ function PaymentsMain() {
                       <TableCell className="text-sm tabular-nums">
                         {r.amount}
                       </TableCell>
+                      <TableCell>
+                        <span
+                          className={
+                            r.kind === 'reprocess'
+                              ? 'inline-flex items-center rounded border border-blue-300 bg-blue-50 px-1.5 py-0.5 text-[0.65rem] font-medium uppercase tracking-wider text-blue-700'
+                              : 'inline-flex items-center rounded border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[0.65rem] font-medium uppercase tracking-wider text-amber-700'
+                          }
+                        >
+                          {r.kind === 'reprocess' ? 'Reprocess' : 'Refund'}
+                        </span>
+                      </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {r.reason}
                       </TableCell>
@@ -709,19 +734,44 @@ function PaymentsMain() {
                         {r.date}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setRefundRow(r)
-                            setRefundOpen(true)
-                          }}
-                        >
-                          Add bene details
-                        </Button>
+                        {r.kind === 'reprocess' ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              toast.success('Reprocess submitted', {
+                                description: `${r.originalTxnId} — resubmission awaiting checker approval.`,
+                              })
+                            }}
+                          >
+                            <RotateCcwIcon className="size-3.5" />
+                            Reprocess
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setRefundRow(r)
+                              setRefundOpen(true)
+                            }}
+                          >
+                            Add bene details
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
+                  {allUnprocessed.length === 0 && (
+                    <TableRow>
+                      <TableCell
+                        colSpan={7}
+                        className="py-10 text-center text-sm text-muted-foreground"
+                      >
+                        No exceptions — nothing needs review right now.
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
@@ -738,8 +788,8 @@ function PaymentsMain() {
               trigger={null}
             />
           )}
-        </div>
-      )}
+        </TabsContent>
+      </Tabs>
 
       {/* Detail Sheet */}
       <PaymentDetailSheet

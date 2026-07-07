@@ -6,7 +6,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   MoreHorizontalIcon,
-  FolderPlusIcon,
+  FlagIcon,
   DownloadIcon,
 } from 'lucide-react'
 import { parse as parseDate } from 'date-fns'
@@ -736,23 +736,49 @@ export function TransactionsPage() {
                                 originalTxnId: t.id,
                                 customer: t.senderName,
                                 amount: `${t.currency} ${t.amount}`,
-                                reason: 'Flagged from transactions',
+                                reason: 'Suspicious credit — refund required',
                                 date: t.transactionDate,
+                                kind: 'refund',
                               })
                               if (added) {
-                                toast.success('Added to unprocessed deposits', {
-                                  description: `${t.id} is now awaiting refund on the Payments page.`,
+                                toast.success('Flagged as exception', {
+                                  description: `${t.id} moved to the Exceptions tab on the Payments page for refund review.`,
                                 })
                               } else {
-                                toast.info('Already in unprocessed deposits', {
-                                  description: `${t.id} is already awaiting refund.`,
+                                toast.info('Already in exceptions', {
+                                  description: `${t.id} is already awaiting review.`,
                                 })
                               }
                             }}
                             disabled={t.direction !== 'CREDIT'}
                           >
-                            <FolderPlusIcon className="size-3.5" />
-                            Add to unprocessed deposits
+                            <FlagIcon className="size-3.5" />
+                            Flag: suspicious credit — refund
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onSelect={() => {
+                              const added = addUnprocessedDeposit({
+                                originalTxnId: t.id,
+                                customer: t.senderName,
+                                amount: `${t.currency} ${t.amount}`,
+                                reason: 'Returned by beneficiary bank — reprocess required',
+                                date: t.transactionDate,
+                                kind: 'reprocess',
+                              })
+                              if (added) {
+                                toast.success('Flagged as exception', {
+                                  description: `${t.id} moved to the Exceptions tab on the Payments page for reprocessing.`,
+                                })
+                              } else {
+                                toast.info('Already in exceptions', {
+                                  description: `${t.id} is already awaiting review.`,
+                                })
+                              }
+                            }}
+                            disabled={t.direction !== 'DEBIT'}
+                          >
+                            <FlagIcon className="size-3.5" />
+                            Flag: returned payment — reprocess
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>

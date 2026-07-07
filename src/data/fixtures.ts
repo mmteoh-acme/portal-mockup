@@ -4077,12 +4077,16 @@ export function entityTransactions(entity: Entity): Txn[] {
   return ENTITY_TRANSACTIONS[entity.id] ?? []
 }
 
+// An exception: a transaction flagged into the review/triage queue — e.g. a
+// returned payment that needs reprocessing, or a suspicious inbound credit
+// that needs to be refunded.
 export type UnprocessedRefund = {
   originalTxnId: string
   customer: string
   amount: string
   reason: string
   date: string
+  kind?: 'refund' | 'reprocess'
 }
 
 export const unprocessedRefunds: UnprocessedRefund[] = [
@@ -4090,8 +4094,9 @@ export const unprocessedRefunds: UnprocessedRefund[] = [
     originalTxnId: 'txn_0QJ87FX8QDVV2',
     customer: 'Vivien Tan',
     amount: 'S$ 12,000.00',
-    reason: 'Sender name unmatched',
+    reason: 'Sender name unmatched — suspicious credit',
     date: '2026-05-28',
+    kind: 'refund',
   },
   {
     originalTxnId: 'txn_0QJ4FX8RDVD3',
@@ -4099,7 +4104,16 @@ export const unprocessedRefunds: UnprocessedRefund[] = [
     amount: 'S$ 620.00',
     reason: 'Incorrect account number',
     date: '2026-05-27',
-  }
+    kind: 'refund',
+  },
+  {
+    originalTxnId: 'txn_0QJ2AX7PQCKR8',
+    customer: 'Meridian Foods Pte Ltd',
+    amount: 'S$ 8,140.00',
+    reason: 'Returned by beneficiary bank — reprocess required',
+    date: '2026-05-29',
+    kind: 'reprocess',
+  },
 ]
 
 

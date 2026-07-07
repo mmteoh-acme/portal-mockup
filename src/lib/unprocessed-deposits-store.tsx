@@ -1,9 +1,9 @@
 import * as React from 'react'
 import type { UnprocessedRefund } from '@/data/fixtures'
 
-// Session-scoped store of deposits an operator has flagged from the
-// Transactions page ("Add to unprocessed deposits"). These surface in the
-// "Unprocessed deposits awaiting refund" table on the Payments page.
+// Session-scoped store of transactions an operator has flagged as exceptions
+// from the Transactions page (returned payments to reprocess, suspicious
+// credits to refund). These surface in the Exceptions tab on the Payments page.
 
 const STORAGE_KEY = 'portal-mockup:unprocessedDeposits'
 const EVENT = 'portal-mockup:unprocessed-deposits-updated'
