@@ -129,6 +129,30 @@ function isoPaymentDate(raw: string): string {
   return `${d.getFullYear()}-${m}-${day}`
 }
 
+// Reconstruct the POST /payments request body that created this payment.
+function buildPaymentRequestPayload(p: Payment): string {
+  const payload = {
+    type: p.type,
+    currency: p.currency,
+    amount: Number(p.amount.replace(/,/g, '')) || p.amount,
+    customerReference: p.customerReference || null,
+    paymentDetails: p.paymentDetails || null,
+    senderAccountId: p.senderAccountId || null,
+    senderAccountCurrency: p.currency,
+    receiver: {
+      name: p.receiverName || null,
+      bank: p.receiverBank || null,
+      bankAccountNumber: p.receiverBankAccountNumber || null,
+      address: {
+        line1: '21 Central Street',
+        city: 'SG',
+        country: 'SG',
+      },
+    },
+  }
+  return JSON.stringify(payload, null, 2)
+}
+
 // Reconstruct the raw API payload for a payment, mirroring the
 // GET /payments/{id} response shape surfaced by the Acme API.
 function buildPaymentRawPayload(
@@ -1716,7 +1740,19 @@ function PaymentDetailSheet({
                 />
               </DetailSection>
 
-              <DetailSection title="Raw payload">
+              <DetailSection title="Request payload">
+                <div className="mb-1.5 font-mono text-[0.68rem] text-muted-foreground">
+                  POST /payments
+                </div>
+                <pre className="max-h-96 overflow-auto rounded border bg-muted/30 p-3 font-mono text-[0.7rem] leading-relaxed text-foreground/90">
+                  {buildPaymentRequestPayload(payment)}
+                </pre>
+              </DetailSection>
+
+              <DetailSection title="Response payload">
+                <div className="mb-1.5 font-mono text-[0.68rem] text-muted-foreground">
+                  GET /payments/{payment.id}
+                </div>
                 <pre className="max-h-96 overflow-auto rounded border bg-muted/30 p-3 font-mono text-[0.7rem] leading-relaxed text-foreground/90">
                   {buildPaymentRawPayload(payment, refund, retry)}
                 </pre>
