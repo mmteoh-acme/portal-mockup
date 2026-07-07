@@ -763,14 +763,14 @@ export function TransactionsPage() {
                             disabled={t.direction !== 'CREDIT'}
                           >
                             <FlagIcon className="size-3.5" />
-                            Flag: suspicious credit — refund
+                            Flag as Return
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onSelect={() => flagException(t, 'reprocess')}
                             disabled={t.direction !== 'DEBIT'}
                           >
                             <FlagIcon className="size-3.5" />
-                            Flag: returned payment — reprocess
+                            Flag as Reversal
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -869,14 +869,14 @@ export function TransactionsPage() {
                       disabled={openTxn.direction !== 'CREDIT'}
                     >
                       <FlagIcon className="size-3.5" />
-                      Flag: suspicious credit — refund
+                      Flag as Return
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onSelect={() => flagException(openTxn, 'reprocess')}
                       disabled={openTxn.direction !== 'DEBIT'}
                     >
                       <FlagIcon className="size-3.5" />
-                      Flag: returned payment — reprocess
+                      Flag as Reversal
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
