@@ -197,7 +197,9 @@ function PaymentsMain() {
   const submittedRetries = useSubmittedRetries()
   const { user } = useUser()
   const navigate = useNavigate()
-  const [filter, setFilter] = React.useState<FilterKey>('all')
+  const [tab, setTab] = React.useState<FilterKey | 'exceptions'>('all')
+  // Status filter derived from the active tab; exceptions tab has no status.
+  const filter: FilterKey = tab === 'exceptions' ? 'all' : tab
   const [filterCurrency, setFilterCurrency] = React.useState('')
   const [filterBank, setFilterBank] = React.useState('')
   const [filterAccount, setFilterAccount] = React.useState('')
@@ -305,31 +307,25 @@ function PaymentsMain() {
         <NewPaymentButton />
       </div>
 
-      <Tabs defaultValue="payments">
+      <Tabs
+        value={tab}
+        onValueChange={(v) => setTab(v as FilterKey | 'exceptions')}
+      >
         <TabsList>
-          <TabsTrigger value="payments">Payments</TabsTrigger>
+          <TabsTrigger value="all">All ({counts.all})</TabsTrigger>
+          <TabsTrigger value="pending">Pending ({counts.pending})</TabsTrigger>
+          <TabsTrigger value="failed">Failed ({counts.failed})</TabsTrigger>
+          <TabsTrigger value="completed">
+            Completed ({counts.completed})
+          </TabsTrigger>
           <TabsTrigger value="exceptions">
             Exceptions ({allUnprocessed.length})
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="payments" className="space-y-6 pt-4">
+        <TabsContent value={tab === 'exceptions' ? '__payments' : tab} className="space-y-6 pt-4">
       {/* Filters */}
       <div className="flex flex-wrap items-end gap-2">
-        <div className="flex flex-col gap-1">
-          <span className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">Status</span>
-          <Select value={filter} onValueChange={(v) => setFilter(v as FilterKey)}>
-            <SelectTrigger size="sm" className="h-8 w-40 font-normal">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="pending">Pending ({counts.pending})</SelectItem>
-              <SelectItem value="failed">Failed ({counts.failed})</SelectItem>
-              <SelectItem value="completed">Completed ({counts.completed})</SelectItem>
-              <SelectItem value="all">All ({counts.all})</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
         <div className="flex flex-col gap-1">
           <span className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">Currency</span>
           <Select value={filterCurrency || '__all'} onValueChange={(v) => setFilterCurrency(v === '__all' ? '' : v)}>

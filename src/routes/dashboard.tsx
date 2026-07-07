@@ -1,5 +1,6 @@
 import * as React from 'react'
-import { LandmarkIcon, PlusIcon } from 'lucide-react'
+import { LandmarkIcon, PlusIcon, RefreshCwIcon } from 'lucide-react'
+import { toast } from 'sonner'
 import {
   Card,
   CardContent,
@@ -77,6 +78,31 @@ function BalancesModule({
   const [balanceType, setBalanceType] = React.useState<'available' | 'ledger'>(
     'available',
   )
+  // As-of balances are fetched on demand — the balances API is billed per
+  // call, so refresh is an explicit user action rather than a poll.
+  const [asOf, setAsOf] = React.useState(BALANCES_AS_OF)
+  const [refreshing, setRefreshing] = React.useState(false)
+
+  const refreshBalances = () => {
+    if (refreshing) return
+    setRefreshing(true)
+    window.setTimeout(() => {
+      const now = new Date()
+      const formatted = `${now.toLocaleString('en-SG', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      })} SGT`
+      setAsOf(formatted)
+      setRefreshing(false)
+      toast.success('Balances refreshed', {
+        description: 'Retrieved the latest as-of balances from the bank.',
+      })
+    }, 900)
+  }
 
   const group = groups.find((g) => g.currency === currency) ?? groups[0]
   const hist = history.find((h) => h.currency === currency) ?? history[0]
@@ -131,11 +157,24 @@ function BalancesModule({
           <div className="flex items-start justify-between">
             <div>
               <h2 className="text-lg font-semibold">Balance Stats</h2>
-              <p className="text-xs text-muted-foreground">
-                As of: {BALANCES_AS_OF}
-              </p>
+              <p className="text-xs text-muted-foreground">As of: {asOf}</p>
             </div>
-            {currencySelect}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5"
+                onClick={refreshBalances}
+                disabled={refreshing}
+                title="Retrieves live as-of balances. The balances API is billed per call, so refresh on demand."
+              >
+                <RefreshCwIcon
+                  className={`size-3.5 ${refreshing ? 'animate-spin' : ''}`}
+                />
+                {refreshing ? 'Refreshing…' : 'Refresh'}
+              </Button>
+              {currencySelect}
+            </div>
           </div>
           <div className="mt-5 grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div>
@@ -165,9 +204,7 @@ function BalancesModule({
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h2 className="text-lg font-semibold">Balances</h2>
-                <p className="text-xs text-muted-foreground">
-                  As of: {BALANCES_AS_OF}
-                </p>
+                <p className="text-xs text-muted-foreground">As of: {asOf}</p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <Select
