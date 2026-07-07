@@ -75,7 +75,7 @@ const AUDIT_EVENTS: AuditEvent[] = [
     outcome: 'SUCCESS',
     source: 'Portal',
     bank: 'DBS',
-    endpoint: 'POST /v1/refunds/rf_KH2M9AXBECQ3/approve',
+    endpoint: 'POST /payments/rf_KH2M9AXBECQ3/approve',
     ip: '203.118.8.4',
     responsePayload: `{
   "id": "rf_KH2M9AXBECQ3",
@@ -99,17 +99,19 @@ const AUDIT_EVENTS: AuditEvent[] = [
     outcome: 'PENDING',
     source: 'Portal',
     bank: 'DBS',
-    endpoint: 'POST /v1/refunds',
+    endpoint: 'POST /payments',
     ip: '203.118.8.2',
     requestPayload: `{
-  "originalTxnId": "txn_01J9KB1C2D3E4",
-  "amount": "1200.00",
+  "type": "FAST",
+  "amount": 1200,
   "currency": "SGD",
-  "reason": "Missing beneficiary details",
+  "customerReference": "REFUND-txn_01J9KB1C2D3E4",
+  "paymentDetails": "Refund — missing beneficiary details",
+  "senderAccountId": "intacc_0KT8ZSCRKXP0O",
   "receiver": {
     "name": "Vivien Tan",
     "bankAccountNumber": "•••• •••• 6833",
-    "bic": "DBSS•••XXX"
+    "bank": "DBSS•••XXX"
   }
 }`,
     responsePayload: `{
@@ -133,7 +135,7 @@ const AUDIT_EVENTS: AuditEvent[] = [
     outcome: 'REJECTED',
     source: 'Portal',
     bank: 'CIMB',
-    endpoint: 'POST /v1/retries/rty_3ABCD123/reject',
+    endpoint: 'POST /payments/rty_3ABCD123/reject',
     ip: '203.118.8.4',
     errorCode: 'BANK_AC01',
     errorTitle: 'Account number provided is incorrect',
@@ -165,12 +167,15 @@ const AUDIT_EVENTS: AuditEvent[] = [
     outcome: 'PENDING',
     source: 'Portal',
     bank: 'CIMB',
-    endpoint: 'POST /v1/retries',
+    endpoint: 'POST /payments',
     ip: '203.118.8.2',
     requestPayload: `{
-  "originalPaymentId": "pmt_failing_002",
-  "amount": "45000.00",
+  "type": "FAST",
+  "amount": 45000,
   "currency": "SGD",
+  "customerReference": "RETRY-pmt_failing_002",
+  "paymentDetails": "Retry of failed payment pmt_failing_002",
+  "senderAccountId": "intacc_0KERZSCDKXV0O",
   "receiver": {
     "name": "MR LO CHUN KIT",
     "bankAccountNumber": "•••• •••• 9651",
@@ -193,7 +198,7 @@ const AUDIT_EVENTS: AuditEvent[] = [
     outcome: 'SUCCESS',
     source: 'Portal',
     bank: 'DBS',
-    endpoint: 'POST /v1/retries/rty_9XYZ001/approve',
+    endpoint: 'POST /payments/rty_9XYZ001/approve',
     ip: '203.118.8.4',
   },
   {
@@ -211,7 +216,7 @@ const AUDIT_EVENTS: AuditEvent[] = [
     outcome: 'REJECTED',
     source: 'API',
     bank: 'DBS',
-    endpoint: 'POST /v1/retries',
+    endpoint: 'POST /payments',
     ip: '203.118.8.2',
     errorCode: 'BANK_AM04',
     errorTitle: 'Insufficient funds',
@@ -286,7 +291,7 @@ const AUDIT_EVENTS: AuditEvent[] = [
     outcome: 'PENDING',
     source: 'Portal',
     bank: 'DBS',
-    endpoint: 'POST /v1/refunds',
+    endpoint: 'POST /payments',
     ip: '203.118.8.9',
   },
   {
@@ -304,7 +309,7 @@ const AUDIT_EVENTS: AuditEvent[] = [
     outcome: 'SUCCESS',
     source: 'Portal',
     bank: 'CIMB',
-    endpoint: 'POST /v1/refunds/rf_AW001/approve',
+    endpoint: 'POST /payments/rf_AW001/approve',
     ip: '203.118.8.4',
   },
   {
