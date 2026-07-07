@@ -76,6 +76,19 @@ export const COMPANY: Company = {
               iban: '',
               createdAt: '2025-04-18T14:11:00',
             },
+            {
+              id: 'intacc_0KT8ZSFGUSDOP',
+              number: '0123570118',
+              name: 'USD Operating',
+              currency: 'USD',
+              lastBalance: 2841032.50,
+              priorDayBalance: 2795410.75,
+              status: 'ACTIVE',
+              mode: 'LIVE',
+              swiftBic: 'DBSSSGSGXXX',
+              iban: '',
+              createdAt: '2025-08-15T10:00:00',
+            },
           ],
         },
         {
@@ -375,8 +388,6 @@ export type ActivityItem = {
 }
 
 export function entityKpis(entity: Entity): KpiCard[] {
-  const accounts = entityAccounts(entity)
-  const total = accounts.reduce((sum, a) => sum + a.lastBalance, 0)
   const txns = ENTITY_TRANSACTIONS[entity.id] ?? []
   const txnsCount = txns.length
   const pendingFromRefunds = entity.id === 'ent_acme_labs_sg' ? unprocessedRefunds.length : 0
@@ -389,12 +400,6 @@ export function entityKpis(entity: Entity): KpiCard[] {
       value: String(txnsCount),
       delta: txnsCount > 0 ? '+' + txnsCount : '0',
       sub: 'across all rails',
-    },
-    {
-      label: 'Balances total',
-      value: formatSGD(total),
-      delta: '+0.6%',
-      sub: `across ${accounts.length} account${accounts.length === 1 ? '' : 's'}`,
     },
     {
       label: 'Pending approvals',
