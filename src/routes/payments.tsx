@@ -1,7 +1,6 @@
 import * as React from 'react'
 import {
   PlusIcon,
-  ShieldCheckIcon,
   ArrowLeftIcon,
   Undo2Icon,
   ChevronLeftIcon,
@@ -25,15 +24,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
 import {
   Sheet,
   SheetContent,
