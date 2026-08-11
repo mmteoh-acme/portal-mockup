@@ -8,6 +8,10 @@ import {
   MoreHorizontalIcon,
   FlagIcon,
   DownloadIcon,
+  ArrowDownIcon,
+  CheckCircle2Icon,
+  ClockIcon,
+  ExternalLinkIcon,
 } from 'lucide-react'
 import { parse as parseDate } from 'date-fns'
 import { Card, CardContent } from '@/components/ui/card'
@@ -58,7 +62,14 @@ import {
   LEGAL_ENTITIES,
   TRANSACTIONS,
   bankNames as allBankNames,
+  formatAmountWithCurrency,
+  getAccount,
+  formatDirectionalAmount,
+  sortTransactionsByDateDesc,
+  txnDetail,
+  type Account,
   type Txn,
+  type TxnDetail,
 } from '@/data/fixtures'
 import type { DateRange } from 'react-day-picker'
 
@@ -67,22 +78,32 @@ type CurrencyFilter = 'all' | string
 
 const PAGE_SIZE = 20
 
+// Mirrors the transaction view's field set: the main columns first, then the
+// detail fields. organization_id and statement_entry_id stay out of the export.
 const CSV_HEADERS = [
-  'Transaction ID',
-  'Direction',
+  'Date',
+  'Account',
   'Amount',
   'Currency',
-  'Transaction date',
-  'Internal account ID',
-  'Counterparty',
+  'Direction',
+  'Counterparty name',
   'Counterparty bank',
-  'Customer reference',
+  'Counterparty account no.',
+  'Transaction ID',
   'Bank reference',
-  'Additional info',
-  'Remittance info',
-  'Transaction type',
+  'Customer reference',
+  'Type',
+  'Virtual account',
+  'Remittance information',
+  'Additional information',
+  'Other references',
+  'Bank message ID',
   'Data source',
+  'Statement ID',
+  'Reconciled at',
+  'Description',
   'Created at',
+  'Last updated',
 ] as const
 
 function csvEscape(v: string | undefined | null): string {
@@ -93,23 +114,34 @@ function csvEscape(v: string | undefined | null): string {
 function downloadTransactionsCsv(rows: Txn[], entityName: string): void {
   const lines = [CSV_HEADERS.map(csvEscape).join(',')]
   for (const t of rows) {
+    const d = txnDetail(t, getAccount(t.internalAccountId))
     lines.push(
       [
-        t.id,
-        t.direction,
-        t.amount,
-        t.currency,
         t.transactionDate,
         t.internalAccountId,
+        t.amount,
+        t.currency,
+        t.direction,
         t.senderName,
         t.senderBank,
-        t.customerRef,
+        d.senderBankAccountNumber,
+        t.id,
         t.bankRef,
-        t.additionalInformation,
-        t.remittanceInfo,
+        t.customerRef,
         t.transactionType,
+        d.virtualAccountNumber,
+        t.remittanceInfo,
+        t.additionalInformation,
+        d.transactionReferences
+          .map((r) => `${r.name}=${r.value}`)
+          .join('; '),
+        d.messageId,
         t.dataSource,
+        d.statementId,
+        d.reconciledWithStatementAt,
+        d.description,
         t.createdAt,
+        d.updatedAt,
       ]
         .map(csvEscape)
         .join(','),
@@ -162,9 +194,9 @@ function isoTxnDate(raw: string): string {
 function buildRawPayload(
   t: Txn,
   origin: { number: string; bic: string } | undefined,
+  d: TxnDetail,
 ): string {
   const date = isoTxnDate(t.transactionDate)
-  const acctSvcrRef = t.bankRef.replace(/\D/g, '') || '133042890'
   const payload = {
     data: [
       {
@@ -173,14 +205,10 @@ function buildRawPayload(
         transactionType: t.transactionType,
         transactionStatus: 'BOOKED',
         bankReference: t.bankRef,
-        transactionReferences: [
-          {
-            dataSource: 'CAMT053',
-            name: 'acctSvcrRef',
-            value: acctSvcrRef,
-          },
-        ],
+        messageId: d.messageId,
+        transactionReferences: d.transactionReferences,
         customerReference: t.customerRef,
+        description: d.description,
         remittanceInformation: t.remittanceInfo,
         additionalInformation: t.additionalInformation,
         amount: Number(t.amount.replace(/,/g, '')),
@@ -196,14 +224,14 @@ function buildRawPayload(
           bank: t.senderBank || null,
           localRoutingIdentifier: '003',
           bankName: t.senderBank || null,
-          bankAccountNumber: null,
+          bankAccountNumber: d.senderBankAccountNumber,
         },
         bankAccount: {
           id: t.internalAccountId,
           bank: origin?.bic ?? null,
           bankAccountNumber: origin?.number ?? null,
         },
-        virtualAccountNumber: null,
+        virtualAccountNumber: d.virtualAccountNumber,
         transactionDate: date,
         bookingDate: {
           date,
@@ -211,7 +239,8 @@ function buildRawPayload(
           offset: '+08:00',
           tz: 'Asia/Singapore',
         },
-        statementId: 'stmt_0KP0KSCSSM7V8',
+        statementId: d.statementId,
+        reconciledWithStatementAt: d.reconciledWithStatementAt,
         createdAt: `${date}T00:00:00.000000Z`,
         updatedAt: `${date}T00:00:00.000000Z`,
       },
@@ -236,7 +265,11 @@ function inRange(dateStr: string, range: DateRange | undefined): boolean {
 export function TransactionsPage() {
   // Flat list for the whole client group. Bank and legal entity are filters
   // over account attributes rather than levels to drill into.
-  const rows = React.useMemo<Txn[]>(() => TRANSACTIONS, [])
+  // Default sort: value date descending.
+  const rows = React.useMemo<Txn[]>(
+    () => sortTransactionsByDateDesc(TRANSACTIONS),
+    [],
+  )
 
   const bankNames = React.useMemo(() => allBankNames(ACCOUNTS), [])
 
@@ -309,6 +342,12 @@ export function TransactionsPage() {
     for (const r of rows) if (r.transactionType) set.add(r.transactionType)
     return Array.from(set).sort()
   }, [rows])
+
+  const accountById = React.useMemo<Record<string, Account>>(() => {
+    const map: Record<string, Account> = {}
+    for (const a of accounts) map[a.id] = a
+    return map
+  }, [accounts])
 
   // Map each account id → its bank name. Used by the Bank filter to decide
   // whether a transaction's internalAccountId belongs to a selected bank.
@@ -638,37 +677,25 @@ export function TransactionsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-32 text-[0.7rem] uppercase tracking-wider whitespace-normal leading-snug">
-                    Transaction ID
+                    <span
+                      className="inline-flex items-center gap-1"
+                      title="Value Date of the transaction"
+                    >
+                      Date
+                      <ArrowDownIcon className="size-3 opacity-60" />
+                    </span>
                   </TableHead>
-                  <TableHead className="w-28 text-right text-[0.7rem] uppercase tracking-wider whitespace-normal leading-snug">
+                  <TableHead className="w-44 text-[0.7rem] uppercase tracking-wider whitespace-normal leading-snug">
+                    Account
+                  </TableHead>
+                  <TableHead className="w-40 text-right text-[0.7rem] uppercase tracking-wider whitespace-normal leading-snug">
                     Amount
                   </TableHead>
-                  <TableHead className="w-20 text-[0.7rem] uppercase tracking-wider whitespace-normal leading-snug">
-                    Currency
-                  </TableHead>
-                  <TableHead className="w-32 text-[0.7rem] uppercase tracking-wider whitespace-normal leading-snug">
-                    Transaction date
-                  </TableHead>
-                  <TableHead className="w-36 text-[0.7rem] uppercase tracking-wider whitespace-normal leading-snug">
-                    Counterparty
-                  </TableHead>
-                  <TableHead className="w-32 text-[0.7rem] uppercase tracking-wider whitespace-normal leading-snug">
-                    Originating account #
-                  </TableHead>
-                  <TableHead className="w-32 text-[0.7rem] uppercase tracking-wider whitespace-normal leading-snug">
-                    Originating bank
-                  </TableHead>
-                  <TableHead className="w-36 text-[0.7rem] uppercase tracking-wider whitespace-normal leading-snug">
-                    Customer reference
-                  </TableHead>
-                  <TableHead className="w-36 text-[0.7rem] uppercase tracking-wider whitespace-normal leading-snug">
-                    Bank reference
+                  <TableHead className="w-56 text-[0.7rem] uppercase tracking-wider whitespace-normal leading-snug">
+                    Counterparty details
                   </TableHead>
                   <TableHead className="w-28 text-[0.7rem] uppercase tracking-wider whitespace-normal leading-snug">
-                    Transaction type
-                  </TableHead>
-                  <TableHead className="w-32 text-[0.7rem] uppercase tracking-wider whitespace-normal leading-snug">
-                    Created at
+                    Reconciled
                   </TableHead>
                   <TableHead className="w-12 text-[0.7rem] uppercase tracking-wider whitespace-normal leading-snug">
                     Actions
@@ -682,8 +709,19 @@ export function TransactionsPage() {
                     className="cursor-pointer"
                     onClick={() => setOpenTxn(t)}
                   >
-                    <TableCell className="max-w-[8rem]" title={t.id}>
-                      <Mono className="block max-w-full truncate">{t.id}</Mono>
+                    <TableCell
+                      className="text-xs text-muted-foreground whitespace-nowrap"
+                      title="Value Date of the transaction"
+                    >
+                      {t.transactionDate}
+                    </TableCell>
+                    <TableCell
+                      className="max-w-[11rem]"
+                      title={t.internalAccountId}
+                    >
+                      <Mono className="block max-w-full truncate">
+                        {t.internalAccountId}
+                      </Mono>
                       {accountIdToName[t.internalAccountId] && (
                         <div className="mt-0.5 truncate text-[0.7rem] text-muted-foreground">
                           {accountIdToName[t.internalAccountId]}
@@ -691,58 +729,32 @@ export function TransactionsPage() {
                       )}
                     </TableCell>
                     <TableCell className="text-right whitespace-nowrap">
-                      <div
-                        className={`text-[0.65rem] uppercase tracking-wider ${
+                      <span
+                        className={`text-sm tabular-nums ${
                           t.direction === 'CREDIT'
                             ? 'text-emerald-700'
-                            : 'text-muted-foreground'
+                            : 'text-foreground'
                         }`}
                       >
-                        {t.direction}
-                      </div>
-                      <div className="text-sm tabular-nums">
-                        {t.direction === 'CREDIT' ? '+' : '-'} {t.amount}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-xs">
-                      {t.currency}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                      {t.transactionDate}
-                    </TableCell>
-                    <TableCell
-                      className="max-w-[10rem] truncate text-sm font-medium"
-                      title={t.senderName}
-                    >
-                      {t.senderName}
-                    </TableCell>
-                    <TableCell className="font-mono text-[0.72rem] text-muted-foreground whitespace-nowrap">
-                      {accountIdToOrigin[t.internalAccountId]?.number || '—'}
-                    </TableCell>
-                    <TableCell className="font-mono text-[0.72rem] text-muted-foreground whitespace-nowrap">
-                      {accountIdToOrigin[t.internalAccountId]?.bic || '—'}
-                    </TableCell>
-                    <TableCell
-                      className="max-w-[9rem] truncate"
-                      title={t.customerRef}
-                    >
-                      <span className="block truncate font-mono text-[0.7rem] rounded bg-muted px-1.5 py-0.5">
-                        {t.customerRef || '—'}
+                        {formatDirectionalAmount(t)}
                       </span>
                     </TableCell>
-                    <TableCell
-                      className="max-w-[9rem] truncate"
-                      title={t.bankRef}
-                    >
-                      <span className="block truncate font-mono text-[0.7rem] rounded bg-muted px-1.5 py-0.5">
-                        {t.bankRef || '—'}
-                      </span>
+                    <TableCell className="max-w-[14rem]">
+                      <div
+                        className="truncate text-sm font-medium"
+                        title={t.senderName}
+                      >
+                        {t.senderName || '—'}
+                      </div>
+                      <div className="mt-0.5 truncate font-mono text-[0.7rem] text-muted-foreground">
+                        {t.senderBank || '—'}
+                      </div>
                     </TableCell>
                     <TableCell>
-                      <StatusPill status={t.transactionType} />
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                      {t.createdAt}
+                      <ReconciledBadge
+                        at={txnDetail(t, accountById[t.internalAccountId])
+                          .reconciledWithStatementAt}
+                      />
                     </TableCell>
                     <TableCell
                       className="text-right"
@@ -779,7 +791,7 @@ export function TransactionsPage() {
                 {filtered.length === 0 && (
                   <TableRow>
                     <TableCell
-                      colSpan={12}
+                      colSpan={6}
                       className="py-10 text-center text-sm text-muted-foreground"
                     >
                       {rows.length === 0
@@ -837,9 +849,14 @@ export function TransactionsPage() {
               <div className="flex flex-wrap items-start justify-between gap-3 border-b px-4 pb-4">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold tracking-tight tabular-nums">
-                      {openTxn.direction === 'CREDIT' ? '+' : '-'}{' '}
-                      {openTxn.amount} {openTxn.currency}
+                    <span
+                      className={`text-2xl font-bold tracking-tight tabular-nums ${
+                        openTxn.direction === 'CREDIT'
+                          ? 'text-emerald-700'
+                          : 'text-foreground'
+                      }`}
+                    >
+                      {formatDirectionalAmount(openTxn)}
                     </span>
                     <span
                       className={
@@ -873,74 +890,11 @@ export function TransactionsPage() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-4 px-4 pb-6 pt-4">
-                <Field label="Direction">
-                  <span className="text-sm">{openTxn.direction}</span>
-                </Field>
-                <Field label="Amount">
-                  <span className="text-sm tabular-nums">
-                    {openTxn.direction === 'CREDIT' ? '+' : '-'} {openTxn.amount}
-                  </span>
-                </Field>
-                <Field label="Currency">
-                  <Mono>{openTxn.currency}</Mono>
-                </Field>
-                <Field label="Transaction date">
-                  <Mono>{openTxn.transactionDate}</Mono>
-                </Field>
-                <Field label="Internal account number">
-                  <Mono>{openTxn.internalAccountId}</Mono>
-                </Field>
-                <Field label="Transaction type">
-                  <StatusPill status={openTxn.transactionType} />
-                </Field>
-                <Field
-                  label={
-                    openTxn.direction === 'DEBIT' ? 'Receiver name' : 'Sender name'
-                  }
-                >
-                  <span className="text-sm font-medium">
-                    {openTxn.senderName || '—'}
-                  </span>
-                </Field>
-                <Field
-                  label={
-                    openTxn.direction === 'DEBIT' ? 'Receiver bank' : 'Sender bank'
-                  }
-                >
-                  <span className="text-sm">{openTxn.senderBank || '—'}</span>
-                </Field>
-                <Field label="Customer reference">
-                  <Mono>{openTxn.customerRef || '—'}</Mono>
-                </Field>
-                <Field label="Bank reference">
-                  <Mono>{openTxn.bankRef || '—'}</Mono>
-                </Field>
-                <Field label="Data source">
-                  <Mono>{openTxn.dataSource}</Mono>
-                </Field>
-                <Field label="Created at">
-                  <Mono>{openTxn.createdAt}</Mono>
-                </Field>
-                <Field label="Additional info" className="col-span-2">
-                  <pre className="whitespace-pre-wrap break-words rounded border bg-muted/30 p-2 font-mono text-[0.72rem] text-foreground/90">
-                    {openTxn.additionalInformation || '—'}
-                  </pre>
-                </Field>
-                <Field label="Remittance info" className="col-span-2">
-                  <p className="break-words text-sm text-foreground/90">
-                    {openTxn.remittanceInfo || '—'}
-                  </p>
-                </Field>
-                <Field label="Raw payload" className="col-span-2">
-                  <pre className="max-h-96 overflow-auto rounded border bg-muted/30 p-3 font-mono text-[0.7rem] leading-relaxed text-foreground/90">
-                    {buildRawPayload(
-                      openTxn,
-                      accountIdToOrigin[openTxn.internalAccountId],
-                    )}
-                  </pre>
-                </Field>
-              </div>
+              <TxnDetailBody
+                t={openTxn}
+                account={accountById[openTxn.internalAccountId]}
+                origin={accountIdToOrigin[openTxn.internalAccountId]}
+              />
             </>
           )}
         </SheetContent>
@@ -962,6 +916,226 @@ function Field({
     <div className={`flex flex-col gap-1 ${className ?? ''}`}>
       <MonoLabel>{label}</MonoLabel>
       <div>{children}</div>
+    </div>
+  )
+}
+
+// Reconciliation state as a badge in the main table; the full timestamp lives
+// in the detail view.
+function ReconciledBadge({ at }: { at: string | null }) {
+  if (!at) {
+    return (
+      <span
+        className="inline-flex items-center gap-1 rounded border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[0.65rem] font-medium uppercase tracking-wider text-amber-700"
+        title="Not yet matched to a bank statement"
+      >
+        <ClockIcon className="size-3" />
+        Pending
+      </span>
+    )
+  }
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded border border-emerald-300 bg-emerald-50 px-1.5 py-0.5 text-[0.65rem] font-medium uppercase tracking-wider text-emerald-700"
+      title={`Reconciled at ${at}`}
+    >
+      <CheckCircle2Icon className="size-3" />
+      Yes
+    </span>
+  )
+}
+
+function DetailSection({
+  title,
+  children,
+}: {
+  title: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="text-[0.7rem] font-semibold uppercase tracking-wider text-foreground/70">
+        {title}
+      </div>
+      <div className="grid grid-cols-2 gap-x-6 gap-y-4">{children}</div>
+    </div>
+  )
+}
+
+// Every field the spec assigns to the Detail view, in spec order.
+// organization_id and statement_entry_id are deliberately not rendered.
+function TxnDetailBody({
+  t,
+  account,
+  origin,
+}: {
+  t: Txn
+  account: Account | undefined
+  origin: { number: string; bic: string } | undefined
+}) {
+  const d = txnDetail(t, account)
+
+  return (
+    <div className="space-y-6 px-4 pb-6 pt-4">
+      <DetailSection title="Identifiers">
+        <Field label="Transaction ID">
+          <Mono>{t.id}</Mono>
+        </Field>
+        <Field label="Type">
+          <StatusPill status={t.transactionType} />
+        </Field>
+        <Field label="Bank reference">
+          <Mono>{t.bankRef || '—'}</Mono>
+        </Field>
+        <Field label="Customer reference">
+          <Mono>{t.customerRef || '—'}</Mono>
+        </Field>
+        <Field label="Virtual account">
+          {d.virtualAccountNumber ? (
+            <Mono>{d.virtualAccountNumber}</Mono>
+          ) : (
+            <span className="text-sm text-muted-foreground">—</span>
+          )}
+        </Field>
+        <Field label="Bank message ID">
+          <Mono className="break-all">{d.messageId}</Mono>
+        </Field>
+      </DetailSection>
+
+      <DetailSection title="Counterparty">
+        <Field
+          label={t.direction === 'DEBIT' ? 'Receiver name' : 'Sender name'}
+        >
+          <span className="text-sm font-medium">{t.senderName || '—'}</span>
+        </Field>
+        <Field
+          label={t.direction === 'DEBIT' ? 'Receiver bank' : 'Sender bank'}
+        >
+          <span className="text-sm">{t.senderBank || '—'}</span>
+        </Field>
+        <Field label="Counterparty account no.">
+          {d.senderBankAccountNumber ? (
+            <Mono>{d.senderBankAccountNumber}</Mono>
+          ) : (
+            <span className="text-sm text-muted-foreground">—</span>
+          )}
+        </Field>
+        <Field label="Amount">
+          <span className="text-sm tabular-nums">
+            {formatAmountWithCurrency(t.amount, t.currency)}
+          </span>
+        </Field>
+      </DetailSection>
+
+      <DetailSection title="Payment information">
+        <Field label="Description" className="col-span-2">
+          <p className="break-words text-sm text-foreground/90">
+            {d.description}
+          </p>
+        </Field>
+        <Field label="Remittance information" className="col-span-2">
+          <p className="break-words text-sm text-foreground/90">
+            {t.remittanceInfo || '—'}
+          </p>
+        </Field>
+        <Field label="Additional information" className="col-span-2">
+          <pre className="whitespace-pre-wrap break-words rounded border bg-muted/30 p-2 font-mono text-[0.72rem] text-foreground/90">
+            {t.additionalInformation || '—'}
+          </pre>
+        </Field>
+        <Field label="Other references" className="col-span-2">
+          <div className="overflow-hidden rounded border">
+            <table className="w-full text-[0.72rem]">
+              <tbody>
+                {d.transactionReferences.map((r) => (
+                  <tr key={r.name} className="border-b last:border-b-0">
+                    <td className="px-2 py-1.5 font-mono text-muted-foreground">
+                      {r.name}
+                    </td>
+                    <td className="px-2 py-1.5 font-mono">{r.value}</td>
+                    <td className="px-2 py-1.5 text-right font-mono text-muted-foreground">
+                      {r.dataSource}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Field>
+      </DetailSection>
+
+      <DetailSection title="Reconciliation">
+        <Field label="Statement ID">
+          <button
+            type="button"
+            className="inline-flex items-center gap-1 font-mono text-[0.78rem] text-[#1447E6] hover:underline"
+            onClick={() =>
+              toast.info('Statements view not in this mockup yet', {
+                description: `${d.statementId} — the statement detail page is still to be designed.`,
+              })
+            }
+          >
+            {d.statementId}
+            <ExternalLinkIcon className="size-3" />
+          </button>
+        </Field>
+        <Field label="Reconciled at">
+          {d.reconciledWithStatementAt ? (
+            <Mono>{d.reconciledWithStatementAt}</Mono>
+          ) : (
+            <span className="text-sm text-amber-700">
+              Not yet reconciled
+            </span>
+          )}
+        </Field>
+        <Field label="Data source" className="col-span-2">
+          <ol className="space-y-2">
+            {d.dataSourceTimeline.map((step, i) => (
+              <li key={`${step.source}-${i}`} className="flex gap-2.5">
+                <div className="flex flex-col items-center">
+                  <span className="mt-1 size-1.5 shrink-0 rounded-full bg-foreground/40" />
+                  {i < d.dataSourceTimeline.length - 1 && (
+                    <span className="mt-0.5 w-px flex-1 bg-border" />
+                  )}
+                </div>
+                <div className="pb-1">
+                  <div className="flex items-baseline gap-2">
+                    <Mono className="text-[0.7rem]">{step.source}</Mono>
+                    <span className="text-xs text-foreground/80">
+                      {step.label}
+                    </span>
+                  </div>
+                  <div className="text-[0.7rem] text-muted-foreground">
+                    {step.at}
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </Field>
+      </DetailSection>
+
+      <DetailSection title="Audit">
+        <Field label="Created at">
+          <Mono>{t.createdAt}</Mono>
+        </Field>
+        <Field label="Last updated">
+          <Mono>{d.updatedAt}</Mono>
+        </Field>
+      </DetailSection>
+
+      <DetailSection title="Bank log">
+        <Field label="Raw bank log" className="col-span-2">
+          <pre className="max-h-72 overflow-auto rounded border bg-muted/30 p-3 font-mono text-[0.7rem] leading-relaxed text-foreground/90">
+            {d.rawBankLog}
+          </pre>
+        </Field>
+        <Field label="API response payload" className="col-span-2">
+          <pre className="max-h-96 overflow-auto rounded border bg-muted/30 p-3 font-mono text-[0.7rem] leading-relaxed text-foreground/90">
+            {buildRawPayload(t, origin, d)}
+          </pre>
+        </Field>
+      </DetailSection>
     </div>
   )
 }

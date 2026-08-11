@@ -1059,6 +1059,12 @@ export const webhooks = [
   },
 ]
 
+export type TxnReference = {
+  dataSource: string
+  name: string
+  value: string
+}
+
 export type Txn = {
   id: string
   direction: 'CREDIT' | 'DEBIT'
@@ -1075,6 +1081,18 @@ export type Txn = {
   transactionType: string
   dataSource: string
   createdAt: string
+  // Detail-view fields. The sampled feed data below doesn't carry these, so
+  // where one is absent `txnDetail` derives a deterministic stand-in from the
+  // transaction's own values — set them here to override.
+  virtualAccountNumber?: string
+  senderBankAccountNumber?: string
+  transactionReferences?: TxnReference[]
+  messageId?: string
+  statementId?: string
+  reconciledWithStatementAt?: string | null
+  description?: string
+  updatedAt?: string
+  rawBankLog?: string
 }
 
 // One flat transaction list for the whole client group. Which of these a user
@@ -4696,6 +4714,237 @@ export const TRANSACTIONS: Txn[] = [
 
 export function allTransactions(): Txn[] {
   return TRANSACTIONS
+}
+
+// ---------------------------------------------------------------------------
+// Transaction view helpers
+//
+// The main table shows Date / Account / Amount / Counterparty; everything else
+// lives in the detail view. The sampled bank-feed rows above only carry the
+// fields the feed itself returns, so the remaining detail fields are derived
+// deterministically from each transaction (no Date.now, no randomness) — same
+// input always yields the same output, which keeps screenshots stable.
+// ---------------------------------------------------------------------------
+
+// FNV-1a. Deterministic per transaction, so derived values never shift.
+function hashString(s: string): number {
+  let h = 2166136261
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return Math.abs(h)
+}
+
+// "1 Jun, 2026" or "1 Jun, 2026, 14:11" → "2026-06-01".
+export function txnIsoDate(display: string): string {
+  const m = display.match(/(\d+)\s+(\w+),\s+(\d{4})/)
+  if (!m) return display
+  const mon = MONTH_INDEX[m[2]]
+  if (mon === undefined) return display
+  return `${m[3]}-${String(mon + 1).padStart(2, '0')}-${m[1].padStart(2, '0')}`
+}
+
+// "12500" → "12,500.00 SGD"
+export function formatAmountWithCurrency(
+  amount: string,
+  currency: string,
+): string {
+  const n = Number(String(amount).replace(/,/g, ''))
+  if (!Number.isFinite(n)) return `${amount} ${currency}`
+  return `${n.toLocaleString('en-SG', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })} ${currency}`
+}
+
+// Direction is carried by the parentheses, accounting-style: a debit reads
+// "(12,500.00 SGD)", a credit "12,500.00 SGD".
+export function formatDirectionalAmount(
+  t: Pick<Txn, 'amount' | 'currency' | 'direction'>,
+): string {
+  const body = formatAmountWithCurrency(t.amount, t.currency)
+  return t.direction === 'DEBIT' ? `(${body})` : body
+}
+
+export type TxnDetail = {
+  virtualAccountNumber: string | null
+  senderBankAccountNumber: string | null
+  transactionReferences: TxnReference[]
+  messageId: string
+  statementId: string
+  reconciledWithStatementAt: string | null
+  description: string
+  updatedAt: string
+  rawBankLog: string
+  // Progression of feeds that touched this transaction, for the Data Source
+  // timeline in the detail view.
+  dataSourceTimeline: { source: string; label: string; at: string }[]
+}
+
+const MOCK_TODAY_ISO = '2026-06-01'
+
+function pad(n: number, width = 2): string {
+  return String(n).padStart(width, '0')
+}
+
+// createdAt "1 Jun, 2026, 14:11" + n minutes, same display format.
+function addMinutesToDisplay(display: string, minutes: number): string {
+  const m = display.match(/^(.*?),\s*(\d{2}):(\d{2})$/)
+  if (!m) return display
+  const total = Number(m[2]) * 60 + Number(m[3]) + minutes
+  const h = Math.floor(total / 60) % 24
+  return `${m[1]}, ${pad(h)}:${pad(total % 60)}`
+}
+
+export function txnDetail(t: Txn, account?: Account): TxnDetail {
+  const h = hashString(t.id)
+  const iso = txnIsoDate(t.transactionDate)
+  const compact = iso.replace(/-/g, '')
+  const bic = account?.swiftBic || t.senderBank || 'DBSSSGSGXXX'
+
+  // One statement per account per day, so transactions booked together share
+  // a statement id.
+  // Acme statement ids look like stmt_0H3BQSYF6QQ0W — 12 base36 characters, so
+  // two hashes are concatenated to fill the width without zero padding.
+  const statementKey = `${t.internalAccountId}|${iso}`
+  const statementId =
+    t.statementId ??
+    `stmt_0${(
+      hashString(statementKey).toString(36) +
+      hashString(`${statementKey}#2`).toString(36)
+    )
+      .toUpperCase()
+      .slice(0, 12)}`
+
+  // The current day's statement hasn't landed yet, and a few older items are
+  // genuinely still outstanding.
+  const unreconciled = iso === MOCK_TODAY_ISO || h % 17 === 0
+  const reconciledWithStatementAt =
+    t.reconciledWithStatementAt !== undefined
+      ? t.reconciledWithStatementAt
+      : unreconciled
+        ? null
+        : `${iso}T21:${pad(h % 60)}:${pad((h >> 3) % 60)}+08:00`
+
+  // Virtual accounts only apply to inbound collections.
+  const virtualAccountNumber =
+    t.virtualAccountNumber ??
+    (t.direction === 'CREDIT' && h % 3 !== 0
+      ? `${(account?.number ?? '0000000000').slice(0, 4)}${pad(h % 100000000, 8)}`
+      : null)
+
+  const senderBankAccountNumber =
+    t.senderBankAccountNumber ??
+    (t.senderName ? pad((h >> 2) % 10000000000, 10) : null)
+
+  const acctSvcrRef = t.bankRef.replace(/\D/g, '') || pad(h % 1000000000, 9)
+  const transactionReferences =
+    t.transactionReferences ??
+    [
+      { dataSource: t.dataSource, name: 'acctSvcrRef', value: acctSvcrRef },
+      {
+        dataSource: t.dataSource,
+        name: 'endToEndId',
+        value: t.customerRef || 'NOTPROVIDED',
+      },
+      {
+        dataSource: t.dataSource,
+        name: 'instrId',
+        value: `INS${pad(h % 100000000, 8)}`,
+      },
+    ]
+
+  const messageId =
+    t.messageId ?? `${bic}-${t.dataSource}-${compact}-${pad(h % 1000000, 6)}`
+
+  const description =
+    t.description ??
+    `${t.direction === 'CREDIT' ? 'Incoming' : 'Outgoing'} ${t.transactionType} ${
+      t.direction === 'CREDIT' ? 'from' : 'to'
+    } ${t.senderName || 'unnamed counterparty'}`
+
+  const updatedAt = t.updatedAt ?? addMinutesToDisplay(t.createdAt, (h % 47) + 3)
+
+  // CAMT052 is the intraday feed, CAMT053 the end-of-day statement — the feed
+  // spells the latter both 'CAMT053' and 'CAMT.053'. IDN/ICN are the local
+  // clearing feeds, which arrive in one shot.
+  const isEndOfDayStatement = t.dataSource.replace('.', '') === 'CAMT053'
+  const dataSourceTimeline: TxnDetail['dataSourceTimeline'] = [
+    {
+      source: isEndOfDayStatement ? 'CAMT052' : t.dataSource,
+      label: 'Seen on intraday feed',
+      at: t.createdAt,
+    },
+  ]
+  if (isEndOfDayStatement) {
+    dataSourceTimeline.push({
+      source: t.dataSource,
+      label: 'Confirmed on end-of-day statement',
+      at: updatedAt,
+    })
+  }
+  if (reconciledWithStatementAt) {
+    dataSourceTimeline.push({
+      source: statementId,
+      label: 'Reconciled with statement',
+      at: reconciledWithStatementAt,
+    })
+  }
+
+  const amountRaw = String(t.amount).replace(/,/g, '')
+  const rawBankLog =
+    t.rawBankLog ??
+    [
+      `<Ntry>`,
+      `  <NtryRef>${t.bankRef || acctSvcrRef}</NtryRef>`,
+      `  <Amt Ccy="${t.currency}">${amountRaw}</Amt>`,
+      `  <CdtDbtInd>${t.direction === 'CREDIT' ? 'CRDT' : 'DBIT'}</CdtDbtInd>`,
+      `  <Sts>BOOK</Sts>`,
+      `  <BookgDt><Dt>${iso}</Dt></BookgDt>`,
+      `  <ValDt><Dt>${iso}</Dt></ValDt>`,
+      `  <AcctSvcrRef>${acctSvcrRef}</AcctSvcrRef>`,
+      `  <BkTxCd><Prtry><Cd>${t.transactionType}</Cd></Prtry></BkTxCd>`,
+      `  <NtryDtls><TxDtls>`,
+      `    <Refs><EndToEndId>${t.customerRef || 'NOTPROVIDED'}</EndToEndId></Refs>`,
+      `    <RltdPties><${t.direction === 'CREDIT' ? 'Dbtr' : 'Cdtr'}><Nm>${t.senderName}</Nm></${t.direction === 'CREDIT' ? 'Dbtr' : 'Cdtr'}></RltdPties>`,
+      `    <RltdAgts><${t.direction === 'CREDIT' ? 'DbtrAgt' : 'CdtrAgt'}><FinInstnId><BICFI>${t.senderBank || '—'}</BICFI></FinInstnId></${t.direction === 'CREDIT' ? 'DbtrAgt' : 'CdtrAgt'}></RltdAgts>`,
+      `    <RmtInf><Ustrd>${t.remittanceInfo}</Ustrd></RmtInf>`,
+      t.additionalInformation
+        ? `    <AddtlTxInf>${t.additionalInformation.replace(/\n/g, ' ')}</AddtlTxInf>`
+        : null,
+      `  </TxDtls></NtryDtls>`,
+      `</Ntry>`,
+    ]
+      .filter(Boolean)
+      .join('\n')
+
+  return {
+    virtualAccountNumber,
+    senderBankAccountNumber,
+    transactionReferences,
+    messageId,
+    statementId,
+    reconciledWithStatementAt,
+    description,
+    updatedAt,
+    rawBankLog,
+    dataSourceTimeline,
+  }
+}
+
+// Default sort for the transaction table: value date descending, then the
+// booking timestamp, then id so the order is stable across renders.
+export function sortTransactionsByDateDesc(rows: Txn[]): Txn[] {
+  return [...rows].sort((a, b) => {
+    const byDate = txnIsoDate(b.transactionDate).localeCompare(
+      txnIsoDate(a.transactionDate),
+    )
+    if (byDate !== 0) return byDate
+    const byCreated = b.createdAt.localeCompare(a.createdAt)
+    if (byCreated !== 0) return byCreated
+    return a.id.localeCompare(b.id)
+  })
 }
 
 // A flagged credit transaction pending review.
