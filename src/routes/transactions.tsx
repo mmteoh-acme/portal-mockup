@@ -66,7 +66,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { toast } from 'sonner'
-import { Mono, MonoLabel, StatusPill } from '@/components/mono'
+import { Mono, StatusPill } from '@/components/mono'
 import { addUnprocessedDeposit } from '@/lib/unprocessed-deposits-store'
 import { DataTableFilter } from '@/components/data-table-filter'
 import {
@@ -1069,19 +1069,33 @@ export function TransactionsPage() {
   )
 }
 
+// A description-list row: label in the first column, value in the remaining
+// two. `stacked` drops the grid and puts the value under the label, for blocks
+// that need the full width — raw payloads, the references table, the timeline.
+//
+// Follows the shadcn description-list pattern, tightened from its py-6/text-base
+// to suit a side sheet carrying ~20 fields rather than a four-row marketing list.
 function Field({
   label,
   children,
-  className,
+  stacked,
 }: {
   label: string
   children: React.ReactNode
-  className?: string
+  stacked?: boolean
 }) {
+  if (stacked) {
+    return (
+      <div className="space-y-2 py-3">
+        <dt className="text-sm font-medium">{label}</dt>
+        <dd>{children}</dd>
+      </div>
+    )
+  }
   return (
-    <div className={`flex flex-col gap-1 ${className ?? ''}`}>
-      <MonoLabel>{label}</MonoLabel>
-      <div>{children}</div>
+    <div className="py-3 sm:grid sm:grid-cols-3 sm:gap-4">
+      <dt className="text-sm font-medium">{label}</dt>
+      <dd className="mt-1 sm:col-span-2 sm:mt-0">{children}</dd>
     </div>
   )
 }
@@ -1119,11 +1133,11 @@ function DetailSection({
   children: React.ReactNode
 }) {
   return (
-    <div className="space-y-3">
-      <div className="text-[0.7rem] font-semibold uppercase tracking-wider text-foreground/70">
+    <div>
+      <h3 className="text-[0.7rem] font-semibold uppercase tracking-wider text-foreground/70">
         {title}
-      </div>
-      <div className="grid grid-cols-2 gap-x-6 gap-y-4">{children}</div>
+      </h3>
+      <dl className="mt-2 divide-y border-t">{children}</dl>
     </div>
   )
 }
@@ -1194,22 +1208,22 @@ function TxnDetailBody({
       </DetailSection>
 
       <DetailSection title="Payment information">
-        <Field label="Description" className="col-span-2">
+        <Field label="Description" stacked>
           <p className="break-words text-sm text-foreground/90">
             {d.description}
           </p>
         </Field>
-        <Field label="Remittance information" className="col-span-2">
+        <Field label="Remittance information" stacked>
           <p className="break-words text-sm text-foreground/90">
             {t.remittanceInfo || '—'}
           </p>
         </Field>
-        <Field label="Additional information" className="col-span-2">
+        <Field label="Additional information" stacked>
           <pre className="whitespace-pre-wrap break-words rounded border bg-muted/30 p-2 font-mono text-[0.72rem] text-foreground/90">
             {t.additionalInformation || '—'}
           </pre>
         </Field>
-        <Field label="Other references" className="col-span-2">
+        <Field label="Other references" stacked>
           <div className="overflow-hidden rounded border">
             <table className="w-full text-[0.72rem]">
               <tbody>
@@ -1254,7 +1268,7 @@ function TxnDetailBody({
             </span>
           )}
         </Field>
-        <Field label="Data source" className="col-span-2">
+        <Field label="Data source" stacked>
           <ol className="space-y-2">
             {d.dataSourceTimeline.map((step, i) => (
               <li key={`${step.source}-${i}`} className="flex gap-2.5">
@@ -1291,12 +1305,12 @@ function TxnDetailBody({
       </DetailSection>
 
       <DetailSection title="Bank log">
-        <Field label="Raw bank log" className="col-span-2">
+        <Field label="Raw bank log" stacked>
           <pre className="max-h-72 overflow-auto rounded border bg-muted/30 p-3 font-mono text-[0.7rem] leading-relaxed text-foreground/90">
             {d.rawBankLog}
           </pre>
         </Field>
-        <Field label="API response payload" className="col-span-2">
+        <Field label="API response payload" stacked>
           <pre className="max-h-96 overflow-auto rounded border bg-muted/30 p-3 font-mono text-[0.7rem] leading-relaxed text-foreground/90">
             {buildRawPayload(t, origin, d)}
           </pre>
