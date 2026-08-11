@@ -82,7 +82,9 @@ const PAGE_SIZE = 20
 // detail fields. organization_id and statement_entry_id stay out of the export.
 const CSV_HEADERS = [
   'Date',
-  'Account',
+  'Account number',
+  'Account name',
+  'Internal account ID',
   'Amount',
   'Currency',
   'Direction',
@@ -114,10 +116,13 @@ function csvEscape(v: string | undefined | null): string {
 function downloadTransactionsCsv(rows: Txn[], entityName: string): void {
   const lines = [CSV_HEADERS.map(csvEscape).join(',')]
   for (const t of rows) {
-    const d = txnDetail(t, getAccount(t.internalAccountId))
+    const account = getAccount(t.internalAccountId)
+    const d = txnDetail(t, account)
     lines.push(
       [
         t.transactionDate,
+        account?.number,
+        account?.name,
         t.internalAccountId,
         t.amount,
         t.currency,
@@ -717,10 +722,11 @@ export function TransactionsPage() {
                     </TableCell>
                     <TableCell
                       className="max-w-[11rem]"
-                      title={t.internalAccountId}
+                      title={`${accountIdToName[t.internalAccountId] ?? ''} · ${t.internalAccountId}`}
                     >
                       <Mono className="block max-w-full truncate">
-                        {t.internalAccountId}
+                        {accountIdToOrigin[t.internalAccountId]?.number ??
+                          t.internalAccountId}
                       </Mono>
                       {accountIdToName[t.internalAccountId] && (
                         <div className="mt-0.5 truncate text-[0.7rem] text-muted-foreground">
