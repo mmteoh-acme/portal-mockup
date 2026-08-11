@@ -1,5 +1,11 @@
 import * as React from 'react'
-import { LandmarkIcon, PlusIcon, RefreshCwIcon } from 'lucide-react'
+import {
+  LandmarkIcon,
+  PlusIcon,
+  RefreshCwIcon,
+  LayersIcon,
+  TriangleAlertIcon,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import {
   Card,
@@ -32,9 +38,22 @@ import {
   ChartLegend,
   ChartCardShell,
 } from '@/components/charts'
+import { Link } from '@tanstack/react-router'
+import {
+  AccountGroupSheet,
+  CreateAccountGroupDialog,
+  Pill,
+  RulePill,
+} from '@/components/account-group-config'
+import { formatWhen } from '@/lib/format'
+import { useAccountGroups } from '@/lib/admin-store'
 import {
   ACCOUNTS,
   LEGAL_ENTITIES,
+  accountGroupCurrencies,
+  accountsInAccountGroup,
+  unassignedAccounts,
+  type AccountGroup,
   balanceHistory,
   balancesByCurrency,
   clientKpis,
@@ -471,6 +490,10 @@ export function DashboardPage() {
             </ChartCardShell>
           </div>
 
+          {/* Account groups — same create / edit / add-accounts flow as the
+              Account Groups admin page, driven by the same components */}
+          <AccountGroupsPanel />
+
           {/* Services & success rates table */}
           <div className="rounded-lg border bg-card">
             <div className="border-b px-4 py-3">
@@ -589,6 +612,140 @@ export function DashboardPage() {
           )}
         </>
       )}
+    </div>
+  )
+}
+
+// Account-group configuration on the dashboard: create a group, open one to
+// edit it, and add or remove its accounts — the same dialog and sheet the
+// Account Groups page uses, so there is one flow rather than two.
+function AccountGroupsPanel() {
+  const groups = useAccountGroups()
+  const [createOpen, setCreateOpen] = React.useState(false)
+  const [openGroup, setOpenGroup] = React.useState<AccountGroup | null>(null)
+  const unassigned = unassignedAccounts(groups)
+
+  // Track the live copy so edits made in the sheet show immediately.
+  const openGroupLive = openGroup
+    ? groups.find((g) => g.id === openGroup.id) ?? null
+    : null
+
+  return (
+    <div className="rounded-lg border bg-card">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b px-4 py-3">
+        <div>
+          <h3 className="text-sm font-semibold">Account groups</h3>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Group accounts for access and reporting. Mapping a group to a{' '}
+            <Link
+              to="/user-groups"
+              className="font-medium text-foreground underline underline-offset-4"
+            >
+              user group
+            </Link>{' '}
+            is what makes those accounts visible.
+          </p>
+        </div>
+        <Button
+          size="sm"
+          variant="outline"
+          className="gap-1.5"
+          onClick={() => setCreateOpen(true)}
+        >
+          <PlusIcon className="size-3.5" />
+          Create account group
+        </Button>
+      </div>
+
+      {unassigned.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 border-b bg-amber-50 px-4 py-2.5 text-xs text-amber-800">
+          <TriangleAlertIcon className="size-3.5 shrink-0" />
+          <span className="flex-1">
+            <span className="font-medium">
+              {unassigned.length} account{unassigned.length === 1 ? '' : 's'}
+            </span>{' '}
+            in no group — invisible to every non-admin user.
+          </span>
+          <Button asChild variant="ghost" size="sm" className="h-6 text-xs">
+            <Link to="/account-groups">Review</Link>
+          </Button>
+        </div>
+      )}
+
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                Name
+              </TableHead>
+              <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                Membership
+              </TableHead>
+              <TableHead className="text-right text-[0.7rem] uppercase tracking-wider">
+                Accounts
+              </TableHead>
+              <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                Currencies
+              </TableHead>
+              <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                Updated
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {groups.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={5} className="py-10">
+                  <div className="flex flex-col items-center gap-2 text-center">
+                    <div className="flex aspect-square size-10 items-center justify-center rounded-full border bg-muted">
+                      <LayersIcon className="size-4 text-muted-foreground" />
+                    </div>
+                    <p className="text-sm font-medium">No account groups yet</p>
+                    <p className="text-xs text-muted-foreground">
+                      Without one, no non-admin user can see any account.
+                    </p>
+                  </div>
+                </TableCell>
+              </TableRow>
+            )}
+            {groups.map((g) => (
+              <TableRow
+                key={g.id}
+                className="cursor-pointer"
+                onClick={() => setOpenGroup(g)}
+              >
+                <TableCell className="whitespace-nowrap font-medium">
+                  {g.name}
+                </TableCell>
+                <TableCell className="whitespace-nowrap">
+                  <RulePill rule={g.rule} />
+                </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {accountsInAccountGroup(g).length}
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-wrap gap-1">
+                    {accountGroupCurrencies(g).map((c) => (
+                      <Pill key={c}>{c}</Pill>
+                    ))}
+                  </div>
+                </TableCell>
+                <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
+                  {formatWhen(g.updatedAt)}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      <CreateAccountGroupDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <AccountGroupSheet
+        key={openGroupLive?.id ?? 'none'}
+        group={openGroupLive}
+        onClose={() => setOpenGroup(null)}
+      />
     </div>
   )
 }

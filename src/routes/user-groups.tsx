@@ -58,6 +58,7 @@ import {
   type UserGroup,
   type UserGroupScope,
 } from '@/data/fixtures'
+import { formatWhen } from '@/lib/format'
 import {
   addUserGroup,
   deleteUserGroup,
@@ -75,14 +76,6 @@ const ROLE_COLORS: Record<PortalRole, string> = {
   CHECKER: 'border-emerald-300 bg-emerald-100 text-emerald-700',
   VIEWER: 'border-zinc-300 bg-zinc-100 text-zinc-600',
   AUDITOR: 'border-amber-300 bg-amber-100 text-amber-700',
-}
-
-function formatWhen(iso: string): string {
-  if (!iso) return '—'
-  const d = new Date(iso)
-  if (isNaN(d.getTime())) return iso
-  const month = d.toLocaleString('en-US', { month: 'short' })
-  return `${month} ${d.getDate()}, ${d.getFullYear()}`
 }
 
 function initials(name: string): string {
