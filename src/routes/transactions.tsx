@@ -14,6 +14,7 @@ import {
   CheckCircle2Icon,
   ClockIcon,
   ExternalLinkIcon,
+  InfoIcon,
 } from 'lucide-react'
 import type {
   ColumnDef,
@@ -68,6 +69,11 @@ import { toast } from 'sonner'
 import { Mono, MonoLabel, StatusPill } from '@/components/mono'
 import { addUnprocessedDeposit } from '@/lib/unprocessed-deposits-store'
 import { DataTableFilter } from '@/components/data-table-filter'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import {
   ACCOUNTS,
   CLIENT_GROUP,
@@ -398,11 +404,9 @@ export function TransactionsPage() {
         id: 'transactionDate',
         accessorKey: 'transactionDate',
         header: 'Date',
+        meta: { headerTooltip: 'Value date returned from the bank' },
         cell: ({ row }) => (
-          <span
-            className="whitespace-nowrap text-xs text-muted-foreground"
-            title="Value Date of the transaction"
-          >
+          <span className="whitespace-nowrap text-xs text-muted-foreground">
             {row.original.transactionDate}
           </span>
         ),
@@ -859,6 +863,32 @@ export function TransactionsPage() {
                   {headerGroup.headers.map((header) => {
                     const canSort = header.column.getCanSort()
                     const sorted = header.column.getIsSorted()
+                    const tip = header.column.columnDef.meta?.headerTooltip
+                    const label = header.isPlaceholder ? null : canSort ? (
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1 uppercase tracking-wider hover:text-foreground"
+                        onClick={header.column.getToggleSortingHandler()}
+                      >
+                        {flexRender(
+                          header.column.columnDef.header,
+                          header.getContext(),
+                        )}
+                        {tip && <InfoIcon className="size-3 opacity-50" />}
+                        {sorted === 'desc' ? (
+                          <ArrowDownIcon className="size-3 opacity-60" />
+                        ) : sorted === 'asc' ? (
+                          <ArrowUpIcon className="size-3 opacity-60" />
+                        ) : (
+                          <ArrowUpDownIcon className="size-3 opacity-30" />
+                        )}
+                      </button>
+                    ) : (
+                      flexRender(
+                        header.column.columnDef.header,
+                        header.getContext(),
+                      )
+                    )
                     return (
                       <TableHead
                         key={header.id}
@@ -869,29 +899,18 @@ export function TransactionsPage() {
                             : undefined
                         }
                       >
-                        {header.isPlaceholder ? null : canSort ? (
-                          <button
-                            type="button"
-                            className="inline-flex items-center gap-1 uppercase tracking-wider hover:text-foreground"
-                            onClick={header.column.getToggleSortingHandler()}
-                          >
-                            {flexRender(
-                              header.column.columnDef.header,
-                              header.getContext(),
-                            )}
-                            {sorted === 'desc' ? (
-                              <ArrowDownIcon className="size-3 opacity-60" />
-                            ) : sorted === 'asc' ? (
-                              <ArrowUpIcon className="size-3 opacity-60" />
-                            ) : (
-                              <ArrowUpDownIcon className="size-3 opacity-30" />
-                            )}
-                          </button>
+                        {tip ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="inline-flex">{label}</span>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              <InfoIcon className="size-3.5 shrink-0 opacity-80" />
+                              {tip}
+                            </TooltipContent>
+                          </Tooltip>
                         ) : (
-                          flexRender(
-                            header.column.columnDef.header,
-                            header.getContext(),
-                          )
+                          label
                         )}
                       </TableHead>
                     )

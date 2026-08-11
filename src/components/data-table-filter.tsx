@@ -23,6 +23,8 @@ declare module '@tanstack/react-table' {
   interface ColumnMeta<TData extends RowData, TValue> {
     filterVariant?: 'text' | 'range' | 'select'
     filterLabel?: string
+    // Explains the column in a tooltip on its header.
+    headerTooltip?: string
     // Fixed option list, for when faceted values aren't the full domain.
     filterOptions?: { label: string; value: string }[]
   }
