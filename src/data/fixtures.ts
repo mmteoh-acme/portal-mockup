@@ -1084,6 +1084,7 @@ export type Txn = {
   // Detail-view fields. The sampled feed data below doesn't carry these, so
   // where one is absent `txnDetail` derives a deterministic stand-in from the
   // transaction's own values — set them here to override.
+  bookingDate?: string
   virtualAccountNumber?: string
   senderBankAccountNumber?: string
   transactionReferences?: TxnReference[]
@@ -4768,6 +4769,9 @@ export function formatDirectionalAmount(
 }
 
 export type TxnDetail = {
+  // When the bank booked the entry, as opposed to the value date the entry is
+  // dated with. Usually the same day; occasionally the day before.
+  bookingDate: string
   virtualAccountNumber: string | null
   senderBankAccountNumber: string | null
   transactionReferences: TxnReference[]
@@ -4827,6 +4831,20 @@ export function txnDetail(t: Txn, account?: Account): TxnDetail {
         ? null
         : `${iso}T21:${pad(h % 60)}:${pad((h >> 3) % 60)}+08:00`
 
+  // Most entries are booked on their value date; some are booked the day
+  // before and only value the next day.
+  const bookingIso =
+    h % 4 === 0
+      ? (() => {
+          const d = new Date(`${iso}T00:00:00`)
+          d.setDate(d.getDate() - 1)
+          return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+        })()
+      : iso
+  const bookingDate =
+    t.bookingDate ??
+    `${bookingIso}T${pad((h >> 5) % 24)}:${pad(h % 60)}:${pad((h >> 3) % 60)}+08:00`
+
   // Virtual accounts only apply to inbound collections.
   const virtualAccountNumber =
     t.virtualAccountNumber ??
@@ -4869,11 +4887,14 @@ export function txnDetail(t: Txn, account?: Account): TxnDetail {
   // CAMT052 is the intraday feed, CAMT053 the end-of-day statement — the feed
   // spells the latter both 'CAMT053' and 'CAMT.053'. IDN/ICN are the local
   // clearing feeds, which arrive in one shot.
+  //
+  // The transaction record is created the moment a feed delivers it, so the
+  // created-at timestamp is the first step in the timeline.
   const isEndOfDayStatement = t.dataSource.replace('.', '') === 'CAMT053'
   const dataSourceTimeline: TxnDetail['dataSourceTimeline'] = [
     {
       source: isEndOfDayStatement ? 'CAMT052' : t.dataSource,
-      label: 'Seen on intraday feed',
+      label: 'Transaction created',
       at: t.createdAt,
     },
   ]
@@ -4920,6 +4941,7 @@ export function txnDetail(t: Txn, account?: Account): TxnDetail {
       .join('\n')
 
   return {
+    bookingDate,
     virtualAccountNumber,
     senderBankAccountNumber,
     transactionReferences,

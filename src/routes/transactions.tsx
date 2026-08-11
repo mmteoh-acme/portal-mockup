@@ -6,13 +6,10 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   MoreHorizontalIcon,
-  FlagIcon,
   DownloadIcon,
   ArrowDownIcon,
   ArrowUpIcon,
   ArrowUpDownIcon,
-  CheckCircle2Icon,
-  ClockIcon,
   ExternalLinkIcon,
   InfoIcon,
 } from 'lucide-react'
@@ -67,8 +64,13 @@ import {
 } from '@/components/ui/sheet'
 import { toast } from 'sonner'
 import { Mono, StatusPill } from '@/components/mono'
-import { addUnprocessedDeposit } from '@/lib/unprocessed-deposits-store'
 import { DataTableFilter } from '@/components/data-table-filter'
+import { CopyButton } from '@/components/copy-button'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
 import {
   Tooltip,
   TooltipContent,
@@ -96,6 +98,7 @@ const PAGE_SIZE = 20
 // detail fields. organization_id and statement_entry_id stay out of the export.
 const CSV_HEADERS = [
   'Date',
+  'Booking date',
   'Account number',
   'Account name',
   'Internal account ID',
@@ -135,6 +138,7 @@ function downloadTransactionsCsv(rows: Txn[], entityName: string): void {
     lines.push(
       [
         t.transactionDate,
+        d.bookingDate,
         account?.number,
         account?.name,
         t.internalAccountId,
@@ -289,8 +293,6 @@ type TxnRow = Txn & {
   bank: string
   legalEntityCode: string
   amountNumber: number
-  reconciledLabel: 'Yes' | 'Pending'
-  reconciledAt: string | null
 }
 
 const SELECT_ALL_STATE = (
@@ -313,7 +315,6 @@ export function TransactionsPage() {
     () =>
       TRANSACTIONS.map((t) => {
         const account = accountById[t.internalAccountId]
-        const detail = txnDetail(t, account)
         return {
           ...t,
           accountNumber: account?.number ?? t.internalAccountId,
@@ -321,8 +322,6 @@ export function TransactionsPage() {
           bank: account?.bank ?? '',
           legalEntityCode: account?.legalEntity ?? '',
           amountNumber: Number(String(t.amount).replace(/,/g, '')) || 0,
-          reconciledLabel: detail.reconciledWithStatementAt ? 'Yes' : 'Pending',
-          reconciledAt: detail.reconciledWithStatementAt,
         }
       }),
     [accountById],
@@ -344,35 +343,6 @@ export function TransactionsPage() {
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     () => [{ id: 'transactionDate', value: defaultRange }],
   )
-
-  // Flag a credit transaction into the Pending review queue (Payments page).
-  // The bank rejected a payment order and returned the funds as a separate
-  // credit line, so the payment needs resubmitting.
-  const flagException = (t: Txn, kind: 'reversal' | 'return') => {
-    const added = addUnprocessedDeposit({
-      originalTxnId: t.id,
-      customer: t.senderName,
-      amount: `${t.currency} ${t.amount}`,
-      reason:
-        kind === 'reversal'
-          ? 'Refund reversal to client'
-          : 'Payment rejected — funds returned by bank, resubmission required',
-      date: t.transactionDate,
-      kind,
-    })
-    if (added) {
-      toast.success(kind === 'reversal' ? 'Flagged as Reversal' : 'Flagged for return', {
-        description:
-          kind === 'reversal'
-            ? `${t.id} moved to the Pending review tab on the Payments page — process as a refund reversal to the client.`
-            : `${t.id} moved to the Pending review tab on the Payments page — resubmit the returned payment.`,
-      })
-    } else {
-      toast.info('Already pending review', {
-        description: `${t.id} is already awaiting review.`,
-      })
-    }
-  }
 
   const columns = React.useMemo<ColumnDef<TxnRow>[]>(
     () => [
@@ -480,21 +450,6 @@ export function TransactionsPage() {
         enableSorting: false,
         meta: { filterVariant: 'text', filterLabel: 'Counterparty' },
       },
-      {
-        id: 'reconciledLabel',
-        accessorKey: 'reconciledLabel',
-        header: 'Reconciled',
-        cell: ({ row }) => <ReconciledBadge at={row.original.reconciledAt} />,
-        filterFn: 'equalsString',
-        meta: {
-          filterVariant: 'select',
-          filterLabel: 'Reconciled',
-          filterOptions: [
-            { label: 'Yes', value: 'Yes' },
-            { label: 'Pending', value: 'Pending' },
-          ],
-        },
-      },
       // Attributes we filter on but don't show as columns — hidden so their
       // filter controls can live in the same filter row.
       {
@@ -561,11 +516,12 @@ export function TransactionsPage() {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onSelect={() => flagException(row.original, 'return')}
-                  disabled={row.original.direction !== 'CREDIT'}
+                  onSelect={() =>
+                    downloadTransactionsCsv([row.original], CLIENT_GROUP.name)
+                  }
                 >
-                  <FlagIcon className="size-3.5" />
-                  Flag for return
+                  <DownloadIcon className="size-3.5" />
+                  Export as CSV
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -641,39 +597,6 @@ export function TransactionsPage() {
 
   const filteredRows = table.getFilteredRowModel().rows
   const selectedRows = table.getSelectedRowModel().rows
-  const selectedCredits = selectedRows.filter(
-    (r) => r.original.direction === 'CREDIT',
-  )
-
-  const bulkFlagForReturn = () => {
-    let added = 0
-    let skipped = 0
-    for (const r of selectedCredits) {
-      const ok = addUnprocessedDeposit({
-        originalTxnId: r.original.id,
-        customer: r.original.senderName,
-        amount: `${r.original.currency} ${r.original.amount}`,
-        reason:
-          'Payment rejected — funds returned by bank, resubmission required',
-        date: r.original.transactionDate,
-        kind: 'return',
-      })
-      if (ok) added++
-      else skipped++
-    }
-    setRowSelection({})
-    if (added > 0) {
-      toast.success(`Flagged ${added} transaction${added === 1 ? '' : 's'} for return`, {
-        description: `Moved to the Pending review tab on the Payments page.${
-          skipped > 0 ? ` ${skipped} already awaiting review.` : ''
-        }`,
-      })
-    } else {
-      toast.info('Already pending review', {
-        description: 'Every selected transaction is already awaiting review.',
-      })
-    }
-  }
 
   const clearFilters = () => {
     setGlobalFilter('')
@@ -783,7 +706,6 @@ export function TransactionsPage() {
             />
             <DataTableFilter column={table.getColumn('amountNumber')!} />
             <DataTableFilter column={table.getColumn('counterparty')!} />
-            <DataTableFilter column={table.getColumn('reconciledLabel')!} />
             <DataTableFilter column={table.getColumn('bank')!} />
             <DataTableFilter column={table.getColumn('legalEntityCode')!} />
             <DataTableFilter column={table.getColumn('direction')!} />
@@ -828,21 +750,6 @@ export function TransactionsPage() {
             >
               <DownloadIcon className="size-3" />
               Download CSV ({selectedRows.length})
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 gap-1.5 bg-background text-xs"
-              disabled={selectedCredits.length === 0}
-              onClick={bulkFlagForReturn}
-              title={
-                selectedCredits.length === 0
-                  ? 'Only credits can be returned'
-                  : undefined
-              }
-            >
-              <FlagIcon className="size-3" />
-              Flag {selectedCredits.length} for return
             </Button>
             <Button
               variant="ghost"
@@ -1040,11 +947,12 @@ export function TransactionsPage() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-64">
                     <DropdownMenuItem
-                      onSelect={() => flagException(openTxn, 'return')}
-                      disabled={openTxn.direction !== 'CREDIT'}
+                      onSelect={() =>
+                        downloadTransactionsCsv([openTxn], CLIENT_GROUP.name)
+                      }
                     >
-                      <FlagIcon className="size-3.5" />
-                      Flag for return
+                      <DownloadIcon className="size-3.5" />
+                      Export as CSV
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -1100,31 +1008,6 @@ function Field({
   )
 }
 
-// Reconciliation state as a badge in the main table; the full timestamp lives
-// in the detail view.
-function ReconciledBadge({ at }: { at: string | null }) {
-  if (!at) {
-    return (
-      <span
-        className="inline-flex items-center gap-1 rounded border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[0.65rem] font-medium uppercase tracking-wider text-amber-700"
-        title="Not yet matched to a bank statement"
-      >
-        <ClockIcon className="size-3" />
-        Pending
-      </span>
-    )
-  }
-  return (
-    <span
-      className="inline-flex items-center gap-1 rounded border border-emerald-300 bg-emerald-50 px-1.5 py-0.5 text-[0.65rem] font-medium uppercase tracking-wider text-emerald-700"
-      title={`Reconciled at ${at}`}
-    >
-      <CheckCircle2Icon className="size-3" />
-      Yes
-    </span>
-  )
-}
-
 function DetailSection({
   title,
   children,
@@ -1138,6 +1021,42 @@ function DetailSection({
         {title}
       </h3>
       <dl className="mt-2 divide-y border-t">{children}</dl>
+    </div>
+  )
+}
+
+// Raw payloads are long and rarely the reason someone opened this sheet, so
+// they start collapsed with a copy button — the common action is "give me this
+// to paste into a support ticket", not "read it here".
+function CodeBlockField({ label, code }: { label: string; code: string }) {
+  const [open, setOpen] = React.useState(false)
+  const lineCount = code.split('\n').length
+
+  return (
+    <div className="space-y-2 py-3">
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <div className="flex items-center justify-between gap-2">
+          <dt className="text-sm font-medium">
+            <CollapsibleTrigger className="inline-flex items-center gap-1.5 hover:text-foreground/70">
+              <ChevronRightIcon
+                className={`size-3.5 transition-transform ${open ? 'rotate-90' : ''}`}
+              />
+              {label}
+              <span className="text-[0.7rem] font-normal text-muted-foreground">
+                {lineCount} lines
+              </span>
+            </CollapsibleTrigger>
+          </dt>
+          <CopyButton value={code} />
+        </div>
+        <dd>
+          <CollapsibleContent>
+            <pre className="mt-2 max-h-96 overflow-auto rounded border bg-muted/30 p-3 font-mono text-[0.7rem] leading-relaxed text-foreground/90">
+              {code}
+            </pre>
+          </CollapsibleContent>
+        </dd>
+      </Collapsible>
     </div>
   )
 }
@@ -1295,7 +1214,10 @@ function TxnDetailBody({
         </Field>
       </DetailSection>
 
-      <DetailSection title="Audit">
+      <DetailSection title="Dates">
+        <Field label="Booking date">
+          <Mono>{d.bookingDate}</Mono>
+        </Field>
         <Field label="Created at">
           <Mono>{t.createdAt}</Mono>
         </Field>
@@ -1305,16 +1227,11 @@ function TxnDetailBody({
       </DetailSection>
 
       <DetailSection title="Bank log">
-        <Field label="Raw bank log" stacked>
-          <pre className="max-h-72 overflow-auto rounded border bg-muted/30 p-3 font-mono text-[0.7rem] leading-relaxed text-foreground/90">
-            {d.rawBankLog}
-          </pre>
-        </Field>
-        <Field label="API response payload" stacked>
-          <pre className="max-h-96 overflow-auto rounded border bg-muted/30 p-3 font-mono text-[0.7rem] leading-relaxed text-foreground/90">
-            {buildRawPayload(t, origin, d)}
-          </pre>
-        </Field>
+        <CodeBlockField label="Raw bank log" code={d.rawBankLog} />
+        <CodeBlockField
+          label="API response payload"
+          code={buildRawPayload(t, origin, d)}
+        />
       </DetailSection>
     </div>
   )
