@@ -9,13 +9,33 @@ import {
   FlagIcon,
   DownloadIcon,
   ArrowDownIcon,
+  ArrowUpIcon,
+  ArrowUpDownIcon,
   CheckCircle2Icon,
   ClockIcon,
   ExternalLinkIcon,
 } from 'lucide-react'
+import type {
+  ColumnDef,
+  ColumnFiltersState,
+  RowSelectionState,
+  SortingState,
+} from '@tanstack/react-table'
+import {
+  flexRender,
+  getCoreRowModel,
+  getFacetedMinMaxValues,
+  getFacetedRowModel,
+  getFacetedUniqueValues,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+} from '@tanstack/react-table'
 import { parse as parseDate } from 'date-fns'
-import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
 import {
   Table,
@@ -32,18 +52,9 @@ import {
 } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
@@ -56,25 +67,22 @@ import {
 import { toast } from 'sonner'
 import { Mono, MonoLabel, StatusPill } from '@/components/mono'
 import { addUnprocessedDeposit } from '@/lib/unprocessed-deposits-store'
+import { DataTableFilter } from '@/components/data-table-filter'
 import {
   ACCOUNTS,
   CLIENT_GROUP,
   LEGAL_ENTITIES,
   TRANSACTIONS,
-  bankNames as allBankNames,
   formatAmountWithCurrency,
-  getAccount,
   formatDirectionalAmount,
-  sortTransactionsByDateDesc,
+  getAccount,
   txnDetail,
+  txnIsoDate,
   type Account,
   type Txn,
   type TxnDetail,
 } from '@/data/fixtures'
 import type { DateRange } from 'react-day-picker'
-
-type DirectionFilter = 'all' | 'CREDIT' | 'DEBIT'
-type CurrencyFilter = 'all' | string
 
 const PAGE_SIZE = 20
 
@@ -267,18 +275,52 @@ function inRange(dateStr: string, range: DateRange | undefined): boolean {
   return d >= from && d <= to
 }
 
+// Row shape the table works on: the transaction plus the account attributes and
+// derived values the columns sort, filter and group by.
+type TxnRow = Txn & {
+  accountNumber: string
+  accountName: string
+  bank: string
+  legalEntityCode: string
+  amountNumber: number
+  reconciledLabel: 'Yes' | 'Pending'
+  reconciledAt: string | null
+}
+
+const SELECT_ALL_STATE = (
+  all: boolean,
+  some: boolean,
+): boolean | 'indeterminate' => (all ? true : some ? 'indeterminate' : false)
+
 export function TransactionsPage() {
-  // Flat list for the whole client group. Bank and legal entity are filters
-  // over account attributes rather than levels to drill into.
-  // Default sort: value date descending.
-  const rows = React.useMemo<Txn[]>(
-    () => sortTransactionsByDateDesc(TRANSACTIONS),
-    [],
-  )
-
-  const bankNames = React.useMemo(() => allBankNames(ACCOUNTS), [])
-
   const accounts = React.useMemo(() => ACCOUNTS, [])
+  const accountById = React.useMemo<Record<string, Account>>(() => {
+    const map: Record<string, Account> = {}
+    for (const a of accounts) map[a.id] = a
+    return map
+  }, [accounts])
+
+  // Flat list for the whole client group, widened with the account attributes
+  // so bank / legal entity / account are filterable columns rather than
+  // separate bits of page state.
+  const data = React.useMemo<TxnRow[]>(
+    () =>
+      TRANSACTIONS.map((t) => {
+        const account = accountById[t.internalAccountId]
+        const detail = txnDetail(t, account)
+        return {
+          ...t,
+          accountNumber: account?.number ?? t.internalAccountId,
+          accountName: account?.name ?? '',
+          bank: account?.bank ?? '',
+          legalEntityCode: account?.legalEntity ?? '',
+          amountNumber: Number(String(t.amount).replace(/,/g, '')) || 0,
+          reconciledLabel: detail.reconciledWithStatementAt ? 'Yes' : 'Pending',
+          reconciledAt: detail.reconciledWithStatementAt,
+        }
+      }),
+    [accountById],
+  )
 
   const defaultRange = React.useMemo<DateRange>(() => {
     const today = new Date('2026-06-01T00:00:00')
@@ -287,27 +329,19 @@ export function TransactionsPage() {
     return { from, to: today }
   }, [])
 
-  const [q, setQ] = React.useState('')
-  const [dateRange, setDateRange] = React.useState<DateRange | undefined>(
-    defaultRange,
-  )
-  const [selectedBanks, setSelectedBanks] = React.useState<Set<string>>(
-    new Set(bankNames),
-  )
-  const [accountId, setAccountId] = React.useState<string>('all')
-  const [legalEntity, setLegalEntity] = React.useState<string>('all')
-  const [direction, setDirection] = React.useState<DirectionFilter>('all')
-  const [currency, setCurrency] = React.useState<CurrencyFilter>('all')
-  const [txnType, setTxnType] = React.useState<string>('all')
   const [openTxn, setOpenTxn] = React.useState<Txn | null>(null)
-  const [page, setPage] = React.useState(1)
+  const [globalFilter, setGlobalFilter] = React.useState('')
+  const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({})
+  const [sorting, setSorting] = React.useState<SortingState>([
+    { id: 'transactionDate', desc: true },
+  ])
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    () => [{ id: 'transactionDate', value: defaultRange }],
+  )
 
   // Flag a credit transaction into the Pending review queue (Payments page).
-  // Shared by the row actions menu and the detail sheet Actions button.
-  // - Reversal: reverse a single payment order — processed as a refund
-  //   reversal back to the client.
-  // - Return: the bank rejected a payment order and returned the funds as a
-  //   separate credit line — the payment needs to be resubmitted.
+  // The bank rejected a payment order and returned the funds as a separate
+  // credit line, so the payment needs resubmitting.
   const flagException = (t: Txn, kind: 'reversal' | 'return') => {
     const added = addUnprocessedDeposit({
       originalTxnId: t.id,
@@ -334,118 +368,322 @@ export function TransactionsPage() {
     }
   }
 
-  // Distinct currencies present in the transaction list, for the Currency filter.
-  const currencies = React.useMemo<string[]>(() => {
-    const set = new Set<string>()
-    for (const r of rows) if (r.currency) set.add(r.currency)
-    return Array.from(set).sort()
-  }, [rows])
+  const columns = React.useMemo<ColumnDef<TxnRow>[]>(
+    () => [
+      {
+        id: 'select',
+        header: ({ table }) => (
+          <Checkbox
+            checked={SELECT_ALL_STATE(
+              table.getIsAllPageRowsSelected(),
+              table.getIsSomePageRowsSelected(),
+            )}
+            onCheckedChange={(value) =>
+              table.toggleAllPageRowsSelected(!!value)
+            }
+            aria-label="Select all"
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label="Select row"
+          />
+        ),
+        enableSorting: false,
+        size: 36,
+      },
+      {
+        id: 'transactionDate',
+        accessorKey: 'transactionDate',
+        header: 'Date',
+        cell: ({ row }) => (
+          <span
+            className="whitespace-nowrap text-xs text-muted-foreground"
+            title="Value Date of the transaction"
+          >
+            {row.original.transactionDate}
+          </span>
+        ),
+        sortingFn: (a, b) =>
+          txnIsoDate(a.original.transactionDate).localeCompare(
+            txnIsoDate(b.original.transactionDate),
+          ) || a.original.createdAt.localeCompare(b.original.createdAt),
+        filterFn: (row, columnId, value) =>
+          inRange(row.getValue(columnId) as string, value as DateRange | undefined),
+      },
+      {
+        id: 'accountNumber',
+        accessorKey: 'accountNumber',
+        header: 'Account',
+        cell: ({ row }) => (
+          <div
+            className="max-w-[11rem]"
+            title={`${row.original.accountName} · ${row.original.internalAccountId}`}
+          >
+            <Mono className="block max-w-full truncate">
+              {row.original.accountNumber}
+            </Mono>
+            {row.original.accountName && (
+              <div className="mt-0.5 truncate text-[0.7rem] text-muted-foreground">
+                {row.original.accountName}
+              </div>
+            )}
+          </div>
+        ),
+        filterFn: 'equalsString',
+        meta: { filterVariant: 'select', filterLabel: 'Account' },
+      },
+      {
+        id: 'amountNumber',
+        accessorKey: 'amountNumber',
+        header: () => <div className="text-right">Amount</div>,
+        cell: ({ row }) => (
+          <div className="text-right whitespace-nowrap">
+            <span
+              className={`text-sm tabular-nums ${
+                row.original.direction === 'CREDIT'
+                  ? 'text-emerald-700'
+                  : 'text-foreground'
+              }`}
+            >
+              {formatDirectionalAmount(row.original)}
+            </span>
+          </div>
+        ),
+        filterFn: 'inNumberRange',
+        meta: { filterVariant: 'range', filterLabel: 'Amount' },
+      },
+      {
+        id: 'counterparty',
+        accessorFn: (r) => `${r.senderName} ${r.senderBank}`.trim(),
+        header: 'Counterparty details',
+        cell: ({ row }) => (
+          <div className="max-w-[14rem]">
+            <div
+              className="truncate text-sm font-medium"
+              title={row.original.senderName}
+            >
+              {row.original.senderName || '—'}
+            </div>
+            <div className="mt-0.5 truncate font-mono text-[0.7rem] text-muted-foreground">
+              {row.original.senderBank || '—'}
+            </div>
+          </div>
+        ),
+        filterFn: 'includesString',
+        enableSorting: false,
+        meta: { filterVariant: 'text', filterLabel: 'Counterparty' },
+      },
+      {
+        id: 'reconciledLabel',
+        accessorKey: 'reconciledLabel',
+        header: 'Reconciled',
+        cell: ({ row }) => <ReconciledBadge at={row.original.reconciledAt} />,
+        filterFn: 'equalsString',
+        meta: {
+          filterVariant: 'select',
+          filterLabel: 'Reconciled',
+          filterOptions: [
+            { label: 'Yes', value: 'Yes' },
+            { label: 'Pending', value: 'Pending' },
+          ],
+        },
+      },
+      // Attributes we filter on but don't show as columns — hidden so their
+      // filter controls can live in the same filter row.
+      {
+        id: 'bank',
+        accessorKey: 'bank',
+        header: 'Bank',
+        filterFn: 'equalsString',
+        meta: { filterVariant: 'select', filterLabel: 'Bank' },
+      },
+      {
+        id: 'legalEntityCode',
+        accessorKey: 'legalEntityCode',
+        header: 'Legal entity',
+        filterFn: 'equalsString',
+        meta: {
+          filterVariant: 'select',
+          filterLabel: 'Legal entity',
+          filterOptions: LEGAL_ENTITIES.map((e) => ({
+            label: `${e.code} · ${e.name}`,
+            value: e.code,
+          })),
+        },
+      },
+      {
+        id: 'direction',
+        accessorKey: 'direction',
+        header: 'Direction',
+        filterFn: 'equalsString',
+        meta: { filterVariant: 'select', filterLabel: 'Direction' },
+      },
+      {
+        id: 'currency',
+        accessorKey: 'currency',
+        header: 'Currency',
+        filterFn: 'equalsString',
+        meta: { filterVariant: 'select', filterLabel: 'Currency' },
+      },
+      {
+        id: 'transactionType',
+        accessorKey: 'transactionType',
+        header: 'Type',
+        filterFn: 'equalsString',
+        meta: { filterVariant: 'select', filterLabel: 'Type' },
+      },
+      {
+        id: 'actions',
+        header: () => <span className="sr-only">Actions</span>,
+        cell: ({ row }) => (
+          <div className="text-right">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-7"
+                  aria-label="Row actions"
+                >
+                  <MoreHorizontalIcon className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onSelect={() => setOpenTxn(row.original)}>
+                  View details
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onSelect={() => flagException(row.original, 'return')}
+                  disabled={row.original.direction !== 'CREDIT'}
+                >
+                  <FlagIcon className="size-3.5" />
+                  Flag for return
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        ),
+        enableSorting: false,
+        size: 48,
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  )
 
-  // Distinct transaction types (ACT, FAST, MEPS, OTHERS, …) for the Type filter.
-  const txnTypes = React.useMemo<string[]>(() => {
-    const set = new Set<string>()
-    for (const r of rows) if (r.transactionType) set.add(r.transactionType)
-    return Array.from(set).sort()
-  }, [rows])
+  const table = useReactTable({
+    data,
+    columns,
+    state: { sorting, columnFilters, rowSelection, globalFilter },
+    initialState: {
+      pagination: { pageIndex: 0, pageSize: PAGE_SIZE },
+      columnVisibility: {
+        bank: false,
+        legalEntityCode: false,
+        direction: false,
+        currency: false,
+        transactionType: false,
+      },
+    },
+    getRowId: (r) => r.id,
+    globalFilterFn: (row, _columnId, value) => {
+      const needle = String(value).trim().toLowerCase()
+      if (!needle) return true
+      const r = row.original
+      return [
+        r.id,
+        r.senderName,
+        r.customerRef,
+        r.bankRef,
+        r.internalAccountId,
+        r.accountNumber,
+        r.remittanceInfo,
+      ]
+        .join(' ')
+        .toLowerCase()
+        .includes(needle)
+    },
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    onRowSelectionChange: setRowSelection,
+    onGlobalFilterChange: setGlobalFilter,
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getFacetedRowModel: getFacetedRowModel(),
+    getFacetedUniqueValues: getFacetedUniqueValues(),
+    getFacetedMinMaxValues: getFacetedMinMaxValues(),
+    enableSortingRemoval: false,
+    autoResetPageIndex: true,
+  })
 
-  const accountById = React.useMemo<Record<string, Account>>(() => {
-    const map: Record<string, Account> = {}
-    for (const a of accounts) map[a.id] = a
-    return map
-  }, [accounts])
-
-  // Map each account id → its bank name. Used by the Bank filter to decide
-  // whether a transaction's internalAccountId belongs to a selected bank.
-  const accountIdToBankName = React.useMemo<Record<string, string>>(() => {
-    const map: Record<string, string> = {}
-    for (const a of accounts) map[a.id] = a.bank
-    return map
-  }, [accounts])
-
-  // Map each account id → its legal-entity tag, for the Legal entity filter.
-  const accountIdToLegalEntity = React.useMemo<Record<string, string>>(() => {
-    const map: Record<string, string> = {}
-    for (const a of accounts) map[a.id] = a.legalEntity
-    return map
-  }, [accounts])
-
-  // Map each account id → its display name (e.g. "USD Operating").
-  // Used in the Transaction ID cell so the account context is visible inline.
-  const accountIdToName = React.useMemo<Record<string, string>>(() => {
-    const map: Record<string, string> = {}
-    for (const a of accounts) map[a.id] = a.name
-    return map
-  }, [accounts])
-
-  // Map each account id → originating account number + bank BIC.
-  // Used by the Originating account / Originating bank table columns.
-  const accountIdToOrigin = React.useMemo<
-    Record<string, { number: string; bic: string }>
-  >(() => {
-    const map: Record<string, { number: string; bic: string }> = {}
-    for (const a of accounts) map[a.id] = { number: a.number, bic: a.swiftBic }
-    return map
-  }, [accounts])
-
-  const filtered = React.useMemo<Txn[]>(() => {
-    const needle = q.trim().toLowerCase()
-    return rows.filter((t) => {
-      if (needle) {
-        const hay = [
-          t.id,
-          t.senderName,
-          t.customerRef,
-          t.bankRef,
-          t.internalAccountId,
-          t.remittanceInfo,
-        ]
-          .join(' ')
-          .toLowerCase()
-        if (!hay.includes(needle)) return false
-      }
-      if (!inRange(t.transactionDate, dateRange)) return false
-      const bankName = accountIdToBankName[t.internalAccountId]
-      if (!bankName || !selectedBanks.has(bankName)) return false
-      if (accountId !== 'all' && t.internalAccountId !== accountId) return false
-      if (
-        legalEntity !== 'all' &&
-        accountIdToLegalEntity[t.internalAccountId] !== legalEntity
-      )
-        return false
-      if (direction !== 'all' && t.direction !== direction) return false
-      if (currency !== 'all' && t.currency !== currency) return false
-      if (txnType !== 'all' && t.transactionType !== txnType) return false
-      return true
-    })
-  }, [rows, q, dateRange, selectedBanks, accountId, legalEntity, direction, currency, txnType, accountIdToBankName, accountIdToLegalEntity])
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
-
-  React.useEffect(() => {
-    setPage(1)
-  }, [q, dateRange, selectedBanks, accountId, legalEntity, direction, currency, txnType])
-
-  React.useEffect(() => {
-    if (page > totalPages) setPage(totalPages)
-  }, [page, totalPages])
-
-  const pageStart = (page - 1) * PAGE_SIZE
-  const pageEnd = Math.min(pageStart + PAGE_SIZE, filtered.length)
-  const paged = filtered.slice(pageStart, pageEnd)
-
-  const hasTxns = rows.length > 0
-  const hasFilters = hasTxns
-
-  const bankLabel =
-    selectedBanks.size === 0
-      ? 'None'
-      : selectedBanks.size === bankNames.length
-        ? 'All'
-        : selectedBanks.size === 1
-          ? Array.from(selectedBanks)[0]!
-          : `${selectedBanks.size} selected`
-
+  const dateColumn = table.getColumn('transactionDate')!
+  const dateRange = dateColumn.getFilterValue() as DateRange | undefined
   const dateLabel = formatDateRangeLabel(dateRange)
+
+  const accountOptions = React.useMemo(
+    () =>
+      accounts.map((a) => ({
+        label: `${a.number} · ${a.name}`,
+        value: a.number,
+      })),
+    [accounts],
+  )
+
+  const filteredRows = table.getFilteredRowModel().rows
+  const selectedRows = table.getSelectedRowModel().rows
+  const selectedCredits = selectedRows.filter(
+    (r) => r.original.direction === 'CREDIT',
+  )
+
+  const bulkFlagForReturn = () => {
+    let added = 0
+    let skipped = 0
+    for (const r of selectedCredits) {
+      const ok = addUnprocessedDeposit({
+        originalTxnId: r.original.id,
+        customer: r.original.senderName,
+        amount: `${r.original.currency} ${r.original.amount}`,
+        reason:
+          'Payment rejected — funds returned by bank, resubmission required',
+        date: r.original.transactionDate,
+        kind: 'return',
+      })
+      if (ok) added++
+      else skipped++
+    }
+    setRowSelection({})
+    if (added > 0) {
+      toast.success(`Flagged ${added} transaction${added === 1 ? '' : 's'} for return`, {
+        description: `Moved to the Pending review tab on the Payments page.${
+          skipped > 0 ? ` ${skipped} already awaiting review.` : ''
+        }`,
+      })
+    } else {
+      toast.info('Already pending review', {
+        description: 'Every selected transaction is already awaiting review.',
+      })
+    }
+  }
+
+  const clearFilters = () => {
+    setGlobalFilter('')
+    setColumnFilters([{ id: 'transactionDate', value: defaultRange }])
+  }
+
+  const activeFilterCount =
+    columnFilters.filter((f) => f.id !== 'transactionDate').length +
+    (globalFilter.trim() ? 1 : 0)
+
+  const pageIndex = table.getState().pagination.pageIndex
+  const pageSize = table.getState().pagination.pageSize
+  const pageStart = filteredRows.length === 0 ? 0 : pageIndex * pageSize + 1
+  const pageEnd = Math.min((pageIndex + 1) * pageSize, filteredRows.length)
 
   return (
     <div className="space-y-6">
@@ -457,392 +695,293 @@ export function TransactionsPage() {
           variant="outline"
           size="sm"
           className="gap-2"
-          disabled={filtered.length === 0}
-          onClick={() => downloadTransactionsCsv(filtered, CLIENT_GROUP.name)}
+          disabled={filteredRows.length === 0}
+          onClick={() =>
+            downloadTransactionsCsv(
+              filteredRows.map((r) => r.original),
+              CLIENT_GROUP.name,
+            )
+          }
         >
           <DownloadIcon className="size-3.5" />
           Download CSV
-          {filtered.length > 0 && (
+          {filteredRows.length > 0 && (
             <span className="text-[0.65rem] text-muted-foreground">
-              ({filtered.length})
+              ({filteredRows.length})
             </span>
           )}
         </Button>
       </div>
 
-      {hasFilters && (
-        <div className="flex flex-col gap-3">
+      <div className="rounded-md border bg-card">
+        {/* Search + per-column filters */}
+        <div className="space-y-3 px-4 py-4">
           <div className="relative">
             <SearchIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Search by txn id, counterparty, customer ref, bank ref, intacc, remittance…"
+              value={globalFilter}
+              onChange={(e) => setGlobalFilter(e.target.value)}
+              placeholder="Search by txn id, counterparty, customer ref, bank ref, account, remittance…"
               className="pl-9"
             />
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 gap-2 font-normal"
-                >
-                  <CalendarIcon className="size-3.5" />
-                  <span className="text-[0.7rem] uppercase tracking-wider text-muted-foreground">
-                    Transaction date:
-                  </span>
-                  <span className="text-xs">{dateLabel}</span>
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="start" className="w-auto p-0">
-                <div className="flex flex-col gap-2 p-2">
-                  <div className="flex gap-1.5 px-1 pt-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 text-xs"
-                      onClick={() => {
-                        const today = new Date('2026-06-01T00:00:00')
-                        const from = new Date(today)
-                        from.setDate(from.getDate() - 6)
-                        setDateRange({ from, to: today })
-                      }}
-                    >
-                      Last 7 days
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 text-xs"
-                      onClick={() => {
-                        const today = new Date('2026-06-01T00:00:00')
-                        const from = new Date(today)
-                        from.setDate(from.getDate() - 29)
-                        setDateRange({ from, to: today })
-                      }}
-                    >
-                      Last 30 days
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 text-xs"
-                      onClick={() => setDateRange(undefined)}
-                    >
-                      Clear
-                    </Button>
+
+          <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            <div className="space-y-1.5">
+              <Label className="text-[0.7rem] uppercase tracking-wider text-muted-foreground">
+                Transaction date
+              </Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 w-full justify-start gap-2 font-normal"
+                  >
+                    <CalendarIcon className="size-3.5" />
+                    <span className="truncate text-xs">{dateLabel}</span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-auto p-0">
+                  <div className="flex flex-col gap-2 p-2">
+                    <div className="flex gap-1.5 px-1 pt-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => {
+                          const today = new Date('2026-06-01T00:00:00')
+                          const from = new Date(today)
+                          from.setDate(from.getDate() - 6)
+                          dateColumn.setFilterValue({ from, to: today })
+                        }}
+                      >
+                        Last 7 days
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => {
+                          const today = new Date('2026-06-01T00:00:00')
+                          const from = new Date(today)
+                          from.setDate(from.getDate() - 29)
+                          dateColumn.setFilterValue({ from, to: today })
+                        }}
+                      >
+                        Last 30 days
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => dateColumn.setFilterValue(undefined)}
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                    <Calendar
+                      mode="range"
+                      selected={dateRange}
+                      onSelect={(r) => dateColumn.setFilterValue(r)}
+                      numberOfMonths={2}
+                      defaultMonth={dateRange?.from ?? new Date('2026-06-01')}
+                    />
                   </div>
-                  <Calendar
-                    mode="range"
-                    selected={dateRange}
-                    onSelect={setDateRange}
-                    numberOfMonths={2}
-                    defaultMonth={dateRange?.from ?? new Date('2026-06-01')}
-                  />
-                </div>
-              </PopoverContent>
-            </Popover>
+                </PopoverContent>
+              </Popover>
+            </div>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 gap-2 font-normal"
-                >
-                  <span className="text-[0.7rem] uppercase tracking-wider text-muted-foreground">
-                    Bank:
-                  </span>
-                  <span>{bankLabel}</span>
-                  <ChevronDownIcon className="size-3.5 text-muted-foreground" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-56">
-                <DropdownMenuLabel className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">
-                  Filter by bank
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {bankNames.map((name) => (
-                  <DropdownMenuCheckboxItem
-                    key={name}
-                    checked={selectedBanks.has(name)}
-                    onCheckedChange={(checked) => {
-                      setSelectedBanks((prev) => {
-                        const next = new Set(prev)
-                        if (checked) next.add(name)
-                        else next.delete(name)
-                        return next
-                      })
-                    }}
-                    onSelect={(e) => e.preventDefault()}
-                  >
-                    {name}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <Select value={legalEntity} onValueChange={setLegalEntity}>
-              <SelectTrigger size="sm" className="h-8 gap-2 font-normal">
-                <span className="text-[0.7rem] uppercase tracking-wider text-muted-foreground">
-                  Legal entity:
-                </span>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                {LEGAL_ENTITIES.map((e) => (
-                  <SelectItem key={e.code} value={e.code}>
-                    {e.code} · {e.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={accountId} onValueChange={setAccountId}>
-              <SelectTrigger size="sm" className="h-8 gap-2 font-normal">
-                <span className="text-[0.7rem] uppercase tracking-wider text-muted-foreground">
-                  Account:
-                </span>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All accounts</SelectItem>
-                {accounts.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.bank} · {a.legalEntity} · {a.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={direction}
-              onValueChange={(v) => setDirection(v as DirectionFilter)}
-            >
-              <SelectTrigger size="sm" className="h-8 gap-2 font-normal">
-                <span className="text-[0.7rem] uppercase tracking-wider text-muted-foreground">
-                  Direction:
-                </span>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                <SelectItem value="CREDIT">CREDIT</SelectItem>
-                <SelectItem value="DEBIT">DEBIT</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={currency}
-              onValueChange={(v) => setCurrency(v as CurrencyFilter)}
-            >
-              <SelectTrigger size="sm" className="h-8 gap-2 font-normal">
-                <span className="text-[0.7rem] uppercase tracking-wider text-muted-foreground">
-                  Currency:
-                </span>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                {currencies.map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {c}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={txnType} onValueChange={setTxnType}>
-              <SelectTrigger size="sm" className="h-8 gap-2 font-normal">
-                <span className="text-[0.7rem] uppercase tracking-wider text-muted-foreground">
-                  Type:
-                </span>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                {txnTypes.map((t) => (
-                  <SelectItem key={t} value={t}>
-                    {t}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <DataTableFilter
+              column={table.getColumn('accountNumber')!}
+              options={accountOptions}
+            />
+            <DataTableFilter column={table.getColumn('amountNumber')!} />
+            <DataTableFilter column={table.getColumn('counterparty')!} />
+            <DataTableFilter column={table.getColumn('reconciledLabel')!} />
+            <DataTableFilter column={table.getColumn('bank')!} />
+            <DataTableFilter column={table.getColumn('legalEntityCode')!} />
+            <DataTableFilter column={table.getColumn('direction')!} />
+            <DataTableFilter column={table.getColumn('currency')!} />
+            <DataTableFilter column={table.getColumn('transactionType')!} />
           </div>
-        </div>
-      )}
 
-      <Card>
-        <CardContent className="p-0">
-          <div className="w-full overflow-x-auto">
-            <Table className="w-full table-fixed">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-32 text-[0.7rem] uppercase tracking-wider whitespace-normal leading-snug">
-                    <span
-                      className="inline-flex items-center gap-1"
-                      title="Value Date of the transaction"
-                    >
-                      Date
-                      <ArrowDownIcon className="size-3 opacity-60" />
-                    </span>
-                  </TableHead>
-                  <TableHead className="w-44 text-[0.7rem] uppercase tracking-wider whitespace-normal leading-snug">
-                    Account
-                  </TableHead>
-                  <TableHead className="w-40 text-right text-[0.7rem] uppercase tracking-wider whitespace-normal leading-snug">
-                    Amount
-                  </TableHead>
-                  <TableHead className="w-56 text-[0.7rem] uppercase tracking-wider whitespace-normal leading-snug">
-                    Counterparty details
-                  </TableHead>
-                  <TableHead className="w-28 text-[0.7rem] uppercase tracking-wider whitespace-normal leading-snug">
-                    Reconciled
-                  </TableHead>
-                  <TableHead className="w-12 text-[0.7rem] uppercase tracking-wider whitespace-normal leading-snug">
-                    Actions
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paged.map((t) => (
-                  <TableRow
-                    key={t.id}
-                    className="cursor-pointer"
-                    onClick={() => setOpenTxn(t)}
-                  >
-                    <TableCell
-                      className="text-xs text-muted-foreground whitespace-nowrap"
-                      title="Value Date of the transaction"
-                    >
-                      {t.transactionDate}
-                    </TableCell>
-                    <TableCell
-                      className="max-w-[11rem]"
-                      title={`${accountIdToName[t.internalAccountId] ?? ''} · ${t.internalAccountId}`}
-                    >
-                      <Mono className="block max-w-full truncate">
-                        {accountIdToOrigin[t.internalAccountId]?.number ??
-                          t.internalAccountId}
-                      </Mono>
-                      {accountIdToName[t.internalAccountId] && (
-                        <div className="mt-0.5 truncate text-[0.7rem] text-muted-foreground">
-                          {accountIdToName[t.internalAccountId]}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right whitespace-nowrap">
-                      <span
-                        className={`text-sm tabular-nums ${
-                          t.direction === 'CREDIT'
-                            ? 'text-emerald-700'
-                            : 'text-foreground'
-                        }`}
-                      >
-                        {formatDirectionalAmount(t)}
-                      </span>
-                    </TableCell>
-                    <TableCell className="max-w-[14rem]">
-                      <div
-                        className="truncate text-sm font-medium"
-                        title={t.senderName}
-                      >
-                        {t.senderName || '—'}
-                      </div>
-                      <div className="mt-0.5 truncate font-mono text-[0.7rem] text-muted-foreground">
-                        {t.senderBank || '—'}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <ReconciledBadge
-                        at={txnDetail(t, accountById[t.internalAccountId])
-                          .reconciledWithStatementAt}
-                      />
-                    </TableCell>
-                    <TableCell
-                      className="text-right"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-7"
-                            aria-label="Row actions"
-                          >
-                            <MoreHorizontalIcon className="size-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                          <DropdownMenuItem onSelect={() => setOpenTxn(t)}>
-                            View details
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onSelect={() => flagException(t, 'return')}
-                            disabled={t.direction !== 'CREDIT'}
-                          >
-                            <FlagIcon className="size-3.5" />
-                            Flag for return
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {filtered.length === 0 && (
-                  <TableRow>
-                    <TableCell
-                      colSpan={6}
-                      className="py-10 text-center text-sm text-muted-foreground"
-                    >
-                      {rows.length === 0
-                        ? 'No transactions yet.'
-                        : 'No transactions match your filters'}
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-          {filtered.length > 0 && (
-            <div className="flex items-center justify-between border-t px-4 py-3">
-              <div className="text-[0.7rem] uppercase tracking-wider text-muted-foreground">
-                Showing {pageStart + 1}–{pageEnd} of {filtered.length}
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 gap-1"
-                  disabled={page <= 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                >
-                  <ChevronLeftIcon className="size-3.5" />
-                  Previous
-                </Button>
-                <span className="text-xs text-muted-foreground">
-                  Page {page} of {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 gap-1"
-                  disabled={page >= totalPages}
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                >
-                  Next
-                  <ChevronRightIcon className="size-3.5" />
-                </Button>
-              </div>
+          {activeFilterCount > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">
+                {activeFilterCount} filter
+                {activeFilterCount === 1 ? '' : 's'} active
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={clearFilters}
+              >
+                Clear all
+              </Button>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+
+        {/* Bulk actions for the checkbox selection */}
+        {selectedRows.length > 0 && (
+          <div className="flex flex-wrap items-center gap-3 border-t bg-muted/40 px-4 py-2.5">
+            <span className="text-xs font-medium">
+              {selectedRows.length} selected
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 gap-1.5 bg-background text-xs"
+              disabled={selectedCredits.length === 0}
+              onClick={bulkFlagForReturn}
+              title={
+                selectedCredits.length === 0
+                  ? 'Only credits can be returned'
+                  : undefined
+              }
+            >
+              <FlagIcon className="size-3" />
+              Flag {selectedCredits.length} for return
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => setRowSelection({})}
+            >
+              Clear selection
+            </Button>
+          </div>
+        )}
+
+        <div className="w-full overflow-x-auto border-t">
+          <Table>
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id} className="bg-muted/50">
+                  {headerGroup.headers.map((header) => {
+                    const canSort = header.column.getCanSort()
+                    const sorted = header.column.getIsSorted()
+                    return (
+                      <TableHead
+                        key={header.id}
+                        className="relative h-10 select-none text-[0.7rem] uppercase tracking-wider"
+                        style={
+                          header.column.columnDef.size
+                            ? { width: header.column.columnDef.size }
+                            : undefined
+                        }
+                      >
+                        {header.isPlaceholder ? null : canSort ? (
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1 uppercase tracking-wider hover:text-foreground"
+                            onClick={header.column.getToggleSortingHandler()}
+                          >
+                            {flexRender(
+                              header.column.columnDef.header,
+                              header.getContext(),
+                            )}
+                            {sorted === 'desc' ? (
+                              <ArrowDownIcon className="size-3 opacity-60" />
+                            ) : sorted === 'asc' ? (
+                              <ArrowUpIcon className="size-3 opacity-60" />
+                            ) : (
+                              <ArrowUpDownIcon className="size-3 opacity-30" />
+                            )}
+                          </button>
+                        ) : (
+                          flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )
+                        )}
+                      </TableHead>
+                    )
+                  })}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && 'selected'}
+                    className="cursor-pointer"
+                    onClick={() => setOpenTxn(row.original)}
+                  >
+                    {row.getVisibleCells().map((cell) => {
+                      const stopClick =
+                        cell.column.id === 'select' ||
+                        cell.column.id === 'actions'
+                      return (
+                        <TableCell
+                          key={cell.id}
+                          onClick={
+                            stopClick ? (e) => e.stopPropagation() : undefined
+                          }
+                        >
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext(),
+                          )}
+                        </TableCell>
+                      )
+                    })}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={table.getVisibleFlatColumns().length}
+                    className="h-24 text-center text-sm text-muted-foreground"
+                  >
+                    {data.length === 0
+                      ? 'No transactions yet.'
+                      : 'No transactions match your filters'}
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        {filteredRows.length > 0 && (
+          <div className="flex items-center justify-between border-t px-4 py-3">
+            <div className="text-[0.7rem] uppercase tracking-wider text-muted-foreground">
+              Showing {pageStart}–{pageEnd} of {filteredRows.length}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1"
+                disabled={!table.getCanPreviousPage()}
+                onClick={() => table.previousPage()}
+              >
+                <ChevronLeftIcon className="size-3.5" />
+                Previous
+              </Button>
+              <span className="text-xs text-muted-foreground">
+                Page {pageIndex + 1} of {table.getPageCount()}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1"
+                disabled={!table.getCanNextPage()}
+                onClick={() => table.nextPage()}
+              >
+                Next
+                <ChevronRightIcon className="size-3.5" />
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
 
       <Sheet open={!!openTxn} onOpenChange={(o) => !o && setOpenTxn(null)}>
         <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
@@ -899,7 +1038,14 @@ export function TransactionsPage() {
               <TxnDetailBody
                 t={openTxn}
                 account={accountById[openTxn.internalAccountId]}
-                origin={accountIdToOrigin[openTxn.internalAccountId]}
+                origin={
+                  accountById[openTxn.internalAccountId]
+                    ? {
+                        number: accountById[openTxn.internalAccountId].number,
+                        bic: accountById[openTxn.internalAccountId].swiftBic,
+                      }
+                    : undefined
+                }
               />
             </>
           )}
