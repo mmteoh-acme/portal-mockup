@@ -3,7 +3,6 @@ import {
   SearchIcon,
   CalendarIcon,
   ChevronDownIcon,
-  ChevronLeftIcon,
   ChevronRightIcon,
   MoreHorizontalIcon,
   DownloadIcon,
@@ -67,6 +66,15 @@ import { Mono, StatusPill } from '@/components/mono'
 import { DataTableFilter } from '@/components/data-table-filter'
 import { CopyButton } from '@/components/copy-button'
 import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination'
+import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
@@ -92,7 +100,7 @@ import {
 } from '@/data/fixtures'
 import type { DateRange } from 'react-day-picker'
 
-const PAGE_SIZE = 20
+const PAGE_SIZE = 10
 
 // Mirrors the transaction view's field set: the main columns first, then the
 // detail fields. organization_id and statement_entry_id stay out of the export.
@@ -273,6 +281,29 @@ function buildRawPayload(
   return JSON.stringify(payload, null, 2)
 }
 
+// Page numbers with ellipsis gaps: first, last, and a window around the
+// current page — 1 … 4 5 6 … 12.
+function pageNumbers(
+  current: number,
+  total: number,
+): (number | 'ellipsis')[] {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1)
+  }
+  const pages = new Set([1, total, current, current - 1, current + 1])
+  const sorted = [...pages]
+    .filter((p) => p >= 1 && p <= total)
+    .sort((a, b) => a - b)
+  const out: (number | 'ellipsis')[] = []
+  let prev = 0
+  for (const p of sorted) {
+    if (prev && p - prev > 1) out.push('ellipsis')
+    out.push(p)
+    prev = p
+  }
+  return out
+}
+
 function inRange(dateStr: string, range: DateRange | undefined): boolean {
   if (!range?.from) return true
   const d = parseTxnDate(dateStr)
@@ -412,9 +443,9 @@ export function TransactionsPage() {
       {
         id: 'amountNumber',
         accessorKey: 'amountNumber',
-        header: () => <div className="text-right">Amount</div>,
+        header: 'Amount',
         cell: ({ row }) => (
-          <div className="text-right whitespace-nowrap">
+          <div className="whitespace-nowrap">
             <span
               className={`text-sm tabular-nums ${
                 row.original.direction === 'CREDIT'
@@ -449,6 +480,28 @@ export function TransactionsPage() {
         filterFn: 'includesString',
         enableSorting: false,
         meta: { filterVariant: 'text', filterLabel: 'Counterparty' },
+      },
+      {
+        id: 'bankRef',
+        accessorKey: 'bankRef',
+        header: 'Bank reference',
+        cell: ({ row }) => (
+          <Mono className="text-[0.7rem]">{row.original.bankRef || '—'}</Mono>
+        ),
+        filterFn: 'includesString',
+        enableSorting: false,
+        meta: { filterVariant: 'text', filterLabel: 'Bank reference' },
+      },
+      {
+        id: 'transactionType',
+        accessorKey: 'transactionType',
+        header: 'Type',
+        cell: ({ row }) => (
+          <StatusPill status={row.original.transactionType} />
+        ),
+        filterFn: 'equalsString',
+        enableSorting: false,
+        meta: { filterVariant: 'select', filterLabel: 'Type' },
       },
       // Attributes we filter on but don't show as columns — hidden so their
       // filter controls can live in the same filter row.
@@ -488,17 +541,10 @@ export function TransactionsPage() {
         meta: { filterVariant: 'select', filterLabel: 'Currency' },
       },
       {
-        id: 'transactionType',
-        accessorKey: 'transactionType',
-        header: 'Type',
-        filterFn: 'equalsString',
-        meta: { filterVariant: 'select', filterLabel: 'Type' },
-      },
-      {
         id: 'actions',
         header: () => <span className="sr-only">Actions</span>,
         cell: ({ row }) => (
-          <div className="text-right">
+          <div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -546,7 +592,6 @@ export function TransactionsPage() {
         legalEntityCode: false,
         direction: false,
         currency: false,
-        transactionType: false,
       },
     },
     getRowId: (r) => r.id,
@@ -706,6 +751,7 @@ export function TransactionsPage() {
             />
             <DataTableFilter column={table.getColumn('amountNumber')!} />
             <DataTableFilter column={table.getColumn('counterparty')!} />
+            <DataTableFilter column={table.getColumn('bankRef')!} />
             <DataTableFilter column={table.getColumn('bank')!} />
             <DataTableFilter column={table.getColumn('legalEntityCode')!} />
             <DataTableFilter column={table.getColumn('direction')!} />
@@ -875,31 +921,60 @@ export function TransactionsPage() {
             <div className="text-[0.7rem] uppercase tracking-wider text-muted-foreground">
               Showing {pageStart}–{pageEnd} of {filteredRows.length}
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1"
-                disabled={!table.getCanPreviousPage()}
-                onClick={() => table.previousPage()}
-              >
-                <ChevronLeftIcon className="size-3.5" />
-                Previous
-              </Button>
-              <span className="text-xs text-muted-foreground">
-                Page {pageIndex + 1} of {table.getPageCount()}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1"
-                disabled={!table.getCanNextPage()}
-                onClick={() => table.nextPage()}
-              >
-                Next
-                <ChevronRightIcon className="size-3.5" />
-              </Button>
-            </div>
+            <Pagination className="mx-0 w-auto justify-end">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    href="#"
+                    aria-disabled={!table.getCanPreviousPage()}
+                    className={
+                      table.getCanPreviousPage()
+                        ? undefined
+                        : 'pointer-events-none opacity-40'
+                    }
+                    onClick={(e) => {
+                      e.preventDefault()
+                      table.previousPage()
+                    }}
+                  />
+                </PaginationItem>
+                {pageNumbers(pageIndex + 1, table.getPageCount()).map((p, i) =>
+                  p === 'ellipsis' ? (
+                    <PaginationItem key={`gap-${i}`}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  ) : (
+                    <PaginationItem key={p}>
+                      <PaginationLink
+                        href="#"
+                        isActive={p === pageIndex + 1}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          table.setPageIndex(p - 1)
+                        }}
+                      >
+                        {p}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ),
+                )}
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    aria-disabled={!table.getCanNextPage()}
+                    className={
+                      table.getCanNextPage()
+                        ? undefined
+                        : 'pointer-events-none opacity-40'
+                    }
+                    onClick={(e) => {
+                      e.preventDefault()
+                      table.nextPage()
+                    }}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
           </div>
         )}
       </div>
