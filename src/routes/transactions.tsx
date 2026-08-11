@@ -687,30 +687,11 @@ export function TransactionsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Transactions</h1>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-2"
-          disabled={filteredRows.length === 0}
-          onClick={() =>
-            downloadTransactionsCsv(
-              filteredRows.map((r) => r.original),
-              CLIENT_GROUP.name,
-            )
-          }
-        >
-          <DownloadIcon className="size-3.5" />
-          Download CSV
-          {filteredRows.length > 0 && (
-            <span className="text-[0.65rem] text-muted-foreground">
-              ({filteredRows.length})
-            </span>
-          )}
-        </Button>
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Transactions</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Select rows to export them as CSV.
+        </p>
       </div>
 
       <div className="rounded-md border bg-card">
@@ -830,6 +811,20 @@ export function TransactionsPage() {
             <span className="text-xs font-medium">
               {selectedRows.length} selected
             </span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 gap-1.5 bg-background text-xs"
+              onClick={() =>
+                downloadTransactionsCsv(
+                  selectedRows.map((r) => r.original),
+                  CLIENT_GROUP.name,
+                )
+              }
+            >
+              <DownloadIcon className="size-3" />
+              Download CSV ({selectedRows.length})
+            </Button>
             <Button
               variant="outline"
               size="sm"
