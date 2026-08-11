@@ -51,7 +51,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import { Mono, MonoLabel } from '@/components/mono'
 import { cn } from '@/lib/utils'
-import { useEntity } from '@/lib/entity-context'
 import { useUser } from '@/lib/user-context'
 import {
   addRefund,
@@ -70,8 +69,8 @@ import {
 import { useUnprocessedDeposits } from '@/lib/unprocessed-deposits-store'
 import {
   allPayments,
-  entityAccounts,
-  entityTransactions,
+  ACCOUNTS,
+  TRANSACTIONS,
   expiredApprovalsSeed,
   formatMoney,
   paymentRequiresAttention,
@@ -271,13 +270,10 @@ export function PaymentsPage() {
         paymentId?: string
       },
   })
-  const { entity } = useEntity()
   const storeDeposits = useUnprocessedDeposits()
 
   if (search?.action === 'new-refund') {
-    const txn = entity
-      ? entityTransactions(entity).find((t) => t.id === search.txnId) ?? null
-      : null
+    const txn = TRANSACTIONS.find((t) => t.id === search.txnId) ?? null
     return <NewRefundFromTxn txn={txn} />
   }
 
@@ -2216,12 +2212,9 @@ function ContextRow({
 function NewPaymentPage() {
   const navigate = useNavigate()
   const { user } = useUser()
-  const { entity } = useEntity()
 
-  const senderAccounts = React.useMemo(
-    () => (entity ? entityAccounts(entity) : []),
-    [entity],
-  )
+  // Flat account list — pick any account the user can see, no entity scoping.
+  const senderAccounts = React.useMemo(() => ACCOUNTS, [])
   const [senderAccountId, setSenderAccountId] = React.useState('')
   const senderAccount =
     senderAccounts.find((a) => a.id === senderAccountId) ?? null
@@ -2256,7 +2249,7 @@ function NewPaymentPage() {
   const linkResults = React.useMemo(() => {
     const needle = linkQuery.trim().toLowerCase()
     if (!needle) return []
-    const txns = (entity ? entityTransactions(entity) : [])
+    const txns = TRANSACTIONS
       .filter(
         (t) =>
           t.id.toLowerCase().includes(needle) ||
@@ -2281,7 +2274,7 @@ function NewPaymentPage() {
         amount: `${p.currency} ${p.amount}`,
       }))
     return [...txns, ...pymts].slice(0, 6)
-  }, [entity, linkQuery])
+  }, [linkQuery])
 
   // Balance is fetched on demand for the selected account only — the
   // balances API is billed per call.
@@ -2522,7 +2515,8 @@ function NewPaymentPage() {
               <SelectContent>
                 {senderAccounts.map((a) => (
                   <SelectItem key={a.id} value={a.id}>
-                    {a.name} · {a.number} · {a.currency}
+                    {a.bank} · {a.legalEntity} · {a.name} · {a.number} ·{' '}
+                    {a.currency}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -2934,7 +2928,6 @@ function NewPaymentPage() {
 function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
   const navigate = useNavigate()
   const { user } = useUser()
-  const { entity } = useEntity()
 
   const goBack = () =>
     navigate({
@@ -2983,10 +2976,7 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
 
   // Originating account — defaults to the original payment's sender account,
   // but the user can pick a different one (same as the create payment page).
-  const senderAccounts = React.useMemo(
-    () => (entity ? entityAccounts(entity) : []),
-    [entity],
-  )
+  const senderAccounts = React.useMemo(() => ACCOUNTS, [])
   const [senderAccountId, setSenderAccountId] = React.useState(
     () =>
       senderAccounts.find((a) => a.id === payment?.senderAccountId)?.id ??
@@ -3257,7 +3247,8 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
               <SelectContent>
                 {senderAccounts.map((a) => (
                   <SelectItem key={a.id} value={a.id}>
-                    {a.name} · {a.number} · {a.currency}
+                    {a.bank} · {a.legalEntity} · {a.name} · {a.number} ·{' '}
+                    {a.currency}
                   </SelectItem>
                 ))}
               </SelectContent>

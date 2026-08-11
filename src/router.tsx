@@ -7,7 +7,6 @@ import {
 } from '@tanstack/react-router'
 import { AppShell } from '@/components/app-shell'
 import { LoginPage } from '@/routes/login'
-import { SelectEntityPage } from '@/routes/select-entity'
 import { DashboardPage } from '@/routes/dashboard'
 import { TransactionsPage } from '@/routes/transactions'
 import { PaymentsPage } from '@/routes/payments'
@@ -15,6 +14,8 @@ import { InternalAccountsPage } from '@/routes/internal-accounts'
 import { ApiKeysPage } from '@/routes/api-keys'
 import { WebhooksPage } from '@/routes/webhooks'
 import { UsersPage } from '@/routes/users'
+import { AccountGroupsPage } from '@/routes/account-groups'
+import { UserGroupsPage } from '@/routes/user-groups'
 import { ActivityPage } from '@/routes/activity'
 
 const rootRoute = createRootRoute({
@@ -33,12 +34,6 @@ const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/login',
   component: LoginPage,
-})
-
-const selectEntityRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/select-entity',
-  component: SelectEntityPage,
 })
 
 const appLayoutRoute = createRoute({
@@ -90,6 +85,18 @@ const webhooksRoute = createRoute({
   component: WebhooksPage,
 })
 
+const accountGroupsRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: '/account-groups',
+  component: AccountGroupsPage,
+})
+
+const userGroupsRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: '/user-groups',
+  component: UserGroupsPage,
+})
+
 const usersRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: '/users',
@@ -105,7 +112,6 @@ const activityRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
-  selectEntityRoute,
   appLayoutRoute.addChildren([
     dashboardRoute,
     transactionsRoute,
@@ -113,6 +119,8 @@ const routeTree = rootRoute.addChildren([
     internalAccountsRoute,
     apiKeysRoute,
     webhooksRoute,
+    accountGroupsRoute,
+    userGroupsRoute,
     usersRoute,
     activityRoute,
   ]),

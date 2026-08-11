@@ -32,17 +32,17 @@ import {
   ChartLegend,
   ChartCardShell,
 } from '@/components/charts'
-import { useEntity } from '@/lib/entity-context'
 import {
-  entityAccounts,
-  entityBalanceHistory,
-  entityBalancesByCurrency,
-  entityKpis,
+  ACCOUNTS,
+  LEGAL_ENTITIES,
+  balanceHistory,
+  balancesByCurrency,
+  clientKpis,
   formatCompactMoney,
   formatMoney,
   paymentAnalytics,
   successRateByType,
-  type Entity,
+  type Account,
 } from '@/data/fixtures'
 
 const COLOR_API = 'var(--chart-3)'
@@ -60,20 +60,30 @@ const BANK_COLORS = [
 
 const BALANCES_AS_OF = 'Jun 1, 2026, 09:00 AM SGT'
 
-// Balance Stats + daily Balances chart, grouped by currency and bank.
+// Balance Stats + daily Balances chart over the flat account list, grouped by
+// currency and bank. Legal entity is one filter dimension among several — it
+// is an attribute on the account, not a level above it.
 // `sideChart` renders next to the Balances chart in a 2-up grid.
 function BalancesModule({
-  entity,
+  accounts,
   sideChart,
 }: {
-  entity: Entity
+  accounts: Account[]
   sideChart?: React.ReactNode
 }) {
-  const groups = React.useMemo(() => entityBalancesByCurrency(entity), [entity])
+  const [entityFilter, setEntityFilter] = React.useState('all')
+  const scoped = React.useMemo(
+    () =>
+      entityFilter === 'all'
+        ? accounts
+        : accounts.filter((a) => a.legalEntity === entityFilter),
+    [accounts, entityFilter],
+  )
+  const groups = React.useMemo(() => balancesByCurrency(scoped), [scoped])
   const [histRange, setHistRange] = React.useState<'10d' | '30d'>('10d')
   const history = React.useMemo(
-    () => entityBalanceHistory(entity, histRange === '30d' ? 30 : 10),
-    [entity, histRange],
+    () => balanceHistory(scoped, histRange === '30d' ? 30 : 10),
+    [scoped, histRange],
   )
   const [currency, setCurrency] = React.useState(
     () => groups[0]?.currency ?? 'SGD',
@@ -110,9 +120,8 @@ function BalancesModule({
 
   const group = groups.find((g) => g.currency === currency) ?? groups[0]
   const hist = history.find((h) => h.currency === currency) ?? history[0]
-  if (!group || !hist) return null
 
-  const bankNames = hist.bankNames
+  const bankNames = hist?.bankNames ?? []
   const visibleBanks =
     bankFilter === 'all'
       ? bankNames
@@ -122,7 +131,7 @@ function BalancesModule({
     label: b,
     color: BANK_COLORS[bankNames.indexOf(b) % BANK_COLORS.length],
   }))
-  const chartData = hist.days.map((d) => {
+  const chartData = (hist?.days ?? []).map((d) => {
     const source = balanceType === 'ledger' ? d.perBankLedger : d.perBank
     return {
       label: d.label,
@@ -131,6 +140,32 @@ function BalancesModule({
       ),
     }
   })
+
+  const entitySelect = (
+    <Select
+      value={entityFilter}
+      onValueChange={(v) => {
+        setEntityFilter(v)
+        setBankFilter('all')
+      }}
+    >
+      <SelectTrigger
+        size="sm"
+        className="h-8 font-normal"
+        title="Legal entity is a tag on the account, so it filters rather than nests."
+      >
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all">All legal entities</SelectItem>
+        {LEGAL_ENTITIES.map((e) => (
+          <SelectItem key={e.code} value={e.code}>
+            {e.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
 
   const currencySelect = (
     <Select
@@ -161,9 +196,11 @@ function BalancesModule({
           <div className="flex items-start justify-between">
             <div>
               <h2 className="text-lg font-semibold">Balance Stats</h2>
-              <p className="text-xs text-muted-foreground">As of: {asOf}</p>
+              <p className="text-xs text-muted-foreground">
+                As of: {asOf} · {scoped.length} of {accounts.length} accounts
+              </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
@@ -177,6 +214,7 @@ function BalancesModule({
                 />
                 {refreshing ? 'Refreshing…' : 'Refresh'}
               </Button>
+              {entitySelect}
               {currencySelect}
             </div>
           </div>
@@ -186,7 +224,7 @@ function BalancesModule({
                 Available balance
               </div>
               <div className="mt-1 text-3xl font-semibold tabular-nums">
-                {formatMoney(group.currency, group.available)}
+                {group ? formatMoney(group.currency, group.available) : '—'}
               </div>
             </div>
             <div className="sm:border-l sm:pl-6">
@@ -194,7 +232,7 @@ function BalancesModule({
                 Prior-day balance
               </div>
               <div className="mt-1 text-3xl font-semibold tabular-nums">
-                {formatMoney(group.currency, group.priorDay)}
+                {group ? formatMoney(group.currency, group.priorDay) : '—'}
               </div>
             </div>
           </div>
@@ -250,6 +288,7 @@ function BalancesModule({
                     <SelectItem value="30d">Past 30 Days</SelectItem>
                   </SelectContent>
                 </Select>
+                {entitySelect}
                 {currencySelect}
               </div>
             </div>
@@ -259,7 +298,7 @@ function BalancesModule({
                 series={series}
                 height={280}
                 totalFormatter={
-                  histRange === '10d'
+                  histRange === '10d' && group
                     ? (total) => formatCompactMoney(group.currency, total)
                     : undefined
                 }
@@ -282,12 +321,9 @@ function BalancesModule({
 }
 
 export function DashboardPage() {
-  const { entity } = useEntity()
-  if (!entity) return null
-
-  const accounts = entityAccounts(entity)
+  const accounts = ACCOUNTS
   const isEmpty = accounts.length === 0
-  const kpis = entityKpis(entity)
+  const kpis = clientKpis()
   const analytics = paymentAnalytics()
   const rateByType = successRateByType()
 
@@ -298,8 +334,11 @@ export function DashboardPage() {
           Welcome back, Ming
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Operations snapshot for{' '}
-          <span className="font-medium text-foreground">{entity.name}</span>.
+          Operations snapshot across all{' '}
+          <span className="font-medium text-foreground">
+            {accounts.length} accounts
+          </span>{' '}
+          you have access to.
         </p>
       </div>
 
@@ -314,7 +353,7 @@ export function DashboardPage() {
                 Connect a bank to start seeing activity
               </p>
               <p className="mt-1 text-sm text-muted-foreground">
-                {entity.name} has no accounts yet, so there's no balance,
+                No accounts are visible to you yet, so there's no balance,
                 transaction, or approval activity to show.
               </p>
             </div>
@@ -353,7 +392,7 @@ export function DashboardPage() {
 
           {/* Balances (stats + chart) with payment volume alongside */}
           <BalancesModule
-            entity={entity}
+            accounts={accounts}
             sideChart={
               <ChartCardShell
                 title="Payment volume over time"

@@ -51,11 +51,13 @@ import {
 } from '@/components/ui/sheet'
 import { toast } from 'sonner'
 import { Mono, MonoLabel, StatusPill } from '@/components/mono'
-import { useEntity } from '@/lib/entity-context'
 import { addUnprocessedDeposit } from '@/lib/unprocessed-deposits-store'
 import {
-  entityAccounts,
-  entityTransactions,
+  ACCOUNTS,
+  CLIENT_GROUP,
+  LEGAL_ENTITIES,
+  TRANSACTIONS,
+  bankNames as allBankNames,
   type Txn,
 } from '@/data/fixtures'
 import type { DateRange } from 'react-day-picker'
@@ -232,22 +234,13 @@ function inRange(dateStr: string, range: DateRange | undefined): boolean {
 }
 
 export function TransactionsPage() {
-  const { entity } = useEntity()
+  // Flat list for the whole client group. Bank and legal entity are filters
+  // over account attributes rather than levels to drill into.
+  const rows = React.useMemo<Txn[]>(() => TRANSACTIONS, [])
 
-  const rows = React.useMemo<Txn[]>(
-    () => (entity ? entityTransactions(entity) : []),
-    [entity],
-  )
+  const bankNames = React.useMemo(() => allBankNames(ACCOUNTS), [])
 
-  const bankNames = React.useMemo(
-    () => (entity ? entity.banks.map((b) => b.name) : []),
-    [entity],
-  )
-
-  const accounts = React.useMemo(
-    () => (entity ? entityAccounts(entity) : []),
-    [entity],
-  )
+  const accounts = React.useMemo(() => ACCOUNTS, [])
 
   const defaultRange = React.useMemo<DateRange>(() => {
     const today = new Date('2026-06-01T00:00:00')
@@ -264,6 +257,7 @@ export function TransactionsPage() {
     new Set(bankNames),
   )
   const [accountId, setAccountId] = React.useState<string>('all')
+  const [legalEntity, setLegalEntity] = React.useState<string>('all')
   const [direction, setDirection] = React.useState<DirectionFilter>('all')
   const [currency, setCurrency] = React.useState<CurrencyFilter>('all')
   const [txnType, setTxnType] = React.useState<string>('all')
@@ -302,7 +296,7 @@ export function TransactionsPage() {
     }
   }
 
-  // Distinct currencies present in this entity's transactions, for the Currency filter.
+  // Distinct currencies present in the transaction list, for the Currency filter.
   const currencies = React.useMemo<string[]>(() => {
     const set = new Set<string>()
     for (const r of rows) if (r.currency) set.add(r.currency)
@@ -316,50 +310,38 @@ export function TransactionsPage() {
     return Array.from(set).sort()
   }, [rows])
 
-  React.useEffect(() => {
-    setSelectedBanks(new Set(bankNames))
-    setAccountId('all')
-    setCurrency('all')
-    setTxnType('all')
-  }, [entity?.id, bankNames])
-
-  // Map each entity account id → its bank's name. Used by the Bank filter to
-  // decide whether a transaction's internalAccountId belongs to a selected bank.
+  // Map each account id → its bank name. Used by the Bank filter to decide
+  // whether a transaction's internalAccountId belongs to a selected bank.
   const accountIdToBankName = React.useMemo<Record<string, string>>(() => {
     const map: Record<string, string> = {}
-    for (const b of entity?.banks ?? []) {
-      for (const a of b.accounts) {
-        map[a.id] = b.name
-      }
-    }
+    for (const a of accounts) map[a.id] = a.bank
     return map
-  }, [entity?.banks])
+  }, [accounts])
 
-  // Map each entity account id → its display name (e.g. "USD Operating").
+  // Map each account id → its legal-entity tag, for the Legal entity filter.
+  const accountIdToLegalEntity = React.useMemo<Record<string, string>>(() => {
+    const map: Record<string, string> = {}
+    for (const a of accounts) map[a.id] = a.legalEntity
+    return map
+  }, [accounts])
+
+  // Map each account id → its display name (e.g. "USD Operating").
   // Used in the Transaction ID cell so the account context is visible inline.
   const accountIdToName = React.useMemo<Record<string, string>>(() => {
     const map: Record<string, string> = {}
-    for (const b of entity?.banks ?? []) {
-      for (const a of b.accounts) {
-        map[a.id] = a.name
-      }
-    }
+    for (const a of accounts) map[a.id] = a.name
     return map
-  }, [entity?.banks])
+  }, [accounts])
 
-  // Map each entity account id → originating account number + bank BIC.
+  // Map each account id → originating account number + bank BIC.
   // Used by the Originating account / Originating bank table columns.
   const accountIdToOrigin = React.useMemo<
     Record<string, { number: string; bic: string }>
   >(() => {
     const map: Record<string, { number: string; bic: string }> = {}
-    for (const b of entity?.banks ?? []) {
-      for (const a of b.accounts) {
-        map[a.id] = { number: a.number, bic: a.swiftBic }
-      }
-    }
+    for (const a of accounts) map[a.id] = { number: a.number, bic: a.swiftBic }
     return map
-  }, [entity?.banks])
+  }, [accounts])
 
   const filtered = React.useMemo<Txn[]>(() => {
     const needle = q.trim().toLowerCase()
@@ -381,18 +363,23 @@ export function TransactionsPage() {
       const bankName = accountIdToBankName[t.internalAccountId]
       if (!bankName || !selectedBanks.has(bankName)) return false
       if (accountId !== 'all' && t.internalAccountId !== accountId) return false
+      if (
+        legalEntity !== 'all' &&
+        accountIdToLegalEntity[t.internalAccountId] !== legalEntity
+      )
+        return false
       if (direction !== 'all' && t.direction !== direction) return false
       if (currency !== 'all' && t.currency !== currency) return false
       if (txnType !== 'all' && t.transactionType !== txnType) return false
       return true
     })
-  }, [rows, q, dateRange, selectedBanks, accountId, direction, currency, txnType, accountIdToBankName])
+  }, [rows, q, dateRange, selectedBanks, accountId, legalEntity, direction, currency, txnType, accountIdToBankName, accountIdToLegalEntity])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
 
   React.useEffect(() => {
     setPage(1)
-  }, [q, dateRange, selectedBanks, accountId, direction, currency, txnType, entity?.id])
+  }, [q, dateRange, selectedBanks, accountId, legalEntity, direction, currency, txnType])
 
   React.useEffect(() => {
     if (page > totalPages) setPage(totalPages)
@@ -401,8 +388,6 @@ export function TransactionsPage() {
   const pageStart = (page - 1) * PAGE_SIZE
   const pageEnd = Math.min(pageStart + PAGE_SIZE, filtered.length)
   const paged = filtered.slice(pageStart, pageEnd)
-
-  if (!entity) return null
 
   const hasTxns = rows.length > 0
   const hasFilters = hasTxns
@@ -429,7 +414,7 @@ export function TransactionsPage() {
           size="sm"
           className="gap-2"
           disabled={filtered.length === 0}
-          onClick={() => downloadTransactionsCsv(filtered, entity.name)}
+          onClick={() => downloadTransactionsCsv(filtered, CLIENT_GROUP.name)}
         >
           <DownloadIcon className="size-3.5" />
           Download CSV
@@ -555,6 +540,23 @@ export function TransactionsPage() {
               </DropdownMenuContent>
             </DropdownMenu>
 
+            <Select value={legalEntity} onValueChange={setLegalEntity}>
+              <SelectTrigger size="sm" className="h-8 gap-2 font-normal">
+                <span className="text-[0.7rem] uppercase tracking-wider text-muted-foreground">
+                  Legal entity:
+                </span>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                {LEGAL_ENTITIES.map((e) => (
+                  <SelectItem key={e.code} value={e.code}>
+                    {e.code} · {e.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
             <Select value={accountId} onValueChange={setAccountId}>
               <SelectTrigger size="sm" className="h-8 gap-2 font-normal">
                 <span className="text-[0.7rem] uppercase tracking-wider text-muted-foreground">
@@ -566,7 +568,7 @@ export function TransactionsPage() {
                 <SelectItem value="all">All accounts</SelectItem>
                 {accounts.map((a) => (
                   <SelectItem key={a.id} value={a.id}>
-                    {a.name} ({a.id})
+                    {a.bank} · {a.legalEntity} · {a.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -781,7 +783,7 @@ export function TransactionsPage() {
                       className="py-10 text-center text-sm text-muted-foreground"
                     >
                       {rows.length === 0
-                        ? 'No transactions yet for this entity.'
+                        ? 'No transactions yet.'
                         : 'No transactions match your filters'}
                     </TableCell>
                   </TableRow>

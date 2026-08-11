@@ -32,7 +32,7 @@ export function LoginPage() {
               className="space-y-4"
               onSubmit={(e) => {
                 e.preventDefault()
-                navigate({ to: '/select-entity' })
+                navigate({ to: '/dashboard' })
               }}
             >
               <div className="space-y-2">

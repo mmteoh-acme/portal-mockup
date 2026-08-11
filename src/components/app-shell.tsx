@@ -1,6 +1,5 @@
-import * as React from 'react'
-import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
-import { BellIcon, WrenchIcon } from 'lucide-react'
+import { Outlet, useRouterState } from '@tanstack/react-router'
+import { BellIcon, WrenchIcon, LayersIcon } from 'lucide-react'
 import { AppSidebar } from './app-sidebar'
 import {
   SidebarInset,
@@ -22,7 +21,9 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
-import { useEntity } from '@/lib/entity-context'
+import { Link } from '@tanstack/react-router'
+import { CLIENT_GROUP, unassignedAccounts } from '@/data/fixtures'
+import { useAccountGroups } from '@/lib/admin-store'
 
 type Notification = {
   id: string
@@ -50,7 +51,11 @@ const DOWNTIME_NOTIFICATIONS: Notification[] = [
 ]
 
 function NotificationBell() {
-  const count = DOWNTIME_NOTIFICATIONS.length
+  // New accounts land outside every account group, which means nobody but an
+  // admin can see them. Surface that here so it can't go unnoticed.
+  const accountGroups = useAccountGroups()
+  const unassigned = unassignedAccounts(accountGroups)
+  const count = DOWNTIME_NOTIFICATIONS.length + (unassigned.length > 0 ? 1 : 0)
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -72,10 +77,33 @@ function NotificationBell() {
         <div className="border-b px-4 py-3">
           <div className="text-sm font-semibold">Notifications</div>
           <p className="text-xs text-muted-foreground">
-            Scheduled downtime affecting Acme APIs
+            Account assignment and scheduled downtime
           </p>
         </div>
         <div className="divide-y">
+          {unassigned.length > 0 && (
+            <Link
+              to="/account-groups"
+              className="flex gap-3 px-4 py-3 hover:bg-muted/50"
+            >
+              <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md bg-red-100 text-red-700">
+                <LayersIcon className="size-3.5" />
+              </div>
+              <div className="min-w-0 space-y-0.5">
+                <div className="text-sm font-medium leading-snug">
+                  {unassigned.length} account
+                  {unassigned.length === 1 ? '' : 's'} not in any account group
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Unassigned accounts are invisible to every non-admin user.
+                  Assign them to an account group.
+                </div>
+                <div className="text-[0.7rem] font-medium text-foreground/70">
+                  Review in Account Groups →
+                </div>
+              </div>
+            </Link>
+          )}
           {DOWNTIME_NOTIFICATIONS.map((n) => (
             <div key={n.id} className="flex gap-3 px-4 py-3">
               <div
@@ -111,21 +139,15 @@ const PAGE_TITLES: Record<string, string> = {
   '/internal-accounts': 'Internal Accounts',
   '/api-keys': 'API Keys',
   '/webhooks': 'Webhooks',
+  '/account-groups': 'Account Groups',
+  '/user-groups': 'User Groups',
+  '/users': 'Users',
+  '/activity': 'Activity',
 }
 
 export function AppShell() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const title = PAGE_TITLES[pathname] ?? 'Acme'
-  const { entity } = useEntity()
-  const navigate = useNavigate()
-
-  React.useEffect(() => {
-    if (!entity) {
-      navigate({ to: '/select-entity', replace: true })
-    }
-  }, [entity, navigate])
-
-  if (!entity) return null
 
   return (
     <SidebarProvider>
@@ -138,7 +160,7 @@ export function AppShell() {
             <BreadcrumbList>
               <BreadcrumbItem className="hidden md:block">
                 <BreadcrumbLink className="text-xs uppercase tracking-wider">
-                  {entity.name}
+                  {CLIENT_GROUP.name}
                 </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator className="hidden md:block" />
@@ -153,7 +175,7 @@ export function AppShell() {
             <NotificationBell />
           </div>
         </header>
-        <main className="flex-1 px-6 py-6">
+        <main className="min-w-0 flex-1 px-6 py-6">
           <Outlet />
         </main>
       </SidebarInset>

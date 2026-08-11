@@ -10,6 +10,8 @@ import {
   ChevronsUpDownIcon,
   LogOutIcon,
   CheckIcon,
+  LayersIcon,
+  UsersRoundIcon,
 } from 'lucide-react'
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
 import {
@@ -35,8 +37,13 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
-import { useEntity } from '@/lib/entity-context'
 import { useUser } from '@/lib/user-context'
+import {
+  ACCOUNTS,
+  CLIENT_GROUP,
+  LEGAL_ENTITIES,
+  type LegalEntity,
+} from '@/data/fixtures'
 
 type NavItem = {
   title: string
@@ -53,9 +60,11 @@ const OPERATIONS: ReadonlyArray<NavItem> = [
 
 const ADMIN: ReadonlyArray<NavItem> = [
   { title: 'Internal Accounts', icon: LandmarkIcon, to: '/internal-accounts' },
+  { title: 'Account Groups', icon: LayersIcon, to: '/account-groups' },
+  { title: 'User Groups', icon: UsersRoundIcon, to: '/user-groups' },
+  { title: 'Users', icon: UserRoundIcon, to: '/users' },
   { title: 'API Keys', icon: KeyRoundIcon, to: '/api-keys' },
   { title: 'Webhooks', icon: WebhookIcon, to: '/webhooks' },
-  { title: 'Users', icon: UserRoundIcon, to: '/users' },
   { title: 'Activity', icon: ActivityIcon, to: '/activity' },
 ]
 
@@ -96,8 +105,10 @@ function NavLink({
 export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const navigate = useNavigate()
-  const { entity, entities, setEntityId } = useEntity()
   const { user, setRole, allUsers } = useUser()
+  const accountCount = ACCOUNTS.length
+  const entityCount = (code: LegalEntity['code']) =>
+    ACCOUNTS.filter((a) => a.legalEntity === code).length
   const initials = user.name
     .split(' ')
     .map((s) => s[0])
@@ -121,10 +132,10 @@ export function AppSidebar() {
                   </div>
                   <div className="grid flex-1 text-left text-sm leading-tight">
                     <span className="truncate font-semibold">
-                      {entity?.name ?? 'Select entity'}
+                      {CLIENT_GROUP.name}
                     </span>
                     <span className="truncate text-[0.65rem] uppercase tracking-wider text-muted-foreground">
-                      Acme
+                      {accountCount} accounts
                     </span>
                   </div>
                   <ChevronsUpDownIcon className="ml-auto size-4 opacity-60" />
@@ -133,37 +144,47 @@ export function AppSidebar() {
               <DropdownMenuContent
                 align="start"
                 side="bottom"
-                className="w-(--radix-dropdown-menu-trigger-width) min-w-64"
+                className="w-(--radix-dropdown-menu-trigger-width) min-w-72"
               >
                 <DropdownMenuLabel className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">
-                  Entities · Acme
+                  Client group
                 </DropdownMenuLabel>
-                {entities.map((e) => {
-                  const active = e.id === entity?.id
-                  return (
-                    <DropdownMenuItem
-                      key={e.id}
-                      onClick={() => setEntityId(e.id)}
-                    >
-                      <div className="flex aspect-square size-6 items-center justify-center rounded-sm border bg-muted text-[10px] font-semibold">
-                        {e.name
-                          .replace('Acme ', '')
-                          .split(' ')
-                          .map((s) => s[0])
-                          .slice(0, 2)
-                          .join('')
-                          .toUpperCase()}
-                      </div>
-                      <div className="flex-1 truncate">{e.name}</div>
-                      {active && (
-                        <CheckIcon className="ml-2 size-4 text-muted-foreground" />
-                      )}
-                    </DropdownMenuItem>
-                  )
-                })}
+                <DropdownMenuItem disabled className="opacity-100">
+                  <div className="flex aspect-square size-6 items-center justify-center rounded-sm bg-primary text-[10px] font-semibold text-primary-foreground">
+                    A
+                  </div>
+                  <div className="flex-1 truncate font-medium">
+                    {CLIENT_GROUP.name}
+                  </div>
+                  <CheckIcon className="ml-2 size-4 text-muted-foreground" />
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate({ to: '/select-entity' })}>
-                  View all entities
+                <DropdownMenuLabel className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">
+                  Legal entities · tags, not a layer
+                </DropdownMenuLabel>
+                {LEGAL_ENTITIES.map((e) => (
+                  <DropdownMenuItem key={e.code} disabled className="opacity-100">
+                    <div className="flex aspect-square size-6 items-center justify-center rounded-sm border bg-muted font-mono text-[9px] font-semibold">
+                      {e.country}
+                    </div>
+                    <div className="flex-1 truncate text-muted-foreground">
+                      {e.name}
+                    </div>
+                    <span className="ml-2 font-mono text-[0.65rem] text-muted-foreground">
+                      {entityCount(e.code)}
+                    </span>
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => navigate({ to: '/internal-accounts' })}
+                >
+                  View all accounts
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => navigate({ to: '/account-groups' })}
+                >
+                  Manage account groups
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -286,10 +307,7 @@ export function AppSidebar() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   variant="destructive"
-                  onClick={() => {
-                    setEntityId(null)
-                    navigate({ to: '/login' })
-                  }}
+                  onClick={() => navigate({ to: '/login' })}
                 >
                   <LogOutIcon /> Sign out
                 </DropdownMenuItem>

@@ -4,6 +4,71 @@ export const currentUser = {
   role: 'ADMIN',
 }
 
+// ---------------------------------------------------------------------------
+// Flat account model (ACME-2177)
+//
+// Client Group > Accounts. There is no entity or bank layer: bank, legal
+// entity, country and currency are attributes on the account. Access is
+// granted by admin-defined account groups mapped to user groups, never by
+// position in a tree.
+// ---------------------------------------------------------------------------
+
+export type ClientGroup = {
+  id: string
+  name: string
+}
+
+export const CLIENT_GROUP: ClientGroup = {
+  id: 'cg_acme',
+  name: 'Acme Group',
+}
+
+// Legal entity is a *tag* on the account. Admins can scope a user group by
+// this tag instead of hand-building an account group.
+export type LegalEntity = {
+  code: string
+  name: string
+  country: string
+  countryName: string
+}
+
+export const LEGAL_ENTITIES: LegalEntity[] = [
+  { code: 'ALSG', name: 'Acme Labs', country: 'SG', countryName: 'Singapore' },
+  {
+    code: 'AMID',
+    name: 'Acme Markets Indonesia',
+    country: 'ID',
+    countryName: 'Indonesia',
+  },
+  {
+    code: 'AMVN',
+    name: 'Acme Markets Vietnam',
+    country: 'VN',
+    countryName: 'Vietnam',
+  },
+  { code: 'AMEA', name: 'Acme Middle East', country: 'AE', countryName: 'UAE' },
+]
+
+// A connection is the backend connection profile serving an account — what
+// used to be modelled as `Organization`. Internal plumbing only: some banks
+// issue one connection per legal entity (DBS), others issue one connection
+// covering several (CIMB), which is exactly why it cannot be a structural
+// layer above the account.
+export type Connection = {
+  id: string
+  name: string
+  bank: string
+  status: 'CONNECTED' | 'DEGRADED'
+}
+
+export const CONNECTIONS: Connection[] = [
+  { id: 'conn_dbs_sg_01', name: 'DBS SG · 001', bank: 'DBS Singapore', status: 'CONNECTED' },
+  { id: 'conn_dbs_sg_02', name: 'DBS SG · 002', bank: 'DBS Singapore', status: 'CONNECTED' },
+  { id: 'conn_cimb_sg_01', name: 'CIMB SG · 001', bank: 'CIMB Singapore', status: 'CONNECTED' },
+  { id: 'conn_scb_vn_01', name: 'SCB VN · 001', bank: 'SCB Vietnam', status: 'CONNECTED' },
+  { id: 'conn_zand_ae_01', name: 'Zand UAE · 001', bank: 'Zand UAE', status: 'DEGRADED' },
+]
+
 export type Account = {
   id: string
   number: string
@@ -16,216 +81,655 @@ export type Account = {
   swiftBic: string
   iban: string
   createdAt: string
+  // Flat-model attributes — filter dimensions, not layers.
+  bank: string
+  legalEntity: string
+  country: string
+  connectionId: string
 }
 
-export type Bank = {
+export const ACCOUNTS: Account[] = [
+  {
+    id: 'intacc_0KT8ZSCRKXP0O',
+    number: '0123569000',
+    name: 'Operating',
+    currency: 'SGD',
+    lastBalance: 8120442.18,
+    priorDayBalance: 8094310.55,
+    status: 'ACTIVE',
+    mode: 'LIVE',
+    swiftBic: 'DBSSSGSGXXX',
+    iban: '',
+    createdAt: '2025-03-12T09:24:00',
+    bank: 'DBS Singapore',
+    legalEntity: 'ALSG',
+    country: 'SG',
+    connectionId: 'conn_dbs_sg_01',
+  },
+  {
+    id: 'intacc_0KT8ZSDEKXCAN',
+    number: '0123569210',
+    name: 'Client Money Accounts',
+    currency: 'SGD',
+    lastBalance: 2415088.04,
+    priorDayBalance: 2415088.04,
+    status: 'ACTIVE',
+    mode: 'LIVE',
+    swiftBic: 'DBSSSGSGXXX',
+    iban: '',
+    createdAt: '2025-04-18T14:11:00',
+    bank: 'DBS Singapore',
+    legalEntity: 'ALSG',
+    country: 'SG',
+    connectionId: 'conn_dbs_sg_01',
+  },
+  {
+    id: 'intacc_0KT8ZSFGUSDOP',
+    number: '0123570118',
+    name: 'USD Operating',
+    currency: 'USD',
+    lastBalance: 2841032.5,
+    priorDayBalance: 2795410.75,
+    status: 'ACTIVE',
+    mode: 'LIVE',
+    swiftBic: 'DBSSSGSGXXX',
+    iban: '',
+    createdAt: '2025-08-15T10:00:00',
+    bank: 'DBS Singapore',
+    legalEntity: 'ALSG',
+    country: 'SG',
+    connectionId: 'conn_dbs_sg_01',
+  },
+  {
+    id: 'intacc_0KERZSCDKXV0O',
+    number: '0123569455',
+    name: 'Settlement',
+    currency: 'SGD',
+    lastBalance: 4902118.85,
+    priorDayBalance: 4967500.1,
+    status: 'ACTIVE',
+    mode: 'LIVE',
+    swiftBic: 'CIBBSGSGXXX',
+    iban: '',
+    createdAt: '2025-06-02T08:43:00',
+    bank: 'CIMB Singapore',
+    legalEntity: 'ALSG',
+    country: 'SG',
+    // Same CIMB connection serves two legal entities — see intacc_0KERZSJHKXM2P.
+    connectionId: 'conn_cimb_sg_01',
+  },
+  {
+    id: 'intacc_0KERZSJHKXM2P',
+    number: '0123569612',
+    name: 'Collections',
+    currency: 'SGD',
+    lastBalance: 1284770.6,
+    priorDayBalance: 1240118.25,
+    status: 'ACTIVE',
+    mode: 'LIVE',
+    swiftBic: 'CIBBSGSGXXX',
+    iban: '',
+    createdAt: '2025-10-07T11:26:00',
+    bank: 'CIMB Singapore',
+    legalEntity: 'AMID',
+    country: 'SG',
+    connectionId: 'conn_cimb_sg_01',
+  },
+  {
+    id: 'intacc_0KT8YK23K5RR8',
+    number: '0234567890',
+    name: 'USD Operating',
+    currency: 'USD',
+    lastBalance: 14820653.42,
+    priorDayBalance: 14688200.17,
+    status: 'ACTIVE',
+    mode: 'LIVE',
+    swiftBic: 'DBSSSGSGXXX',
+    iban: '',
+    createdAt: '2025-07-29T16:55:00',
+    bank: 'DBS Singapore',
+    legalEntity: 'AMID',
+    country: 'SG',
+    connectionId: 'conn_dbs_sg_02',
+  },
+  {
+    id: 'intacc_0KT8YYRMK5V80',
+    number: '0145889102',
+    name: 'SGD Operating',
+    currency: 'SGD',
+    lastBalance: 6204881.55,
+    priorDayBalance: 6250120.9,
+    status: 'ACTIVE',
+    mode: 'LIVE',
+    swiftBic: 'DBSSSGSGXXX',
+    iban: '',
+    createdAt: '2025-09-08T11:02:00',
+    bank: 'DBS Singapore',
+    legalEntity: 'AMID',
+    country: 'SG',
+    connectionId: 'conn_dbs_sg_02',
+  },
+  {
+    id: 'intacc_0KT8Z0K6V5SHW',
+    number: '0567321408',
+    name: 'USD Reserve',
+    currency: 'USD',
+    lastBalance: 2150400.12,
+    priorDayBalance: 2150400.12,
+    status: 'ACTIVE',
+    mode: 'LIVE',
+    swiftBic: 'DBSSSGSGXXX',
+    iban: '',
+    createdAt: '2025-11-20T13:48:00',
+    bank: 'DBS Singapore',
+    legalEntity: 'AMID',
+    country: 'SG',
+    connectionId: 'conn_dbs_sg_02',
+  },
+  {
+    id: 'intacc_0KT8Z24YB5VF7',
+    number: '0298411577',
+    name: 'SGD Receivables',
+    currency: 'SGD',
+    lastBalance: 4392108.74,
+    priorDayBalance: 4310876.33,
+    status: 'ACTIVE',
+    mode: 'LIVE',
+    swiftBic: 'DBSSSGSGXXX',
+    iban: '',
+    createdAt: '2026-01-14T10:30:00',
+    bank: 'DBS Singapore',
+    legalEntity: 'AMID',
+    country: 'SG',
+    connectionId: 'conn_dbs_sg_02',
+  },
+  {
+    id: 'intacc_0KT8Z3CXZ5RJ9',
+    number: '0721944308',
+    name: 'USD Settlement',
+    currency: 'USD',
+    lastBalance: 9871502.88,
+    priorDayBalance: 9902744.61,
+    status: 'ACTIVE',
+    mode: 'LIVE',
+    swiftBic: 'DBSSSGSGXXX',
+    iban: '',
+    createdAt: '2026-02-26T15:17:00',
+    bank: 'DBS Singapore',
+    legalEntity: 'AMID',
+    country: 'SG',
+    connectionId: 'conn_dbs_sg_02',
+  },
+  {
+    id: 'intacc_0PKDW88MCZNQ0',
+    number: '0892213006',
+    name: 'SGD Reserve',
+    currency: 'SGD',
+    lastBalance: 1820744.3,
+    priorDayBalance: 1795002.48,
+    status: 'ACTIVE',
+    mode: 'LIVE',
+    swiftBic: 'DBSSSGSGXXX',
+    iban: '',
+    createdAt: '2026-04-09T09:08:00',
+    bank: 'DBS Singapore',
+    legalEntity: 'AMID',
+    country: 'SG',
+    connectionId: 'conn_dbs_sg_02',
+  },
+  // Newly onboarded — not yet in any account group, so invisible to every
+  // non-admin user until an admin assigns them.
+  {
+    id: 'intacc_0VN4L7TQZ8M1A',
+    number: '0910227634',
+    name: 'USD Collections',
+    currency: 'USD',
+    lastBalance: 486201.9,
+    priorDayBalance: 452880.4,
+    status: 'ACTIVE',
+    mode: 'LIVE',
+    swiftBic: 'SCBLVNVXXXX',
+    iban: '',
+    createdAt: '2026-05-28T10:12:00',
+    bank: 'SCB Vietnam',
+    legalEntity: 'AMVN',
+    country: 'VN',
+    connectionId: 'conn_scb_vn_01',
+  },
+  {
+    id: 'intacc_0AE9R2KDX4P7C',
+    number: '0044119887',
+    name: 'USD Operating',
+    currency: 'USD',
+    lastBalance: 1102554.16,
+    priorDayBalance: 1102554.16,
+    status: 'ACTIVE',
+    mode: 'LIVE',
+    swiftBic: 'ZANDAEADXXX',
+    iban: 'AE070331234567890123456',
+    createdAt: '2026-05-30T09:41:00',
+    bank: 'Zand UAE',
+    legalEntity: 'AMEA',
+    country: 'AE',
+    connectionId: 'conn_zand_ae_01',
+  },
+]
+
+export function getAccount(id: string): Account | undefined {
+  return ACCOUNTS.find((a) => a.id === id)
+}
+
+export function getLegalEntity(code: string): LegalEntity | undefined {
+  return LEGAL_ENTITIES.find((e) => e.code === code)
+}
+
+export function legalEntityName(code: string): string {
+  return getLegalEntity(code)?.name ?? code
+}
+
+export function getConnection(id: string): Connection | undefined {
+  return CONNECTIONS.find((c) => c.id === id)
+}
+
+export function bankNames(accounts: Account[] = ACCOUNTS): string[] {
+  return [...new Set(accounts.map((a) => a.bank))].sort((a, b) =>
+    a.localeCompare(b),
+  )
+}
+
+export function accountCurrencies(accounts: Account[] = ACCOUNTS): string[] {
+  return [...new Set(accounts.map((a) => a.currency))].sort()
+}
+
+// Flat display label: bank · legal entity · account name. Bank and entity are
+// rendered into the label precisely because they are not structural.
+export function accountLabel(a: Account): string {
+  return `${a.bank} · ${a.legalEntity} · ${a.name}`
+}
+
+// ---------------------------------------------------------------------------
+// Access model
+//
+//   Accounts ──> Account Group ──(mapping)──> User Group ──> User
+//
+// A user group decides *which accounts a member can see*. What they can do
+// with them is decided separately by their role and permissions. An account
+// can sit in several account groups; a user can sit in several user groups.
+// ---------------------------------------------------------------------------
+
+export type PortalRole = 'ADMIN' | 'MAKER' | 'CHECKER' | 'VIEWER' | 'AUDITOR'
+
+export type UserStatus = 'active' | 'invited' | 'suspended'
+
+export type PortalUser = {
   id: string
   name: string
-  accounts: Account[]
+  email: string
+  role: PortalRole
+  status: UserStatus
+  approvalLimit: string | null
+  lastActive: string
 }
 
-export type Entity = {
+export const portalUsers: PortalUser[] = [
+  {
+    id: 'usr_01',
+    name: 'Ming Miin',
+    email: 'ming@tryacme.com',
+    role: 'ADMIN',
+    status: 'active',
+    approvalLimit: null,
+    lastActive: '1 Jun, 2026',
+  },
+  {
+    id: 'usr_02',
+    name: 'Priya Lim',
+    email: 'priya@tryacme.com',
+    role: 'CHECKER',
+    status: 'active',
+    approvalLimit: 'Up to S$2,000,000',
+    lastActive: '1 Jun, 2026',
+  },
+  {
+    id: 'usr_03',
+    name: 'Alice Wong',
+    email: 'alice@tryacme.com',
+    role: 'MAKER',
+    status: 'active',
+    approvalLimit: null,
+    lastActive: '31 May, 2026',
+  },
+  {
+    id: 'usr_04',
+    name: 'Gary Tan',
+    email: 'gary.tan@tryacme.com',
+    role: 'MAKER',
+    status: 'invited',
+    approvalLimit: null,
+    lastActive: '—',
+  },
+  {
+    id: 'usr_05',
+    name: 'James Audit',
+    email: 'james@auditors.com',
+    role: 'AUDITOR',
+    status: 'active',
+    approvalLimit: null,
+    lastActive: '15 Apr, 2026',
+  },
+  {
+    id: 'usr_06',
+    name: 'CS Team',
+    email: 'cs-ops@tryacme.com',
+    role: 'VIEWER',
+    status: 'active',
+    approvalLimit: null,
+    lastActive: '1 Jun, 2026',
+  },
+  {
+    id: 'usr_07',
+    name: 'Dewi Putri',
+    email: 'dewi@tryacme.com',
+    role: 'MAKER',
+    status: 'active',
+    approvalLimit: null,
+    lastActive: '30 May, 2026',
+  },
+]
+
+export function getPortalUser(id: string): PortalUser | undefined {
+  return portalUsers.find((u) => u.id === id)
+}
+
+// How an account group picks up its members. MANUAL = admin hand-picks
+// accounts. LEGAL_ENTITY = every account tagged with the entity, including
+// ones onboarded later.
+export type AccountGroupRule = 'MANUAL' | 'LEGAL_ENTITY'
+
+export type AccountGroup = {
   id: string
   name: string
-  location: string
-  banks: Bank[]
+  description: string
+  rule: AccountGroupRule
+  // Only set when rule is LEGAL_ENTITY.
+  legalEntityCode: string | null
+  // Only used when rule is MANUAL.
+  accountIds: string[]
+  createdBy: string
+  createdAt: string
+  updatedAt: string
 }
 
-export type Company = {
+export const accountGroupsSeed: AccountGroup[] = [
+  {
+    id: 'ag_all_sg_ops',
+    name: 'SG Operating',
+    description: 'Singapore-booked operating and settlement accounts.',
+    rule: 'MANUAL',
+    legalEntityCode: null,
+    accountIds: [
+      'intacc_0KT8ZSCRKXP0O',
+      'intacc_0KT8ZSFGUSDOP',
+      'intacc_0KERZSCDKXV0O',
+    ],
+    createdBy: 'Ming Miin',
+    createdAt: '2026-02-14T10:22:00',
+    updatedAt: '2026-05-19T16:04:00',
+  },
+  {
+    id: 'ag_client_money',
+    name: 'Client Money',
+    description:
+      'Segregated client money accounts. Deliberately narrow — treasury only.',
+    rule: 'MANUAL',
+    legalEntityCode: null,
+    accountIds: ['intacc_0KT8ZSDEKXCAN'],
+    createdBy: 'Ming Miin',
+    createdAt: '2026-02-14T10:31:00',
+    updatedAt: '2026-02-14T10:31:00',
+  },
+  {
+    id: 'ag_amid_all',
+    name: 'Acme Markets Indonesia — all',
+    description:
+      'Every account tagged AMID, including accounts onboarded later.',
+    rule: 'LEGAL_ENTITY',
+    legalEntityCode: 'AMID',
+    accountIds: [],
+    createdBy: 'Ming Miin',
+    createdAt: '2026-03-02T09:15:00',
+    updatedAt: '2026-04-28T11:47:00',
+  },
+  {
+    id: 'ag_reserves',
+    name: 'Reserves & receivables',
+    description: 'Read-mostly balances used for reporting and reconciliation.',
+    rule: 'MANUAL',
+    legalEntityCode: null,
+    accountIds: [
+      'intacc_0KT8Z0K6V5SHW',
+      'intacc_0KT8Z24YB5VF7',
+      'intacc_0PKDW88MCZNQ0',
+    ],
+    createdBy: 'Priya Lim',
+    createdAt: '2026-04-11T14:08:00',
+    updatedAt: '2026-05-06T09:52:00',
+  },
+]
+
+// A user group grants visibility either through account groups or straight
+// off the legal-entity tag — whichever the admin finds easier to maintain.
+export type UserGroupScope = 'ACCOUNT_GROUP' | 'LEGAL_ENTITY'
+
+export type UserGroup = {
   id: string
   name: string
-  entities: Entity[]
+  description: string
+  role: PortalRole
+  scope: UserGroupScope
+  accountGroupIds: string[]
+  legalEntityCodes: string[]
+  memberIds: string[]
+  createdBy: string
+  createdAt: string
+  updatedAt: string
 }
 
-export const COMPANY: Company = {
-  id: 'co_acme',
-  name: 'Acme',
-  entities: [
-    {
-      id: 'ent_acme_labs_sg',
-      name: 'Acme Labs',
-      location: 'Singapore',
-      banks: [
-        {
-          id: 'bk_dbs_sg_labs',
-          name: 'DBS Singapore',
-          accounts: [
-            {
-              id: 'intacc_0KT8ZSCRKXP0O',
-              number: '0123569000',
-              name: 'Operating',
-              currency: 'SGD',
-              lastBalance: 8120442.18,
-              priorDayBalance: 8094310.55,
-              status: 'ACTIVE',
-              mode: 'LIVE',
-              swiftBic: 'DBSSSGSGXXX',
-              iban: '',
-              createdAt: '2025-03-12T09:24:00',
-            },
-            {
-              id: 'intacc_0KT8ZSDEKXCAN',
-              number: '0123569210',
-              name: 'Client Money Accounts',
-              currency: 'SGD',
-              lastBalance: 2415088.04,
-              priorDayBalance: 2415088.04,
-              status: 'ACTIVE',
-              mode: 'LIVE',
-              swiftBic: 'DBSSSGSGXXX',
-              iban: '',
-              createdAt: '2025-04-18T14:11:00',
-            },
-            {
-              id: 'intacc_0KT8ZSFGUSDOP',
-              number: '0123570118',
-              name: 'USD Operating',
-              currency: 'USD',
-              lastBalance: 2841032.50,
-              priorDayBalance: 2795410.75,
-              status: 'ACTIVE',
-              mode: 'LIVE',
-              swiftBic: 'DBSSSGSGXXX',
-              iban: '',
-              createdAt: '2025-08-15T10:00:00',
-            },
-          ],
-        },
-        {
-          id: 'bk_cimb_sg_labs',
-          name: 'CIMB Singapore',
-          accounts: [
-            {
-              id: 'intacc_0KERZSCDKXV0O',
-              number: '0123569455',
-              name: 'Settlement',
-              currency: 'SGD',
-              lastBalance: 4902118.85,
-              priorDayBalance: 4967500.10,
-              status: 'ACTIVE',
-              mode: 'LIVE',
-              swiftBic: 'CIBBSGSGXXX',
-              iban: '',
-              createdAt: '2025-06-02T08:43:00',
-            },
-          ],
-        },
-      ],
-    },
-    {
-      id: 'ent_acme_markets_indo',
-      name: 'Acme Markets Indonesia',
-      location: 'Indonesia',
-      banks: [
-        {
-          id: 'bk_dbs_sg_apac',
-          name: 'DBS Singapore',
-          accounts: [
-            {
-              id: 'intacc_0KT8YK23K5RR8',
-              number: '0234567890',
-              name: 'USD Operating',
-              currency: 'USD',
-              lastBalance: 14820653.42,
-              priorDayBalance: 14688200.17,
-              status: 'ACTIVE',
-              mode: 'LIVE',
-              swiftBic: 'DBSSSGSGXXX',
-              iban: '',
-              createdAt: '2025-07-29T16:55:00',
-            },
-            {
-              id: 'intacc_0KT8YYRMK5V80',
-              number: '0145889102',
-              name: 'SGD Operating',
-              currency: 'SGD',
-              lastBalance: 6204881.55,
-              priorDayBalance: 6250120.90,
-              status: 'ACTIVE',
-              mode: 'LIVE',
-              swiftBic: 'DBSSSGSGXXX',
-              iban: '',
-              createdAt: '2025-09-08T11:02:00',
-            },
-            {
-              id: 'intacc_0KT8Z0K6V5SHW',
-              number: '0567321408',
-              name: 'USD Reserve',
-              currency: 'USD',
-              lastBalance: 2150400.12,
-              priorDayBalance: 2150400.12,
-              status: 'ACTIVE',
-              mode: 'LIVE',
-              swiftBic: 'DBSSSGSGXXX',
-              iban: '',
-              createdAt: '2025-11-20T13:48:00',
-            },
-            {
-              id: 'intacc_0KT8Z24YB5VF7',
-              number: '0298411577',
-              name: 'SGD Receivables',
-              currency: 'SGD',
-              lastBalance: 4392108.74,
-              priorDayBalance: 4310876.33,
-              status: 'ACTIVE',
-              mode: 'LIVE',
-              swiftBic: 'DBSSSGSGXXX',
-              iban: '',
-              createdAt: '2026-01-14T10:30:00',
-            },
-            {
-              id: 'intacc_0KT8Z3CXZ5RJ9',
-              number: '0721944308',
-              name: 'USD Settlement',
-              currency: 'USD',
-              lastBalance: 9871502.88,
-              priorDayBalance: 9902744.61,
-              status: 'ACTIVE',
-              mode: 'LIVE',
-              swiftBic: 'DBSSSGSGXXX',
-              iban: '',
-              createdAt: '2026-02-26T15:17:00',
-            },
-            {
-              id: 'intacc_0PKDW88MCZNQ0',
-              number: '0892213006',
-              name: 'SGD Reserve',
-              currency: 'SGD',
-              lastBalance: 1820744.30,
-              priorDayBalance: 1795002.48,
-              status: 'ACTIVE',
-              mode: 'LIVE',
-              swiftBic: 'DBSSSGSGXXX',
-              iban: '',
-              createdAt: '2026-04-09T09:08:00',
-            },
-          ],
-        },
-      ],
-    },
-    {
-      id: 'ent_acme_markets_hcm',
-      name: 'Acme Markets Vietnam',
-      location: 'Ho Chi Minh, Vietnam',
-      banks: [],
-    },
-    {
-      id: 'ent_acme_middle_east',
-      name: 'Acme Middle East',
-      location: 'Dubai, UAE',
-      banks: [],
-    },
+export const userGroupsSeed: UserGroup[] = [
+  {
+    id: 'ug_administrators',
+    name: 'Administrators',
+    description: 'Full access to every account in the client group.',
+    role: 'ADMIN',
+    scope: 'ACCOUNT_GROUP',
+    accountGroupIds: ['ag_all_sg_ops', 'ag_client_money', 'ag_amid_all', 'ag_reserves'],
+    legalEntityCodes: [],
+    memberIds: ['usr_01'],
+    createdBy: 'Acme Ops',
+    createdAt: '2026-01-08T08:59:00',
+    updatedAt: '2026-05-19T16:05:00',
+  },
+  {
+    id: 'ug_sg_payment_ops',
+    name: 'SG Payment Ops',
+    description: 'Makers raising payments out of the Singapore accounts.',
+    role: 'MAKER',
+    scope: 'ACCOUNT_GROUP',
+    accountGroupIds: ['ag_all_sg_ops'],
+    legalEntityCodes: [],
+    memberIds: ['usr_03', 'usr_04'],
+    createdBy: 'Ming Miin',
+    createdAt: '2026-02-14T10:40:00',
+    updatedAt: '2026-05-02T13:19:00',
+  },
+  {
+    id: 'ug_treasury_approvers',
+    name: 'Treasury Approvers',
+    description: 'Checkers approving payments across SG and client money.',
+    role: 'CHECKER',
+    scope: 'ACCOUNT_GROUP',
+    accountGroupIds: ['ag_all_sg_ops', 'ag_client_money'],
+    legalEntityCodes: [],
+    memberIds: ['usr_02'],
+    createdBy: 'Ming Miin',
+    createdAt: '2026-02-14T10:44:00',
+    updatedAt: '2026-03-30T15:02:00',
+  },
+  {
+    id: 'ug_indo_ops',
+    name: 'Indonesia Ops',
+    description:
+      'Scoped by legal-entity tag instead of a hand-built account group.',
+    role: 'MAKER',
+    scope: 'LEGAL_ENTITY',
+    accountGroupIds: [],
+    legalEntityCodes: ['AMID'],
+    memberIds: ['usr_07'],
+    createdBy: 'Ming Miin',
+    createdAt: '2026-03-02T09:20:00',
+    updatedAt: '2026-04-28T11:50:00',
+  },
+  {
+    id: 'ug_external_audit',
+    name: 'External Audit',
+    description: 'Read-only access to reserve and receivable balances.',
+    role: 'AUDITOR',
+    scope: 'ACCOUNT_GROUP',
+    accountGroupIds: ['ag_reserves'],
+    legalEntityCodes: [],
+    memberIds: ['usr_05'],
+    createdBy: 'Priya Lim',
+    createdAt: '2026-04-11T14:15:00',
+    updatedAt: '2026-04-11T14:15:00',
+  },
+  {
+    id: 'ug_cs_readonly',
+    name: 'CS Read-only',
+    description: 'Customer support — transaction lookup on SG accounts.',
+    role: 'VIEWER',
+    scope: 'ACCOUNT_GROUP',
+    accountGroupIds: ['ag_all_sg_ops'],
+    legalEntityCodes: [],
+    memberIds: ['usr_06'],
+    createdBy: 'Ming Miin',
+    createdAt: '2026-02-20T11:05:00',
+    updatedAt: '2026-02-20T11:05:00',
+  },
+]
+
+// Permission catalogue, shown against a role so the admin can see that the
+// user group controls *visibility* while the role controls *actions*.
+export const ROLE_PERMISSIONS: Record<PortalRole, string[]> = {
+  ADMIN: ['ALL'],
+  MAKER: [
+    'BALANCES',
+    'TRANSACTIONS',
+    'PAYMENTS: INITIATE',
+    'REFUNDS: INITIATE',
   ],
+  CHECKER: ['BALANCES', 'TRANSACTIONS', 'PAYMENTS: APPROVE / REJECT'],
+  VIEWER: ['BALANCES', 'TRANSACTIONS'],
+  AUDITOR: ['BALANCES', 'TRANSACTIONS', 'ACTIVITY LOG', 'STATEMENTS'],
 }
 
-export type EntityId = (typeof COMPANY)['entities'][number]['id']
-
-export function getEntity(id: string): Entity | undefined {
-  return COMPANY.entities.find((e) => e.id === id)
+export function accountsInAccountGroup(
+  group: AccountGroup,
+  accounts: Account[] = ACCOUNTS,
+): Account[] {
+  if (group.rule === 'LEGAL_ENTITY') {
+    return accounts.filter((a) => a.legalEntity === group.legalEntityCode)
+  }
+  return accounts.filter((a) => group.accountIds.includes(a.id))
 }
 
-export function entityAccounts(entity: Entity): Account[] {
-  return entity.banks.flatMap((b) => b.accounts)
+export function accountGroupSize(
+  group: AccountGroup,
+  accounts: Account[] = ACCOUNTS,
+): number {
+  return accountsInAccountGroup(group, accounts).length
+}
+
+export function accountGroupCurrencies(
+  group: AccountGroup,
+  accounts: Account[] = ACCOUNTS,
+): string[] {
+  return [
+    ...new Set(accountsInAccountGroup(group, accounts).map((a) => a.currency)),
+  ].sort()
+}
+
+export function accountGroupsForAccount(
+  accountId: string,
+  groups: AccountGroup[],
+  accounts: Account[] = ACCOUNTS,
+): AccountGroup[] {
+  return groups.filter((g) =>
+    accountsInAccountGroup(g, accounts).some((a) => a.id === accountId),
+  )
+}
+
+// New accounts are invisible by default — they belong to no group until an
+// admin puts them in one. This is the state the admin has to be able to see.
+export function unassignedAccounts(
+  groups: AccountGroup[],
+  accounts: Account[] = ACCOUNTS,
+): Account[] {
+  const assigned = new Set(
+    groups.flatMap((g) => accountsInAccountGroup(g, accounts).map((a) => a.id)),
+  )
+  return accounts.filter((a) => !assigned.has(a.id))
+}
+
+export function accountsForUserGroup(
+  group: UserGroup,
+  accountGroups: AccountGroup[],
+  accounts: Account[] = ACCOUNTS,
+): Account[] {
+  const ids = new Set<string>()
+  if (group.scope === 'LEGAL_ENTITY') {
+    for (const a of accounts) {
+      if (group.legalEntityCodes.includes(a.legalEntity)) ids.add(a.id)
+    }
+  } else {
+    for (const agId of group.accountGroupIds) {
+      const ag = accountGroups.find((g) => g.id === agId)
+      if (!ag) continue
+      for (const a of accountsInAccountGroup(ag, accounts)) ids.add(a.id)
+    }
+  }
+  return accounts.filter((a) => ids.has(a.id))
+}
+
+export function userGroupsForUser(
+  userId: string,
+  userGroups: UserGroup[],
+): UserGroup[] {
+  return userGroups.filter((g) => g.memberIds.includes(userId))
+}
+
+// Effective access preview: the union of every user group the person is in.
+export function accountsForUser(
+  userId: string,
+  userGroups: UserGroup[],
+  accountGroups: AccountGroup[],
+  accounts: Account[] = ACCOUNTS,
+): Account[] {
+  const ids = new Set<string>()
+  for (const ug of userGroupsForUser(userId, userGroups)) {
+    for (const a of accountsForUserGroup(ug, accountGroups, accounts)) {
+      ids.add(a.id)
+    }
+  }
+  return accounts.filter((a) => ids.has(a.id))
+}
+
+export function userGroupsUsingAccountGroup(
+  accountGroupId: string,
+  userGroups: UserGroup[],
+): UserGroup[] {
+  return userGroups.filter((g) =>
+    g.scope === 'ACCOUNT_GROUP' && g.accountGroupIds.includes(accountGroupId),
+  )
 }
 
 export function formatSGD(amount: number): string {
@@ -268,31 +772,31 @@ export type CurrencyBalanceGroup = {
   banks: BankBalanceGroup[]
 }
 
-export function entityBalancesByCurrency(entity: Entity): CurrencyBalanceGroup[] {
+export function balancesByCurrency(
+  accounts: Account[] = ACCOUNTS,
+): CurrencyBalanceGroup[] {
   const currencyMap = new Map<string, Map<string, BankBalanceGroup>>()
 
-  for (const bank of entity.banks) {
-    for (const account of bank.accounts) {
-      let bankMap = currencyMap.get(account.currency)
-      if (!bankMap) {
-        bankMap = new Map()
-        currencyMap.set(account.currency, bankMap)
-      }
-      let group = bankMap.get(bank.id)
-      if (!group) {
-        group = {
-          bankId: bank.id,
-          bankName: bank.name,
-          accounts: [],
-          available: 0,
-          priorDay: 0,
-        }
-        bankMap.set(bank.id, group)
-      }
-      group.accounts.push(account)
-      group.available += account.lastBalance
-      group.priorDay += account.priorDayBalance
+  for (const account of accounts) {
+    let bankMap = currencyMap.get(account.currency)
+    if (!bankMap) {
+      bankMap = new Map()
+      currencyMap.set(account.currency, bankMap)
     }
+    let group = bankMap.get(account.bank)
+    if (!group) {
+      group = {
+        bankId: account.bank,
+        bankName: account.bank,
+        accounts: [],
+        available: 0,
+        priorDay: 0,
+      }
+      bankMap.set(account.bank, group)
+    }
+    group.accounts.push(account)
+    group.available += account.lastBalance
+    group.priorDay += account.priorDayBalance
   }
 
   return [...currencyMap.entries()]
@@ -337,11 +841,11 @@ export type CurrencyBalanceHistory = {
   days: BalanceHistoryDay[]
 }
 
-export function entityBalanceHistory(
-  entity: Entity,
+export function balanceHistory(
+  accounts: Account[] = ACCOUNTS,
   numDays = 10,
 ): CurrencyBalanceHistory[] {
-  const groups = entityBalancesByCurrency(entity)
+  const groups = balancesByCurrency(accounts)
   const today = new Date(2026, 5, 1) // 1 Jun 2026 — mock "today"
 
   return groups.map((g) => {
@@ -400,13 +904,12 @@ export type ActivityItem = {
   actor: string
 }
 
-export function entityKpis(entity: Entity): KpiCard[] {
-  const txns = ENTITY_TRANSACTIONS[entity.id] ?? []
-  const txnsCount = txns.length
-  const pendingFromRefunds = entity.id === 'ent_acme_labs_sg' ? unprocessedRefunds.length : 0
-  const failedFromWithdrawals = entity.id === 'ent_acme_labs_sg'
-    ? allPayments.filter((p) => p.status === 'FAILED').length
-    : 0
+export function clientKpis(): KpiCard[] {
+  const txnsCount = TRANSACTIONS.length
+  const pendingFromRefunds = unprocessedRefunds.length
+  const failedFromWithdrawals = allPayments.filter(
+    (p) => p.status === 'FAILED',
+  ).length
   return [
     {
       label: 'Transactions today',
@@ -429,23 +932,18 @@ export function entityKpis(entity: Entity): KpiCard[] {
   ]
 }
 
-const RECENT_ACTIVITY: Record<string, ActivityItem[]> = {
-  ent_acme_labs_sg: [
-    { id: 'act_01', text: 'Refund REF-2406-882 approved', time: '12 min ago', actor: 'Acme CS' },
-    { id: 'act_02', text: 'Withdrawal DBS-WD-7740 retriggered', time: '34 min ago', actor: 'Acme Ops' },
-    { id: 'act_03', text: 'API key rotated (sk_test_*9F2)', time: '1 hr ago', actor: 'system' },
-    { id: 'act_04', text: 'stmt_0H3BQSYF6QQ0W (2026-05-21) available', time: '2 hr ago', actor: 'system' },
-    { id: 'act_05', text: 'Webhook acme-prod-payment-events redelivered', time: '4 hr ago', actor: 'system' },
-  ],
-  ent_acme_markets_indo: [
-    { id: 'act_01', text: 'Deposit credited to 12344555', time: '8 min ago', actor: 'system' },
-    { id: 'act_02', text: 'Refund initiated for txn_01J9K70V1U2T3', time: '47 min ago', actor: 'Acme Ops' },
-    { id: 'act_03', text: 'Balance snapshot refreshed', time: '1 hr ago', actor: 'system' },
-  ],
-}
+const RECENT_ACTIVITY: ActivityItem[] = [
+  { id: 'act_01', text: 'Refund REF-2406-882 approved', time: '12 min ago', actor: 'Acme CS' },
+  { id: 'act_02', text: 'Withdrawal DBS-WD-7740 retriggered', time: '34 min ago', actor: 'Acme Ops' },
+  { id: 'act_03', text: 'API key rotated (sk_test_*9F2)', time: '1 hr ago', actor: 'system' },
+  { id: 'act_04', text: 'stmt_0H3BQSYF6QQ0W (2026-05-21) available', time: '2 hr ago', actor: 'system' },
+  { id: 'act_05', text: 'Webhook acme-prod-payment-events redelivered', time: '4 hr ago', actor: 'system' },
+  { id: 'act_06', text: 'Deposit credited to 12344555', time: '5 hr ago', actor: 'system' },
+  { id: 'act_07', text: 'Balance snapshot refreshed', time: '6 hr ago', actor: 'system' },
+]
 
-export function entityActivity(entity: Entity): ActivityItem[] {
-  return RECENT_ACTIVITY[entity.id] ?? []
+export function recentActivity(): ActivityItem[] {
+  return RECENT_ACTIVITY
 }
 
 export type ApiKeyAccessGroup = {
@@ -579,8 +1077,10 @@ export type Txn = {
   createdAt: string
 }
 
-export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
-  ent_acme_labs_sg: [
+// One flat transaction list for the whole client group. Which of these a user
+// sees is decided by their user group's account-group mapping, not by any
+// entity or bank layer.
+export const TRANSACTIONS: Txn[] = [
     // MISC bank charges / advices (transactionType OTHERS) — sampled from the
     // DBS match-bank-data feed
     {
@@ -792,8 +1292,6 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       dataSource: 'CAMT.053',
       createdAt: '30 May, 2026, 14:11',
     },
-  ],
-  ent_acme_markets_indo: [
     {
       id: "txn_0QJ6YQEA3DVAS",
       direction: 'DEBIT',
@@ -4194,11 +4692,10 @@ export const ENTITY_TRANSACTIONS: Record<string, Txn[]> = {
       dataSource: "CAMT052",
       createdAt: "27 Apr, 2026, 15:31",
     },
-  ],
-}
+]
 
-export function entityTransactions(entity: Entity): Txn[] {
-  return ENTITY_TRANSACTIONS[entity.id] ?? []
+export function allTransactions(): Txn[] {
+  return TRANSACTIONS
 }
 
 // A flagged credit transaction pending review.

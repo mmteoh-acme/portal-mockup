@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Mono } from '@/components/mono'
-import { useEntity } from '@/lib/entity-context'
+import { CLIENT_GROUP } from '@/data/fixtures'
 
 type EventCategory =
   | 'REFUND'
@@ -236,7 +236,7 @@ const AUDIT_EVENTS: AuditEvent[] = [
     actor: 'Ming Miin',
     actorRole: 'ADMIN',
     action: 'Invited user',
-    target: 'gary.tan@acmelabs.sg · Role: MAKER · Entity: Acme Labs',
+    target: 'gary.tan@acmelabs.sg · Role: MAKER · User group: SG Payment Ops',
     outcome: 'INFO',
     source: 'Portal',
     endpoint: 'POST /v1/users/invitations',
@@ -342,7 +342,6 @@ function maskIp(ip: string): string {
 }
 
 export function ActivityPage() {
-  const { entity } = useEntity()
   const [q, setQ] = React.useState('')
   const [categoryFilter, setCategoryFilter] =
     React.useState<CategoryFilter>('all')
@@ -350,8 +349,6 @@ export function ActivityPage() {
   const [serviceFilter, setServiceFilter] =
     React.useState<ServiceFilter>('all')
   const [expandedId, setExpandedId] = React.useState<string | null>(null)
-
-  if (!entity) return null
 
   // Search-as-you-type across event id, request id, error code, endpoint,
   // API key name, target — mirroring the log search facets.
@@ -389,7 +386,10 @@ export function ActivityPage() {
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Full audit trail for{' '}
-            <span className="font-medium text-foreground">{entity.name}</span>.
+            <span className="font-medium text-foreground">
+              {CLIENT_GROUP.name}
+            </span>
+            .
             Every action is executed as an API call — the actor is the API key
             that made it. Include the{' '}
             <span className="font-medium text-foreground">Event ID</span> when
