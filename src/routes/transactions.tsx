@@ -92,6 +92,7 @@ import {
   formatAmountWithCurrency,
   formatDirectionalAmount,
   getAccount,
+  legalEntityName,
   txnDetail,
   txnIsoDate,
   type Account,
@@ -1009,9 +1010,6 @@ export function TransactionsPage() {
                       {openTxn.direction}
                     </span>
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    {openTxn.senderName} · {openTxn.transactionDate}
-                  </div>
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -1151,6 +1149,33 @@ function TxnDetailBody({
 
   return (
     <div className="space-y-6 px-4 pb-6 pt-4">
+      <DetailSection title="Account">
+        <Field label="Account name">
+          <span className="text-sm font-medium">{account?.name ?? '—'}</span>
+        </Field>
+        <Field label="Account number">
+          <Mono>{origin?.number ?? '—'}</Mono>
+        </Field>
+        <Field label="Internal account ID">
+          <Mono>{t.internalAccountId}</Mono>
+        </Field>
+        <Field label="Bank">
+          <span className="text-sm">{account?.bank ?? '—'}</span>
+        </Field>
+        <Field label="Legal entity">
+          {account ? (
+            <span className="text-sm">
+              {account.legalEntity} · {legalEntityName(account.legalEntity)}
+            </span>
+          ) : (
+            <span className="text-sm text-muted-foreground">—</span>
+          )}
+        </Field>
+        <Field label="SWIFT/BIC">
+          <Mono>{origin?.bic || '—'}</Mono>
+        </Field>
+      </DetailSection>
+
       <DetailSection title="Identifiers">
         <Field label="Transaction ID">
           <Mono>{t.id}</Mono>
