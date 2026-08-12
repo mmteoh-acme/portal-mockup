@@ -137,11 +137,8 @@ const PAGE_TITLES: Record<string, string> = {
   '/transactions': 'Transactions',
   '/payments': 'Payments',
   '/internal-accounts': 'Internal Accounts',
-  '/api-keys': 'API Keys',
-  '/webhooks': 'Webhooks',
   '/account-groups': 'Account Groups',
   '/user-management': 'User Management',
-  '/activity': 'Activity',
 }
 
 export function AppShell() {

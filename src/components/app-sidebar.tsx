@@ -1,10 +1,7 @@
 import {
-  KeyRoundIcon,
   LandmarkIcon,
-  WebhookIcon,
   ArrowLeftRightIcon,
   WalletIcon,
-  ActivityIcon,
   ChevronsUpDownIcon,
   LogOutIcon,
   CheckIcon,
@@ -56,9 +53,6 @@ const OPERATIONS: ReadonlyArray<NavItem> = [
 const ADMIN: ReadonlyArray<NavItem> = [
   { title: 'Internal Accounts', icon: LandmarkIcon, to: '/internal-accounts' },
   { title: 'User Management', icon: UsersRoundIcon, to: '/user-management' },
-  { title: 'API Keys', icon: KeyRoundIcon, to: '/api-keys' },
-  { title: 'Webhooks', icon: WebhookIcon, to: '/webhooks' },
-  { title: 'Activity', icon: ActivityIcon, to: '/activity' },
 ]
 
 function NavLink({

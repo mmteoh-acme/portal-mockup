@@ -58,16 +58,14 @@ There is no account-group layer. A group scopes onto accounts directly.
 
 ## Legal entities
 
-Ripple holds four legal entities. The names and codes below are recorded exactly as supplied. See the open questions for two that need confirming.
+Acme holds four legal entities. The names and codes below are recorded exactly as supplied. See the open questions for two that need confirming.
 
 | Legal entity | Code |
 | --- | --- |
-| Ripple Markets APAC | RMA |
-| Ripple Labs Cayman | RLKY |
-| Ripple Markets Delaware | RMDE |
-| Ripple Markets Middle East | RMEA |
-
-The codes are the R-prefixed set. They come from the group definitions below, which name RMA and RLKY accounts, and they match ACME-2177. This supersedes the earlier AMA / AL / AMDE / AMEL list.
+| Acme Markets APAC | AMA |
+| Acme Labs Cayman | ALKY |
+| Acme Markets Delaware | AMDE |
+| Acme Markets Middle East | AMEA |
 
 ## The configuration
 
@@ -79,6 +77,7 @@ A group defines account access, grants roles and holds users.
 | --- | --- | --- |
 | Administrators | Administrator | All |
 | Trading and Markets | Operations | All |
+| Trading and Markets Reconciliation | Reconciliation | All |
 | Engineers | Engineering | All |
 | RMA Signers | Finance and Treasury | RMA accounts |
 | RLKY Signers | Finance and Treasury | RLKY accounts |
@@ -135,8 +134,6 @@ Background on the teams the roles are named after.
 * Operations are time-sensitive.
 * Payment volume is low. Payment values are high.
 * Sole user of the maker-checker feature.
-* Phased out H2H after migrating all their functions by integrating the Acme maker-checker key into their internal portal.
-* One user holding the payment-checker role in one group can hold payment-maker in another group.
 
 ### Trading and Markets Recon team
 
@@ -177,12 +174,3 @@ Deployed: <https://portal-mockup-virid.vercel.app>
 * The account groups page is removed. A group scopes onto accounts directly.
 * User Management carries the four tabs: Groups, Roles, Permission Sets, Users.
 * The five groups, six roles, six permission sets and five users above are the seeded data.
-
-## Open questions
-
-* The **Engineer** permission set is named by the Engineering role but its permissions were never listed. It is seeded empty rather than guessed. What does an engineer get? Candidates are API keys, webhooks and request logs, all of which ACME-2178 currently defers and hard-codes to administrator.
-* The **Engineers** group is not in the group list, but Cayter is assigned to it. It has been added with the Engineering role and all-account scope. Confirm the scope.
-* **Reconciliation** and **Customer Support** roles exist but no group grants them, so nobody holds them. Confirm whether groups for those teams are coming.
-* **Payment Orders Edit** is the only permission in the Reviewer set. Confirm that Customer Support edits payment orders without being able to view transactions.
-* The brief opened with "Acme group has multiple legal entities" while every entity is a Ripple entity. Read as Ripple being the client and Acme the platform. Confirm.
-* **Administrator holds All**, which includes Payment Approvals. ACME-2178 states that an administrator configures who approves and does not approve. Those two statements conflict. Confirm which holds.

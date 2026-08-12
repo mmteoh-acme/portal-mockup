@@ -10,10 +10,7 @@ import { LoginPage } from '@/routes/login'
 import { TransactionsPage } from '@/routes/transactions'
 import { PaymentsPage } from '@/routes/payments'
 import { InternalAccountsPage } from '@/routes/internal-accounts'
-import { ApiKeysPage } from '@/routes/api-keys'
-import { WebhooksPage } from '@/routes/webhooks'
 import { UserManagementPage } from '@/routes/user-management'
-import { ActivityPage } from '@/routes/activity'
 
 const rootRoute = createRootRoute({
   component: () => <Outlet />,
@@ -64,28 +61,10 @@ const internalAccountsRoute = createRoute({
   component: InternalAccountsPage,
 })
 
-const apiKeysRoute = createRoute({
-  getParentRoute: () => appLayoutRoute,
-  path: '/api-keys',
-  component: ApiKeysPage,
-})
-
-const webhooksRoute = createRoute({
-  getParentRoute: () => appLayoutRoute,
-  path: '/webhooks',
-  component: WebhooksPage,
-})
-
 const userManagementRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: '/user-management',
   component: UserManagementPage,
-})
-
-const activityRoute = createRoute({
-  getParentRoute: () => appLayoutRoute,
-  path: '/activity',
-  component: ActivityPage,
 })
 
 const routeTree = rootRoute.addChildren([
@@ -95,10 +74,7 @@ const routeTree = rootRoute.addChildren([
     transactionsRoute,
     paymentsRoute,
     internalAccountsRoute,
-    apiKeysRoute,
-    webhooksRoute,
     userManagementRoute,
-    activityRoute,
   ]),
 ])
 

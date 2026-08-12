@@ -41,10 +41,8 @@ notification bell.
 - `/login` — UI-only sign-in (any submit navigates to `/transactions`, the MVP landing page)
 - `/transactions` — wildcard search, three timestamp columns (booking / posting / value date), filter chips including legal entity
 - `/payments` — tabs: Refunds (new-refund dialog with bene details + maker-checker), Withdrawals (retrigger dialog with audit log), All payments
-- `/internal-accounts` — flat account list with bank / legal entity / country / currency / account-group columns and filters
+- `/internal-accounts` — flat account list with bank / legal entity / country / currency columns, filters, and which groups can see each account
 - `/user-management` — admin: Groups, Roles, Permission Sets and Users tabs. A group defines account access and grants roles
-- `/api-keys` — API keys table
-- `/webhooks` — webhooks table
 
 All fake data lives in `src/data/fixtures.ts`. Groups an admin creates in the UI
 are kept in `sessionStorage` via `src/lib/admin-store.ts`, seeded from the
