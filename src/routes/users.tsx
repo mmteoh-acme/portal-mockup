@@ -21,17 +21,15 @@ import {
   accountsForUser,
   portalUsers,
   userGroupsForUser,
-  type PortalRole,
+  permissionsFor,
+  type PermissionSet,
   type UserStatus,
 } from '@/data/fixtures'
 import { useAccountGroups, useUserGroups } from '@/lib/admin-store'
 
-const ROLE_COLORS: Record<PortalRole, string> = {
-  ADMIN: 'border-violet-300 bg-violet-100 text-violet-700',
-  MAKER: 'border-blue-300 bg-blue-100 text-blue-700',
-  CHECKER: 'border-emerald-300 bg-emerald-100 text-emerald-700',
-  VIEWER: 'border-zinc-300 bg-zinc-100 text-zinc-600',
-  AUDITOR: 'border-amber-300 bg-amber-100 text-amber-700',
+const PERMISSION_SET_COLORS: Record<PermissionSet, string> = {
+  administrator: 'border-violet-300 bg-violet-100 text-violet-700',
+  approver: 'border-emerald-300 bg-emerald-100 text-emerald-700',
 }
 
 const STATUS_COLORS: Record<UserStatus, string> = {
@@ -58,8 +56,8 @@ export function UsersPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Users</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            A user's role decides what they can do. Which accounts they can see
-            comes from the{' '}
+            A user's permission set decides what they can do. Which accounts
+            they can see comes from the{' '}
             <Link to="/user-groups" className="font-medium text-foreground underline underline-offset-4">
               user groups
             </Link>{' '}
@@ -83,7 +81,7 @@ export function UsersPage() {
                     User
                   </TableHead>
                   <TableHead className="text-[0.7rem] uppercase tracking-wider">
-                    Role
+                    Permission set
                   </TableHead>
                   <TableHead className="text-[0.7rem] uppercase tracking-wider">
                     User groups
@@ -133,7 +131,7 @@ export function UsersPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <RolePill role={m.role} />
+                        <PermissionSetPill set={m.permissionSet} />
                       </TableCell>
                       <TableCell>
                         {groups.length === 0 ? (
@@ -166,7 +164,7 @@ export function UsersPage() {
                               {m.approvalLimit}
                             </span>
                           </div>
-                        ) : m.role === 'CHECKER' ? (
+                        ) : m.permissionSet === 'approver' ? (
                           <span className="text-xs text-muted-foreground">
                             Unlimited
                           </span>
@@ -193,7 +191,7 @@ export function UsersPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem>Change role</DropdownMenuItem>
+                            <DropdownMenuItem>Change permission set</DropdownMenuItem>
                             <DropdownMenuItem asChild>
                               <Link to="/user-groups">Edit user groups</Link>
                             </DropdownMenuItem>
@@ -219,27 +217,34 @@ export function UsersPage() {
         <span className="font-medium text-foreground">
           Visibility vs. permission:
         </span>{' '}
-        user groups decide which accounts a person can see; their role and
-        permissions decide what they can do with them. Both apply — a MAKER in
-        SG Payment Ops can raise payments, but only on that group's accounts.
+        user groups decide which accounts a person can see; their permission set
+        decides what they can do. Both apply, and every grant is scoped — an
+        administrator in SG Payment Ops can raise payments, but only on that
+        group's accounts.
       </div>
 
       <div className="rounded-md border border-dashed bg-muted/20 px-4 py-3 text-xs text-muted-foreground">
         <span className="font-medium text-foreground">Approval thresholds:</span>{' '}
-        Checkers can be assigned a maximum approval amount. Payments above the
-        limit require a separate CHECKER with no limit, or a second approval from
-        an ADMIN. Configure per-user in the Edit menu.
+        Approvers can be assigned a maximum approval amount. Payments above the
+        limit require a second approver with no limit. An administrator
+        configures who can approve and cannot approve themselves. Configure
+        per-user in the Edit menu.
       </div>
     </div>
   )
 }
 
-function RolePill({ role }: { role: PortalRole }) {
+// Acme defines the sets; the client assigns them. The tooltip carries the
+// grant list so an admin can see what a set actually allows.
+function PermissionSetPill({ set }: { set: PermissionSet }) {
   return (
     <span
-      className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[0.65rem] font-medium uppercase tracking-wider ${ROLE_COLORS[role]}`}
+      title={permissionsFor(set)
+        .map((p) => p.key)
+        .join('\n')}
+      className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[0.65rem] font-medium ${PERMISSION_SET_COLORS[set]}`}
     >
-      {role}
+      {set}
     </span>
   )
 }

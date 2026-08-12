@@ -617,9 +617,7 @@ export function AccountGroupSheet({
                           <TableHead className="text-[0.7rem] uppercase tracking-wider">
                             User group
                           </TableHead>
-                          <TableHead className="text-[0.7rem] uppercase tracking-wider">
-                            Role
-                          </TableHead>
+
                           <TableHead className="text-right text-[0.7rem] uppercase tracking-wider">
                             Members
                           </TableHead>
@@ -631,9 +629,7 @@ export function AccountGroupSheet({
                             <TableCell className="text-sm font-medium">
                               {ug.name}
                             </TableCell>
-                            <TableCell>
-                              <Pill>{ug.role}</Pill>
-                            </TableCell>
+
                             <TableCell className="text-right text-sm tabular-nums">
                               {ug.memberIds.length}
                             </TableCell>

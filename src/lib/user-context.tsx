@@ -1,51 +1,61 @@
 import * as React from 'react'
+import type { PermissionSet } from '@/data/fixtures'
 
-export type UserRole = 'MAKER' | 'CHECKER'
-export type User = { name: string; email: string; role: UserRole }
+// Who you are signed in as. There are no roles: a user is granted one of
+// Acme's permission sets, and four-eyes falls out of the catalogue — an
+// administrator creates and edits payments but cannot approve, an approver
+// can approve but holds no admin permissions (ACME-2178).
+export type User = {
+  name: string
+  email: string
+  permissionSet: PermissionSet
+}
 
-const MAKER: User = {
+const ADMINISTRATOR: User = {
   name: 'Ming Miin',
   email: 'ming@tryacme.com',
-  role: 'MAKER',
+  permissionSet: 'administrator',
 }
-const CHECKER: User = {
+const APPROVER: User = {
   name: 'Priya Lim',
   email: 'priya@tryacme.com',
-  role: 'CHECKER',
+  permissionSet: 'approver',
 }
 
-const ALL_USERS: User[] = [MAKER, CHECKER]
+const ALL_USERS: User[] = [ADMINISTRATOR, APPROVER]
 
-const STORAGE_KEY = 'portal-mockup:activeRole'
+const STORAGE_KEY = 'portal-mockup:activePermissionSet'
 
 type UserContextValue = {
   user: User
-  setRole: (r: UserRole) => void
+  setPermissionSet: (s: PermissionSet) => void
   allUsers: User[]
 }
 
 const UserContext = React.createContext<UserContextValue | undefined>(undefined)
 
-function readRoleFromStorage(): UserRole {
-  if (typeof window === 'undefined') return 'MAKER'
+function readFromStorage(): PermissionSet {
+  if (typeof window === 'undefined') return 'administrator'
   const v = window.sessionStorage.getItem(STORAGE_KEY)
-  return v === 'CHECKER' ? 'CHECKER' : 'MAKER'
+  return v === 'approver' ? 'approver' : 'administrator'
 }
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
-  const [role, setRoleState] = React.useState<UserRole>(() => readRoleFromStorage())
+  const [permissionSet, setState] = React.useState<PermissionSet>(() =>
+    readFromStorage(),
+  )
 
-  const setRole = React.useCallback((r: UserRole) => {
-    setRoleState(r)
+  const setPermissionSet = React.useCallback((s: PermissionSet) => {
+    setState(s)
     if (typeof window === 'undefined') return
-    window.sessionStorage.setItem(STORAGE_KEY, r)
+    window.sessionStorage.setItem(STORAGE_KEY, s)
   }, [])
 
-  const user = role === 'CHECKER' ? CHECKER : MAKER
+  const user = permissionSet === 'approver' ? APPROVER : ADMINISTRATOR
 
   const value = React.useMemo<UserContextValue>(
-    () => ({ user, setRole, allUsers: ALL_USERS }),
-    [user, setRole],
+    () => ({ user, setPermissionSet, allUsers: ALL_USERS }),
+    [user, setPermissionSet],
   )
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>

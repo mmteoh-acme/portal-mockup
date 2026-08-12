@@ -780,8 +780,8 @@ export function TransactionsPage() {
 
         {/* Bulk actions for the checkbox selection */}
         {selectedRows.length > 0 && (
-          <div className="flex flex-wrap items-center gap-3 border-t bg-muted/40 px-4 py-2.5">
-            <span className="text-xs font-medium">
+          <div className="flex flex-wrap items-center gap-3 border-t bg-brand-subtle px-4 py-2.5">
+            <span className="text-xs font-medium text-brand-subtle-foreground">
               {selectedRows.length} selected
             </span>
             <Button
@@ -821,7 +821,11 @@ export function TransactionsPage() {
                     const label = header.isPlaceholder ? null : canSort ? (
                       <button
                         type="button"
-                        className="inline-flex items-center gap-1 uppercase tracking-wider hover:text-foreground"
+                        className={`inline-flex items-center gap-1 uppercase tracking-wider ${
+                          sorted
+                            ? 'text-brand'
+                            : 'text-foreground hover:text-foreground'
+                        }`}
                         onClick={header.column.getToggleSortingHandler()}
                       >
                         {flexRender(
@@ -830,9 +834,9 @@ export function TransactionsPage() {
                         )}
                         {tip && <InfoIcon className="size-3 opacity-50" />}
                         {sorted === 'desc' ? (
-                          <ArrowDownIcon className="size-3 opacity-60" />
+                          <ArrowDownIcon className="size-3" />
                         ) : sorted === 'asc' ? (
-                          <ArrowUpIcon className="size-3 opacity-60" />
+                          <ArrowUpIcon className="size-3" />
                         ) : (
                           <ArrowUpDownIcon className="size-3 opacity-30" />
                         )}
@@ -949,6 +953,11 @@ export function TransactionsPage() {
                       <PaginationLink
                         href="#"
                         isActive={p === pageIndex + 1}
+                        className={
+                          p === pageIndex + 1
+                            ? 'border-brand bg-brand text-brand-foreground hover:bg-brand hover:text-brand-foreground'
+                            : undefined
+                        }
                         onClick={(e) => {
                           e.preventDefault()
                           table.setPageIndex(p - 1)
@@ -1267,7 +1276,7 @@ function TxnDetailBody({
         <Field label="Statement ID">
           <button
             type="button"
-            className="inline-flex items-center gap-1 font-mono text-[0.78rem] text-[#1447E6] hover:underline"
+            className="inline-flex items-center gap-1 font-mono text-[0.78rem] text-brand hover:underline"
             onClick={() =>
               toast.info('Statements view not in this mockup yet', {
                 description: `${d.statementId} — the statement detail page is still to be designed.`,

@@ -1,7 +1,7 @@
 export const currentUser = {
   name: 'Ming Miin',
   email: 'ming@tryacme.com',
-  role: 'ADMIN',
+  permissionSet: 'administrator',
 }
 
 // ---------------------------------------------------------------------------
@@ -357,7 +357,55 @@ export function accountLabel(a: Account): string {
 // can sit in several account groups; a user can sit in several user groups.
 // ---------------------------------------------------------------------------
 
-export type PortalRole = 'ADMIN' | 'MAKER' | 'CHECKER' | 'VIEWER' | 'AUDITOR'
+// Permissions are Acme-defined; clients don't compose their own in MVP. A user
+// is granted a permission set, and every grant is scoped by account group —
+// there is no unscoped grant (ACME-2178).
+export type PermissionSet = 'administrator' | 'approver'
+
+export type PermissionGroup = 'Read' | 'Export' | 'Payment' | 'Admin'
+
+export type Permission = {
+  key: string
+  group: PermissionGroup
+  allows: string
+}
+
+export const PERMISSION_CATALOGUE: Permission[] = [
+  { key: 'transaction.read', group: 'Read', allows: 'View transactions' },
+  { key: 'balance.read', group: 'Read', allows: 'View balances, including refresh' },
+  { key: 'statement.read', group: 'Read', allows: 'View and retrieve statement documents' },
+  { key: 'payment.read', group: 'Read', allows: 'View payments and their status' },
+  { key: 'events.read', group: 'Read', allows: 'View the event / audit log' },
+  { key: 'data.export', group: 'Export', allows: 'Export transactions, statements, reports' },
+  { key: 'events.export', group: 'Export', allows: 'Export the event / audit log' },
+  { key: 'payment.create_edit', group: 'Payment', allows: 'Create and edit a payment' },
+  { key: 'payment.approve_reject', group: 'Payment', allows: 'Approve or reject a payment' },
+  { key: 'account_group.manage', group: 'Admin', allows: 'Define account groups' },
+  { key: 'user_group.manage', group: 'Admin', allows: 'Define user groups and their mapping' },
+  { key: 'approval_policy.manage', group: 'Admin', allows: 'Configure the maker-checker matrix' },
+  { key: 'user.invite_assign', group: 'Admin', allows: 'Invite a user, assign a set, scope it' },
+]
+
+// Administrator gets everything except approve/reject — an administrator
+// configures who can approve, and does not approve. Approver gets read, export
+// and approve/reject, and no Admin permissions.
+export const PERMISSION_SET_GRANTS: Record<PermissionSet, string[]> = {
+  administrator: PERMISSION_CATALOGUE.filter(
+    (p) => p.key !== 'payment.approve_reject',
+  ).map((p) => p.key),
+  approver: [
+    ...PERMISSION_CATALOGUE.filter((p) => p.group === 'Read').map((p) => p.key),
+    'data.export',
+    'payment.approve_reject',
+  ],
+}
+
+export const PERMISSION_SETS: PermissionSet[] = ['administrator', 'approver']
+
+export function permissionsFor(set: PermissionSet): Permission[] {
+  const keys = PERMISSION_SET_GRANTS[set]
+  return PERMISSION_CATALOGUE.filter((p) => keys.includes(p.key))
+}
 
 export type UserStatus = 'active' | 'invited' | 'suspended'
 
@@ -365,7 +413,7 @@ export type PortalUser = {
   id: string
   name: string
   email: string
-  role: PortalRole
+  permissionSet: PermissionSet
   status: UserStatus
   approvalLimit: string | null
   lastActive: string
@@ -376,7 +424,7 @@ export const portalUsers: PortalUser[] = [
     id: 'usr_01',
     name: 'Ming Miin',
     email: 'ming@tryacme.com',
-    role: 'ADMIN',
+    permissionSet: 'administrator',
     status: 'active',
     approvalLimit: null,
     lastActive: '1 Jun, 2026',
@@ -385,7 +433,7 @@ export const portalUsers: PortalUser[] = [
     id: 'usr_02',
     name: 'Priya Lim',
     email: 'priya@tryacme.com',
-    role: 'CHECKER',
+    permissionSet: 'approver',
     status: 'active',
     approvalLimit: 'Up to S$2,000,000',
     lastActive: '1 Jun, 2026',
@@ -394,7 +442,7 @@ export const portalUsers: PortalUser[] = [
     id: 'usr_03',
     name: 'Alice Wong',
     email: 'alice@tryacme.com',
-    role: 'MAKER',
+    permissionSet: 'administrator',
     status: 'active',
     approvalLimit: null,
     lastActive: '31 May, 2026',
@@ -403,7 +451,7 @@ export const portalUsers: PortalUser[] = [
     id: 'usr_04',
     name: 'Gary Tan',
     email: 'gary.tan@tryacme.com',
-    role: 'MAKER',
+    permissionSet: 'administrator',
     status: 'invited',
     approvalLimit: null,
     lastActive: '—',
@@ -412,7 +460,7 @@ export const portalUsers: PortalUser[] = [
     id: 'usr_05',
     name: 'James Audit',
     email: 'james@auditors.com',
-    role: 'AUDITOR',
+    permissionSet: 'administrator',
     status: 'active',
     approvalLimit: null,
     lastActive: '15 Apr, 2026',
@@ -421,7 +469,7 @@ export const portalUsers: PortalUser[] = [
     id: 'usr_06',
     name: 'CS Team',
     email: 'cs-ops@tryacme.com',
-    role: 'VIEWER',
+    permissionSet: 'administrator',
     status: 'active',
     approvalLimit: null,
     lastActive: '1 Jun, 2026',
@@ -430,7 +478,7 @@ export const portalUsers: PortalUser[] = [
     id: 'usr_07',
     name: 'Dewi Putri',
     email: 'dewi@tryacme.com',
-    role: 'MAKER',
+    permissionSet: 'administrator',
     status: 'active',
     approvalLimit: null,
     lastActive: '30 May, 2026',
@@ -517,15 +565,15 @@ export const accountGroupsSeed: AccountGroup[] = [
   },
 ]
 
-// A user group grants visibility either through account groups or straight
-// off the legal-entity tag — whichever the admin finds easier to maintain.
+// A user group scopes *account visibility* only — it does not assign
+// permissions. What a member may do comes from the permission set granted to
+// them; which accounts they may do it on comes from here (ACME-2178).
 export type UserGroupScope = 'ACCOUNT_GROUP' | 'LEGAL_ENTITY'
 
 export type UserGroup = {
   id: string
   name: string
   description: string
-  role: PortalRole
   scope: UserGroupScope
   accountGroupIds: string[]
   legalEntityCodes: string[]
@@ -540,7 +588,6 @@ export const userGroupsSeed: UserGroup[] = [
     id: 'ug_administrators',
     name: 'Administrators',
     description: 'Full access to every account in the client group.',
-    role: 'ADMIN',
     scope: 'ACCOUNT_GROUP',
     accountGroupIds: ['ag_all_sg_ops', 'ag_client_money', 'ag_amid_all', 'ag_reserves'],
     legalEntityCodes: [],
@@ -553,7 +600,6 @@ export const userGroupsSeed: UserGroup[] = [
     id: 'ug_sg_payment_ops',
     name: 'SG Payment Ops',
     description: 'Makers raising payments out of the Singapore accounts.',
-    role: 'MAKER',
     scope: 'ACCOUNT_GROUP',
     accountGroupIds: ['ag_all_sg_ops'],
     legalEntityCodes: [],
@@ -566,7 +612,6 @@ export const userGroupsSeed: UserGroup[] = [
     id: 'ug_treasury_approvers',
     name: 'Treasury Approvers',
     description: 'Checkers approving payments across SG and client money.',
-    role: 'CHECKER',
     scope: 'ACCOUNT_GROUP',
     accountGroupIds: ['ag_all_sg_ops', 'ag_client_money'],
     legalEntityCodes: [],
@@ -580,7 +625,6 @@ export const userGroupsSeed: UserGroup[] = [
     name: 'Indonesia Ops',
     description:
       'Scoped by legal-entity tag instead of a hand-built account group.',
-    role: 'MAKER',
     scope: 'LEGAL_ENTITY',
     accountGroupIds: [],
     legalEntityCodes: ['AMID'],
@@ -593,7 +637,6 @@ export const userGroupsSeed: UserGroup[] = [
     id: 'ug_external_audit',
     name: 'External Audit',
     description: 'Read-only access to reserve and receivable balances.',
-    role: 'AUDITOR',
     scope: 'ACCOUNT_GROUP',
     accountGroupIds: ['ag_reserves'],
     legalEntityCodes: [],
@@ -606,7 +649,6 @@ export const userGroupsSeed: UserGroup[] = [
     id: 'ug_cs_readonly',
     name: 'CS Read-only',
     description: 'Customer support — transaction lookup on SG accounts.',
-    role: 'VIEWER',
     scope: 'ACCOUNT_GROUP',
     accountGroupIds: ['ag_all_sg_ops'],
     legalEntityCodes: [],
@@ -616,21 +658,6 @@ export const userGroupsSeed: UserGroup[] = [
     updatedAt: '2026-02-20T11:05:00',
   },
 ]
-
-// Permission catalogue, shown against a role so the admin can see that the
-// user group controls *visibility* while the role controls *actions*.
-export const ROLE_PERMISSIONS: Record<PortalRole, string[]> = {
-  ADMIN: ['ALL'],
-  MAKER: [
-    'BALANCES',
-    'TRANSACTIONS',
-    'PAYMENTS: INITIATE',
-    'REFUNDS: INITIATE',
-  ],
-  CHECKER: ['BALANCES', 'TRANSACTIONS', 'PAYMENTS: APPROVE / REJECT'],
-  VIEWER: ['BALANCES', 'TRANSACTIONS'],
-  AUDITOR: ['BALANCES', 'TRANSACTIONS', 'ACTIVITY LOG', 'STATEMENTS'],
-}
 
 export function accountsInAccountGroup(
   group: AccountGroup,

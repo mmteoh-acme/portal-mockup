@@ -704,11 +704,11 @@ function PaymentsMain() {
                     retry?.status === 'Pending approval'
                   const canReviewRefund =
                     isPendingRefund &&
-                    user.role === 'CHECKER' &&
+                    user.permissionSet === 'approver' &&
                     refund?.requester !== user.name
                   const canReviewRetry =
                     isPendingRetry &&
-                    user.role === 'CHECKER' &&
+                    user.permissionSet === 'approver' &&
                     retry?.requester !== user.name
                   const canReview = canReviewRefund || canReviewRetry
                   const statusPill = refund ? (
@@ -776,7 +776,7 @@ function PaymentsMain() {
                                 if (canReviewRetry) {
                                   approveRetry(p.id, {
                                     name: user.name,
-                                    role: user.role,
+                                    permissionSet: user.permissionSet,
                                   })
                                   toast.success('Retry approved', {
                                     description: `${p.id} — approved by ${user.name}`,
@@ -784,7 +784,7 @@ function PaymentsMain() {
                                 } else {
                                   approveRefund(p.id, {
                                     name: user.name,
-                                    role: user.role,
+                                    permissionSet: user.permissionSet,
                                   })
                                   toast.success('Refund approved', {
                                     description: `${p.id} — approved by ${user.name}`,
@@ -802,7 +802,7 @@ function PaymentsMain() {
                                 if (canReviewRetry) {
                                   rejectRetry(p.id, {
                                     name: user.name,
-                                    role: user.role,
+                                    permissionSet: user.permissionSet,
                                   })
                                   toast.success('Retry rejected', {
                                     description: `${p.id} — rejected by ${user.name}`,
@@ -810,7 +810,7 @@ function PaymentsMain() {
                                 } else {
                                   rejectRefund(p.id, {
                                     name: user.name,
-                                    role: user.role,
+                                    permissionSet: user.permissionSet,
                                   })
                                   toast.success('Refund rejected', {
                                     description: `${p.id} — rejected by ${user.name}`,
@@ -921,13 +921,13 @@ function PaymentsMain() {
               approve their own submissions.
             </p>
           </div>
-          {user.role !== 'CHECKER' && (
+          {user.permissionSet !== 'approver' && (
             <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2.5 text-xs text-amber-800">
               <AlertCircleIcon className="mt-0.5 size-4 shrink-0" />
               <span>
                 You're acting as a{' '}
                 <span className="font-medium uppercase tracking-wider">
-                  {user.role}
+                  {user.permissionSet}
                 </span>
                 . Switch to{' '}
                 <span className="font-medium uppercase tracking-wider">
@@ -966,12 +966,12 @@ function PaymentsMain() {
                 <TableBody>
                   {pendingReview.map((r) => {
                     const canAct =
-                      user.role === 'CHECKER' && r.requester !== user.name
+                      user.permissionSet === 'approver' && r.requester !== user.name
                     const approve = () => {
                       if (r.store === 'retry') {
-                        approveRetry(r.id, { name: user.name, role: user.role })
+                        approveRetry(r.id, { name: user.name, permissionSet: user.permissionSet })
                       } else {
-                        approveRefund(r.id, { name: user.name, role: user.role })
+                        approveRefund(r.id, { name: user.name, permissionSet: user.permissionSet })
                       }
                       toast.success(`${r.kind} approved`, {
                         description: `${r.id} — approved by ${user.name}`,
@@ -979,9 +979,9 @@ function PaymentsMain() {
                     }
                     const reject = () => {
                       if (r.store === 'retry') {
-                        rejectRetry(r.id, { name: user.name, role: user.role })
+                        rejectRetry(r.id, { name: user.name, permissionSet: user.permissionSet })
                       } else {
-                        rejectRefund(r.id, { name: user.name, role: user.role })
+                        rejectRefund(r.id, { name: user.name, permissionSet: user.permissionSet })
                       }
                       toast.success(`${r.kind} rejected`, {
                         description: `${r.id} — rejected by ${user.name}`,
@@ -1520,7 +1520,7 @@ function PaymentDetailSheet({
                             : 'Rejected'}{' '}
                           by {retry.reviewer.name}{' '}
                           <span className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">
-                            ({retry.reviewer.role})
+                            ({retry.reviewer.permissionSet})
                           </span>{' '}
                           —{' '}
                           <span className="text-xs">
@@ -1563,7 +1563,7 @@ function PaymentDetailSheet({
                           : 'Rejected'}{' '}
                         by {refund.reviewer.name}{' '}
                         <span className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">
-                          ({refund.reviewer.role})
+                          ({refund.reviewer.permissionSet})
                         </span>{' '}
                         — <span className="text-xs">{refund.reviewer.at}</span>
                       </span>
@@ -1911,7 +1911,7 @@ function NewRefundFromTxn({ txn }: { txn: Txn | null }) {
         </p>
       </div>
 
-      {user.role === 'CHECKER' && (
+      {user.permissionSet === 'approver' && (
         <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2.5 text-xs text-amber-800">
           <AlertCircleIcon className="mt-0.5 size-4 shrink-0" />
           <span>
@@ -1936,7 +1936,7 @@ function NewRefundFromTxn({ txn }: { txn: Txn | null }) {
             <span className="text-sm">
               {user.name}{' '}
               <span className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">
-                · {user.role}
+                · {user.permissionSet}
               </span>{' '}
               — Acme Operations Team
             </span>
@@ -2386,7 +2386,7 @@ function NewPaymentPage() {
         </p>
       </div>
 
-      {user.role === 'CHECKER' && (
+      {user.permissionSet === 'approver' && (
         <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2.5 text-xs text-amber-800">
           <AlertCircleIcon className="mt-0.5 size-4 shrink-0" />
           <span>
@@ -2408,7 +2408,7 @@ function NewPaymentPage() {
             <span className="text-sm">
               {user.name}{' '}
               <span className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">
-                · {user.role}
+                · {user.permissionSet}
               </span>{' '}
               — Acme Operations Team
             </span>
@@ -3155,7 +3155,7 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
         </p>
       </div>
 
-      {user.role === 'CHECKER' && (
+      {user.permissionSet === 'approver' && (
         <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2.5 text-xs text-amber-800">
           <AlertCircleIcon className="mt-0.5 size-4 shrink-0" />
           <span>
@@ -3210,7 +3210,7 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
             <span className="text-sm">
               {user.name}{' '}
               <span className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">
-                · {user.role}
+                · {user.permissionSet}
               </span>
             </span>
           </ContextRow>

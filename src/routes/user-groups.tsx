@@ -24,13 +24,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
   Sheet,
   SheetContent,
   SheetHeader,
@@ -47,18 +40,18 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   LEGAL_ENTITIES,
-  ROLE_PERMISSIONS,
   accountsForUserGroup,
   accountsInAccountGroup,
   formatMoney,
   getPortalUser,
   legalEntityName,
   portalUsers,
-  type PortalRole,
+  type PermissionSet,
   type UserGroup,
   type UserGroupScope,
 } from '@/data/fixtures'
 import { formatWhen } from '@/lib/format'
+import { RulePill } from '@/components/account-group-config'
 import {
   addUserGroup,
   deleteUserGroup,
@@ -68,14 +61,9 @@ import {
   useUserGroups,
 } from '@/lib/admin-store'
 
-const ROLES: PortalRole[] = ['ADMIN', 'MAKER', 'CHECKER', 'VIEWER', 'AUDITOR']
-
-const ROLE_COLORS: Record<PortalRole, string> = {
-  ADMIN: 'border-violet-300 bg-violet-100 text-violet-700',
-  MAKER: 'border-blue-300 bg-blue-100 text-blue-700',
-  CHECKER: 'border-emerald-300 bg-emerald-100 text-emerald-700',
-  VIEWER: 'border-zinc-300 bg-zinc-100 text-zinc-600',
-  AUDITOR: 'border-amber-300 bg-amber-100 text-amber-700',
+const PERMISSION_SET_COLORS: Record<PermissionSet, string> = {
+  administrator: 'border-violet-300 bg-violet-100 text-violet-700',
+  approver: 'border-emerald-300 bg-emerald-100 text-emerald-700',
 }
 
 function initials(name: string): string {
@@ -114,28 +102,13 @@ function Pill({
   )
 }
 
-function RolePill({ role }: { role: PortalRole }) {
+function PermissionSetPill({ set }: { set: PermissionSet }) {
   return (
     <span
-      className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[0.65rem] font-medium uppercase tracking-wider ${ROLE_COLORS[role]}`}
+      className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[0.65rem] font-medium ${PERMISSION_SET_COLORS[set]}`}
     >
-      {role}
+      {set}
     </span>
-  )
-}
-
-function PermissionPills({ role }: { role: PortalRole }) {
-  return (
-    <div className="flex flex-wrap gap-1">
-      {ROLE_PERMISSIONS[role].map((p) => (
-        <span
-          key={p}
-          className="inline-flex items-center rounded border bg-muted px-1.5 py-0.5 font-mono text-[0.6rem] uppercase tracking-wider text-muted-foreground"
-        >
-          {p}
-        </span>
-      ))}
-    </div>
   )
 }
 
@@ -294,7 +267,7 @@ function MemberEditor({
                 {u.email}
               </div>
             </div>
-            <RolePill role={u.role} />
+            <PermissionSetPill set={u.permissionSet} />
           </label>
         ))}
       </div>
@@ -316,7 +289,6 @@ function CreateUserGroupDialog({
   const accountGroups = useAccountGroups()
   const [name, setName] = React.useState('')
   const [description, setDescription] = React.useState('')
-  const [role, setRole] = React.useState<PortalRole>('MAKER')
   const [scope, setScope] = React.useState<UserGroupScope>('ACCOUNT_GROUP')
   const [agIds, setAgIds] = React.useState<Set<string>>(new Set())
   const [leCodes, setLeCodes] = React.useState<Set<string>>(new Set())
@@ -325,7 +297,6 @@ function CreateUserGroupDialog({
   const reset = () => {
     setName('')
     setDescription('')
-    setRole('MAKER')
     setScope('ACCOUNT_GROUP')
     setAgIds(new Set())
     setLeCodes(new Set())
@@ -338,7 +309,6 @@ function CreateUserGroupDialog({
       id: 'preview',
       name,
       description,
-      role,
       scope,
       accountGroupIds: [...agIds],
       legalEntityCodes: [...leCodes],
@@ -359,7 +329,6 @@ function CreateUserGroupDialog({
       id,
       name: name.trim(),
       description: description.trim(),
-      role,
       scope,
       accountGroupIds: scope === 'ACCOUNT_GROUP' ? [...agIds] : [],
       legalEntityCodes: scope === 'LEGAL_ENTITY' ? [...leCodes] : [],
@@ -387,8 +356,8 @@ function CreateUserGroupDialog({
         <DialogHeader>
           <DialogTitle>Create user group</DialogTitle>
           <DialogDescription>
-            The group decides which accounts its members can see. What they can
-            do with those accounts comes from the role.
+            A group scopes account visibility. What a member may do comes from
+            the permission set granted to them, not from this group.
           </DialogDescription>
         </DialogHeader>
 
@@ -412,26 +381,6 @@ function CreateUserGroupDialog({
                 placeholder="Makers raising payments out of SG accounts"
               />
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Role</Label>
-            <Select
-              value={role}
-              onValueChange={(v) => setRole(v as PortalRole)}
-            >
-              <SelectTrigger className="font-normal">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {ROLES.map((r) => (
-                  <SelectItem key={r} value={r}>
-                    {r}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <PermissionPills role={role} />
           </div>
 
           <ScopeEditor
@@ -582,7 +531,6 @@ function UserGroupSheet({
                   {group.description || 'No description'}
                 </p>
               </div>
-              <RolePill role={group.role} />
             </div>
           </SheetHeader>
 
@@ -607,9 +555,6 @@ function UserGroupSheet({
                     <LayersIcon className="size-3" /> Account groups
                   </Pill>
                 )}
-              </SummaryRow>
-              <SummaryRow label="Permissions">
-                <PermissionPills role={group.role} />
               </SummaryRow>
               <SummaryRow label="Updated">
                 {formatWhen(group.updatedAt)}
@@ -667,23 +612,10 @@ function UserGroupSheet({
                 ) : (
                   <>
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex flex-wrap gap-1">
+                      <div className="text-[0.7rem] font-semibold uppercase tracking-wider text-foreground/70">
                         {group.scope === 'ACCOUNT_GROUP'
-                          ? group.accountGroupIds.map((id) => {
-                              const ag = accountGroups.find((g) => g.id === id)
-                              return (
-                                <Pill key={id}>{ag?.name ?? id}</Pill>
-                              )
-                            })
-                          : group.legalEntityCodes.map((c) => (
-                              <Pill key={c} tone="entity">
-                                {c} · {legalEntityName(c)}
-                              </Pill>
-                            ))}
-                        {group.scope === 'ACCOUNT_GROUP' &&
-                          group.accountGroupIds.length === 0 && (
-                            <Pill tone="warning">No account group mapped</Pill>
-                          )}
+                          ? 'Account groups in scope'
+                          : 'Legal entity tags in scope'}
                       </div>
                       <Button
                         variant="outline"
@@ -692,6 +624,86 @@ function UserGroupSheet({
                       >
                         Edit access
                       </Button>
+                    </div>
+
+                    {/* What the group grants: the account groups it maps to,
+                        then every account those groups resolve to. */}
+                    <div className="overflow-x-auto rounded-lg border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                              {group.scope === 'ACCOUNT_GROUP'
+                                ? 'Account group'
+                                : 'Legal entity'}
+                            </TableHead>
+                            <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                              Membership
+                            </TableHead>
+                            <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                              Accounts
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {group.scope === 'ACCOUNT_GROUP' ? (
+                            group.accountGroupIds.length === 0 ? (
+                              <TableRow>
+                                <TableCell
+                                  colSpan={3}
+                                  className="py-6 text-center text-sm text-amber-700"
+                                >
+                                  No account group mapped — members see nothing.
+                                </TableCell>
+                              </TableRow>
+                            ) : (
+                              group.accountGroupIds.map((id) => {
+                                const ag = accountGroups.find((g) => g.id === id)
+                                return (
+                                  <TableRow key={id}>
+                                    <TableCell className="text-sm font-medium">
+                                      {ag?.name ?? id}
+                                      {ag?.description && (
+                                        <div className="text-[0.65rem] font-normal text-muted-foreground">
+                                          {ag.description}
+                                        </div>
+                                      )}
+                                    </TableCell>
+                                    <TableCell>
+                                      {ag ? <RulePill rule={ag.rule} /> : '—'}
+                                    </TableCell>
+                                    <TableCell className="text-sm tabular-nums">
+                                      {ag ? accountsInAccountGroup(ag).length : 0}
+                                    </TableCell>
+                                  </TableRow>
+                                )
+                              })
+                            )
+                          ) : (
+                            group.legalEntityCodes.map((c) => (
+                              <TableRow key={c}>
+                                <TableCell className="text-sm font-medium">
+                                  <Pill tone="entity">{c}</Pill>{' '}
+                                  {legalEntityName(c)}
+                                </TableCell>
+                                <TableCell className="text-xs text-muted-foreground">
+                                  Every account carrying the tag
+                                </TableCell>
+                                <TableCell className="text-sm tabular-nums">
+                                  {
+                                    visible.filter((a) => a.legalEntity === c)
+                                      .length
+                                  }
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+
+                    <div className="text-[0.7rem] font-semibold uppercase tracking-wider text-foreground/70">
+                      Accounts in scope ({visible.length})
                     </div>
 
                     <div className="overflow-x-auto rounded-lg border">
@@ -795,7 +807,7 @@ function UserGroupSheet({
                               User
                             </TableHead>
                             <TableHead className="text-[0.7rem] uppercase tracking-wider">
-                              Role
+                              Permission set
                             </TableHead>
                             <TableHead className="text-[0.7rem] uppercase tracking-wider">
                               Status
@@ -837,7 +849,7 @@ function UserGroupSheet({
                                 </div>
                               </TableCell>
                               <TableCell>
-                                <RolePill role={u.role} />
+                                <PermissionSetPill set={u.permissionSet} />
                               </TableCell>
                               <TableCell className="text-xs text-muted-foreground">
                                 {u.status}
@@ -908,9 +920,9 @@ export function UserGroupsPage() {
             >
               account groups
             </Link>{' '}
-            or straight off a legal-entity tag. Role and permissions decide what
-            they can do; the group decides what they can see. A user can be in
-            several groups.
+            or straight off a legal-entity tag. A group scopes visibility only —
+            what a member may do comes from their permission set. A user can be
+            in several groups.
           </p>
         </div>
         <Button size="sm" className="gap-2" onClick={() => setCreateOpen(true)}>
@@ -941,9 +953,6 @@ export function UserGroupsPage() {
                 <TableRow>
                   <TableHead className="text-[0.7rem] uppercase tracking-wider">
                     Name
-                  </TableHead>
-                  <TableHead className="text-[0.7rem] uppercase tracking-wider">
-                    Role
                   </TableHead>
                   <TableHead className="text-[0.7rem] uppercase tracking-wider">
                     Scoped by
@@ -997,9 +1006,6 @@ export function UserGroupsPage() {
                           {g.description}
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <RolePill role={g.role} />
-                      </TableCell>
                       <TableCell className="whitespace-nowrap">
                         {g.scope === 'LEGAL_ENTITY' ? (
                           <Pill tone="scope">
@@ -1052,8 +1058,8 @@ export function UserGroupsPage() {
       <div className="rounded-md border border-dashed bg-muted/20 px-4 py-3 text-xs text-muted-foreground">
         <span className="font-medium text-foreground">How access resolves:</span>{' '}
         Accounts → Account Group → (mapping) → User Group → User. A user's
-        effective access is the union of every group they belong to; their role
-        and permissions still gate each action.
+        effective access is the union of every group they belong to; their
+        permission set still gates each action.
       </div>
 
       <CreateUserGroupDialog open={createOpen} onOpenChange={setCreateOpen} />
