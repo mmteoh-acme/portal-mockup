@@ -22,8 +22,8 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
 import { Link } from '@tanstack/react-router'
-import { CLIENT_GROUP, unassignedAccounts } from '@/data/fixtures'
-import { useAccountGroups } from '@/lib/admin-store'
+import { CLIENT_GROUP, accountsOutsideEveryGroup } from '@/data/fixtures'
+import { useUserGroups } from '@/lib/admin-store'
 
 type Notification = {
   id: string
@@ -53,8 +53,8 @@ const DOWNTIME_NOTIFICATIONS: Notification[] = [
 function NotificationBell() {
   // New accounts land outside every account group, which means nobody but an
   // admin can see them. Surface that here so it can't go unnoticed.
-  const accountGroups = useAccountGroups()
-  const unassigned = unassignedAccounts(accountGroups)
+  const userGroups = useUserGroups()
+  const unassigned = accountsOutsideEveryGroup(userGroups)
   const count = DOWNTIME_NOTIFICATIONS.length + (unassigned.length > 0 ? 1 : 0)
   return (
     <Popover>
@@ -83,7 +83,7 @@ function NotificationBell() {
         <div className="divide-y">
           {unassigned.length > 0 && (
             <Link
-              to="/account-groups"
+              to="/user-management"
               className="flex gap-3 px-4 py-3 hover:bg-muted/50"
             >
               <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md bg-red-100 text-red-700">
@@ -92,14 +92,14 @@ function NotificationBell() {
               <div className="min-w-0 space-y-0.5">
                 <div className="text-sm font-medium leading-snug">
                   {unassigned.length} account
-                  {unassigned.length === 1 ? '' : 's'} not in any account group
+                  {unassigned.length === 1 ? '' : 's'} outside every group
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  Unassigned accounts are invisible to every non-admin user.
-                  Assign them to an account group.
+                  An account inside no group's scope is invisible to everyone.
+                  Put it in a group's scope.
                 </div>
                 <div className="text-[0.7rem] font-medium text-foreground/70">
-                  Review in Account Groups →
+                  Review in User Management →
                 </div>
               </div>
             </Link>

@@ -25,24 +25,24 @@ and act as filter dimensions; the backend connection profile (what used to be
 Access is granted by explicit admin configuration rather than tree position:
 
 ```
-Accounts ──> Account Group ──(mapping)──> User Group ──> User
+Permission ─> Permission Set ─> Role ─> Group ─> User
+                                         + account scope
 ```
 
-A user group decides which accounts its members can *see*; role and permissions
-decide what they can *do*. Accounts and users can each belong to several groups.
-Accounts in no account group are invisible to non-admins, so the unassigned
-state is surfaced in a banner, a tab, and the notification bell.
+Permissions and permission sets are managed by Acme. A role narrows the sets for
+one organization's way of working, so roles are the customizable layer. A group
+defines account access, grants roles and holds users. A user can be in several
+groups, and holds no permission of their own. An account inside no group's scope
+is invisible to everyone, so that state is surfaced in a banner and the
+notification bell.
 
 ## Routes
 
-- `/login` — UI-only sign-in (any submit navigates to `/dashboard`)
-- `/dashboard` — KPIs + balances across the flat account list, filterable by legal entity, bank, currency
+- `/login` — UI-only sign-in (any submit navigates to `/transactions`, the MVP landing page)
 - `/transactions` — wildcard search, three timestamp columns (booking / posting / value date), filter chips including legal entity
 - `/payments` — tabs: Refunds (new-refund dialog with bene details + maker-checker), Withdrawals (retrigger dialog with audit log), All payments
 - `/internal-accounts` — flat account list with bank / legal entity / country / currency / account-group columns and filters
-- `/account-groups` — admin: create account groups (hand-picked or driven by legal-entity tag), edit membership, see mapped user groups and unassigned accounts
-- `/user-groups` — admin: create user groups, map them to account groups or legal-entity tags, manage members, preview effective access
-- `/users` — team members with their user groups, effective account access, and approval limits
+- `/user-management` — admin: Groups, Roles, Permission Sets and Users tabs. A group defines account access and grants roles
 - `/api-keys` — API keys table
 - `/webhooks` — webhooks table
 

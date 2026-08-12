@@ -1,5 +1,4 @@
 import {
-  HomeIcon,
   KeyRoundIcon,
   LandmarkIcon,
   WebhookIcon,
@@ -9,7 +8,6 @@ import {
   ChevronsUpDownIcon,
   LogOutIcon,
   CheckIcon,
-  LayersIcon,
   UsersRoundIcon,
 } from 'lucide-react'
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
@@ -46,11 +44,9 @@ import {
 
 type NavItem = {
   title: string
-  icon: typeof HomeIcon
+  icon: typeof LandmarkIcon
   to: string
 }
-
-const HOME: NavItem = { title: 'Home', icon: HomeIcon, to: '/dashboard' }
 
 const OPERATIONS: ReadonlyArray<NavItem> = [
   { title: 'Transactions', icon: ArrowLeftRightIcon, to: '/transactions' },
@@ -59,7 +55,6 @@ const OPERATIONS: ReadonlyArray<NavItem> = [
 
 const ADMIN: ReadonlyArray<NavItem> = [
   { title: 'Internal Accounts', icon: LandmarkIcon, to: '/internal-accounts' },
-  { title: 'Account Groups', icon: LayersIcon, to: '/account-groups' },
   { title: 'User Management', icon: UsersRoundIcon, to: '/user-management' },
   { title: 'API Keys', icon: KeyRoundIcon, to: '/api-keys' },
   { title: 'Webhooks', icon: WebhookIcon, to: '/webhooks' },
@@ -75,7 +70,7 @@ function NavLink({
 }) {
   const isActive =
     pathname === item.to ||
-    (item.to !== '/dashboard' && pathname.startsWith(item.to))
+    pathname.startsWith(item.to)
   return (
     <SidebarMenuItem>
       <SidebarMenuButton
@@ -180,9 +175,9 @@ export function AppSidebar() {
                   View all accounts
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() => navigate({ to: '/account-groups' })}
+                  onClick={() => navigate({ to: '/user-management' })}
                 >
-                  Manage account groups
+                  Manage groups and access
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -191,14 +186,6 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <NavLink item={HOME} pathname={pathname} />
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
         <SidebarGroup>
           <SidebarGroupLabel>Operations</SidebarGroupLabel>
           <SidebarGroupContent>

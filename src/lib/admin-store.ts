@@ -1,9 +1,7 @@
 import * as React from 'react'
 import {
   ROLES,
-  accountGroupsSeed,
   userGroupsSeed,
-  type AccountGroup,
   type Role,
   type UserGroup,
 } from '@/data/fixtures'
@@ -14,9 +12,7 @@ import {
 
 const ROLES_KEY = 'portal-mockup:roles'
 const ROLES_EVENT = 'portal-mockup:roles-updated'
-const ACCOUNT_GROUPS_KEY = 'portal-mockup:accountGroups'
 const USER_GROUPS_KEY = 'portal-mockup:userGroups'
-const ACCOUNT_GROUPS_EVENT = 'portal-mockup:account-groups-updated'
 const USER_GROUPS_EVENT = 'portal-mockup:user-groups-updated'
 
 function read<T>(key: string, seed: T[]): T[] {
@@ -51,46 +47,6 @@ function useStore<T>(key: string, event: string, seed: T[]): T[] {
   }, [key, event, seed])
 
   return items
-}
-
-// ---------------------------------------------------------------------------
-// Account groups
-// ---------------------------------------------------------------------------
-
-export function readAccountGroups(): AccountGroup[] {
-  return read(ACCOUNT_GROUPS_KEY, accountGroupsSeed)
-}
-
-export function useAccountGroups(): AccountGroup[] {
-  return useStore(ACCOUNT_GROUPS_KEY, ACCOUNT_GROUPS_EVENT, accountGroupsSeed)
-}
-
-export function addAccountGroup(group: AccountGroup): void {
-  write(ACCOUNT_GROUPS_KEY, ACCOUNT_GROUPS_EVENT, [
-    ...readAccountGroups(),
-    group,
-  ])
-}
-
-export function updateAccountGroup(
-  id: string,
-  patch: Partial<AccountGroup>,
-): void {
-  write(
-    ACCOUNT_GROUPS_KEY,
-    ACCOUNT_GROUPS_EVENT,
-    readAccountGroups().map((g) =>
-      g.id === id ? { ...g, ...patch, updatedAt: nowIso() } : g,
-    ),
-  )
-}
-
-export function deleteAccountGroup(id: string): void {
-  write(
-    ACCOUNT_GROUPS_KEY,
-    ACCOUNT_GROUPS_EVENT,
-    readAccountGroups().filter((g) => g.id !== id),
-  )
 }
 
 // ---------------------------------------------------------------------------

@@ -1,5 +1,4 @@
 import * as React from 'react'
-import { Link } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import {
   ChevronDownIcon,
@@ -49,8 +48,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   LEGAL_ENTITIES,
   PERMISSION_SETS,
+  ACCOUNTS,
   accountsForUserGroup,
-  accountsInAccountGroup,
   formatMoney,
   getPermissionSet,
   getPortalUser,
@@ -66,7 +65,6 @@ import {
   type UserGroupScope,
 } from '@/data/fixtures'
 import { formatWhen } from '@/lib/format'
-import { RulePill } from '@/components/account-group-config'
 import {
   addRole,
   addUserGroup,
@@ -74,7 +72,6 @@ import {
   deleteUserGroup,
   nowIso,
   updateUserGroup,
-  useAccountGroups,
   useRoles,
   useUserGroups,
 } from '@/lib/admin-store'
@@ -180,39 +177,35 @@ function RolePicker({
 function ScopeEditor({
   scope,
   setScope,
-  accountGroupIds,
-  toggleAccountGroup,
   legalEntityCodes,
   toggleLegalEntity,
+  accountIds,
+  toggleAccount,
 }: {
   scope: UserGroupScope
   setScope: (s: UserGroupScope) => void
-  accountGroupIds: Set<string>
-  toggleAccountGroup: (id: string, checked: boolean) => void
   legalEntityCodes: Set<string>
   toggleLegalEntity: (code: string, checked: boolean) => void
+  accountIds: Set<string>
+  toggleAccount: (id: string, checked: boolean) => void
 }) {
-  const accountGroups = useAccountGroups()
-
   return (
     <div className="space-y-3">
-      <Label>Account scope</Label>
+      <Label>Account access</Label>
       <p className="text-xs text-muted-foreground">
-        Every grant is scoped. The roles above apply only to the accounts
-        selected here.
+        Account access is defined by the group. The roles above apply only to
+        the accounts in scope here.
       </p>
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid gap-2 sm:grid-cols-3">
         <button
           type="button"
-          onClick={() => setScope('ACCOUNT_GROUP')}
+          onClick={() => setScope('ALL')}
           className={`rounded-md border px-3 py-2 text-left text-sm ${
-            scope === 'ACCOUNT_GROUP'
-              ? 'border-primary bg-muted'
-              : 'hover:bg-muted/50'
+            scope === 'ALL' ? 'border-primary bg-muted' : 'hover:bg-muted/50'
           }`}
         >
           <div className="flex items-center gap-1.5 font-medium">
-            <LayersIcon className="size-3.5" /> Account groups
+            <LayersIcon className="size-3.5" /> All accounts
           </div>
         </button>
         <button
@@ -225,45 +218,23 @@ function ScopeEditor({
           }`}
         >
           <div className="flex items-center gap-1.5 font-medium">
-            <TagIcon className="size-3.5" /> Legal entity tags
+            <TagIcon className="size-3.5" /> By legal entity
+          </div>
+        </button>
+        <button
+          type="button"
+          onClick={() => setScope('ACCOUNT')}
+          className={`rounded-md border px-3 py-2 text-left text-sm ${
+            scope === 'ACCOUNT' ? 'border-primary bg-muted' : 'hover:bg-muted/50'
+          }`}
+        >
+          <div className="flex items-center gap-1.5 font-medium">
+            <LayersIcon className="size-3.5" /> Pick accounts
           </div>
         </button>
       </div>
 
-      {scope === 'ACCOUNT_GROUP' ? (
-        <div className="max-h-52 overflow-y-auto rounded-md border">
-          {accountGroups.length === 0 && (
-            <div className="px-3 py-6 text-center text-sm text-muted-foreground">
-              No account groups yet.{' '}
-              <Link
-                to="/account-groups"
-                className="font-medium underline underline-offset-4"
-              >
-                Create one first
-              </Link>
-              .
-            </div>
-          )}
-          {accountGroups.map((ag) => (
-            <label
-              key={ag.id}
-              className="flex cursor-pointer items-center gap-3 border-b px-3 py-2 last:border-b-0 hover:bg-muted/50"
-            >
-              <Checkbox
-                checked={accountGroupIds.has(ag.id)}
-                onCheckedChange={(c) => toggleAccountGroup(ag.id, c === true)}
-              />
-              <div className="min-w-0 flex-1 truncate text-sm font-medium">
-                {ag.name}
-              </div>
-              <Pill>
-                {accountsInAccountGroup(ag).length} account
-                {accountsInAccountGroup(ag).length === 1 ? '' : 's'}
-              </Pill>
-            </label>
-          ))}
-        </div>
-      ) : (
+      {scope === 'LEGAL_ENTITY' && (
         <div className="rounded-md border">
           {LEGAL_ENTITIES.map((e) => (
             <label
@@ -277,12 +248,43 @@ function ScopeEditor({
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-medium">{e.name}</div>
                 <div className="truncate text-[0.65rem] text-muted-foreground">
-                  {e.code} · {e.countryName}
+                  {e.code} · {e.countryName} ·{' '}
+                  {ACCOUNTS.filter((a) => a.legalEntity === e.code).length}{' '}
+                  accounts
                 </div>
               </div>
             </label>
           ))}
         </div>
+      )}
+
+      {scope === 'ACCOUNT' && (
+        <div className="max-h-56 overflow-y-auto rounded-md border">
+          {ACCOUNTS.map((a) => (
+            <label
+              key={a.id}
+              className="flex cursor-pointer items-center gap-3 border-b px-3 py-2 last:border-b-0 hover:bg-muted/50"
+            >
+              <Checkbox
+                checked={accountIds.has(a.id)}
+                onCheckedChange={(c) => toggleAccount(a.id, c === true)}
+              />
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-medium">{a.name}</div>
+                <div className="truncate font-mono text-[0.65rem] text-muted-foreground">
+                  {a.number} · {a.bank}
+                </div>
+              </div>
+              <Pill tone="entity">{a.legalEntity}</Pill>
+            </label>
+          ))}
+        </div>
+      )}
+
+      {scope === 'ALL' && (
+        <p className="rounded-md border border-dashed bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+          Every account in the client group, including accounts onboarded later.
+        </p>
       )}
     </div>
   )
@@ -342,12 +344,11 @@ function CreateGroupDialog({
   onOpenChange: (o: boolean) => void
 }) {
   const roles = useRoles()
-  const accountGroups = useAccountGroups()
   const [name, setName] = React.useState('')
   const [description, setDescription] = React.useState('')
   const [roleIds, setRoleIds] = React.useState<Set<string>>(new Set())
-  const [scope, setScope] = React.useState<UserGroupScope>('ACCOUNT_GROUP')
-  const [agIds, setAgIds] = React.useState<Set<string>>(new Set())
+  const [scope, setScope] = React.useState<UserGroupScope>('LEGAL_ENTITY')
+  const [acctIds, setAcctIds] = React.useState<Set<string>>(new Set())
   const [leCodes, setLeCodes] = React.useState<Set<string>>(new Set())
   const [memberIds, setMemberIds] = React.useState<Set<string>>(new Set())
 
@@ -355,8 +356,8 @@ function CreateGroupDialog({
     setName('')
     setDescription('')
     setRoleIds(new Set())
-    setScope('ACCOUNT_GROUP')
-    setAgIds(new Set())
+    setScope('LEGAL_ENTITY')
+    setAcctIds(new Set())
     setLeCodes(new Set())
     setMemberIds(new Set())
   }
@@ -367,15 +368,17 @@ function CreateGroupDialog({
     description,
     roleIds: [...roleIds],
     scope,
-    accountGroupIds: [...agIds],
     legalEntityCodes: [...leCodes],
+    accountIds: [...acctIds],
     memberIds: [...memberIds],
     createdBy: '',
     createdAt: '',
     updatedAt: '',
   }
-  const preview = accountsForUserGroup(draft, accountGroups)
-  const hasScope = scope === 'ACCOUNT_GROUP' ? agIds.size > 0 : leCodes.size > 0
+  const preview = accountsForUserGroup(draft)
+  const hasScope =
+    scope === 'ALL' ||
+    (scope === 'LEGAL_ENTITY' ? leCodes.size > 0 : acctIds.size > 0)
   const canSubmit = name.trim().length > 0 && roleIds.size > 0 && hasScope
 
   const submit = () => {
@@ -449,21 +452,21 @@ function CreateGroupDialog({
           <ScopeEditor
             scope={scope}
             setScope={setScope}
-            accountGroupIds={agIds}
-            toggleAccountGroup={(id, checked) =>
-              setAgIds((prev) => {
-                const next = new Set(prev)
-                if (checked) next.add(id)
-                else next.delete(id)
-                return next
-              })
-            }
             legalEntityCodes={leCodes}
             toggleLegalEntity={(code, checked) =>
               setLeCodes((prev) => {
                 const next = new Set(prev)
                 if (checked) next.add(code)
                 else next.delete(code)
+                return next
+              })
+            }
+            accountIds={acctIds}
+            toggleAccount={(id, checked) =>
+              setAcctIds((prev) => {
+                const next = new Set(prev)
+                if (checked) next.add(id)
+                else next.delete(id)
                 return next
               })
             }
@@ -673,7 +676,6 @@ function GroupSheet({
   group: UserGroup | null
   onClose: () => void
 }) {
-  const accountGroups = useAccountGroups()
   const allRoles = useRoles()
   const [editing, setEditing] = React.useState(false)
   const [roleIds, setRoleIds] = React.useState<Set<string>>(
@@ -686,7 +688,7 @@ function GroupSheet({
   if (!group) return null
 
   const roles = rolesForUserGroup(group)
-  const visible = accountsForUserGroup(group, accountGroups)
+  const visible = accountsForUserGroup(group)
   const members = group.memberIds
     .map((id) => getPortalUser(id))
     .filter((u): u is NonNullable<typeof u> => !!u)
@@ -856,61 +858,30 @@ function GroupSheet({
 
               <TabsContent value="access" className="mt-4 space-y-3">
                 <div className="text-[0.7rem] font-semibold uppercase tracking-wider text-foreground/70">
-                  {group.scope === 'ACCOUNT_GROUP'
-                    ? 'Account groups in scope'
-                    : 'Legal entity tags in scope'}
+                  Scope
                 </div>
-                <div className="overflow-x-auto rounded-lg border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-[0.7rem] uppercase tracking-wider">
-                          {group.scope === 'ACCOUNT_GROUP'
-                            ? 'Account group'
-                            : 'Legal entity'}
-                        </TableHead>
-                        <TableHead className="text-[0.7rem] uppercase tracking-wider">
-                          Membership
-                        </TableHead>
-                        <TableHead className="text-[0.7rem] uppercase tracking-wider">
-                          Accounts
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {group.scope === 'ACCOUNT_GROUP'
-                        ? group.accountGroupIds.map((id) => {
-                            const ag = accountGroups.find((g) => g.id === id)
-                            return (
-                              <TableRow key={id}>
-                                <TableCell className="text-sm font-medium">
-                                  {ag?.name ?? id}
-                                </TableCell>
-                                <TableCell>
-                                  {ag ? <RulePill rule={ag.rule} /> : '—'}
-                                </TableCell>
-                                <TableCell className="text-sm tabular-nums">
-                                  {ag ? accountsInAccountGroup(ag).length : 0}
-                                </TableCell>
-                              </TableRow>
-                            )
-                          })
-                        : group.legalEntityCodes.map((c) => (
-                            <TableRow key={c}>
-                              <TableCell className="text-sm font-medium">
-                                <Pill tone="entity">{c}</Pill>{' '}
-                                {legalEntityName(c)}
-                              </TableCell>
-                              <TableCell className="text-xs text-muted-foreground">
-                                Every account carrying the tag
-                              </TableCell>
-                              <TableCell className="text-sm tabular-nums">
-                                {visible.filter((a) => a.legalEntity === c).length}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                    </TableBody>
-                  </Table>
+                <div className="rounded-lg border px-3 py-2 text-sm">
+                  {group.scope === 'ALL' ? (
+                    <span>
+                      <Pill tone="scope">All accounts</Pill> Every account in the
+                      client group, including accounts onboarded later.
+                    </span>
+                  ) : group.scope === 'LEGAL_ENTITY' ? (
+                    <span className="flex flex-wrap items-center gap-1">
+                      <Pill tone="scope">By legal entity</Pill>
+                      {group.legalEntityCodes.map((c) => (
+                        <Pill key={c} tone="entity">
+                          {c} · {legalEntityName(c)}
+                        </Pill>
+                      ))}
+                    </span>
+                  ) : (
+                    <span className="flex flex-wrap items-center gap-1">
+                      <Pill tone="scope">Picked accounts</Pill>
+                      {group.accountIds.length} account
+                      {group.accountIds.length === 1 ? '' : 's'}
+                    </span>
+                  )}
                 </div>
 
                 <div className="text-[0.7rem] font-semibold uppercase tracking-wider text-foreground/70">
@@ -1146,7 +1117,6 @@ function RoleSheet({
 export function UserManagementPage() {
   const groups = useUserGroups()
   const roles = useRoles()
-  const accountGroups = useAccountGroups()
   const [openGroup, setOpenGroup] = React.useState<UserGroup | null>(null)
   const [openRole, setOpenRole] = React.useState<Role | null>(null)
   const [createGroup, setCreateGroup] = React.useState(false)
@@ -1278,7 +1248,7 @@ export function UserManagementPage() {
                       const gSets = PERMISSION_SETS.filter((ps) =>
                         gRoles.some((r) => r.permissionSetIds.includes(ps.id)),
                       )
-                      const visible = accountsForUserGroup(g, accountGroups)
+                      const visible = accountsForUserGroup(g)
                       return (
                         <TableRow
                           key={g.id}
@@ -1313,18 +1283,19 @@ export function UserManagementPage() {
                           </TableCell>
                           <TableCell>
                             <div className="flex flex-wrap gap-1">
-                              {g.scope === 'ACCOUNT_GROUP'
-                                ? g.accountGroupIds.map((id) => (
-                                    <Pill key={id} tone="scope">
-                                      {accountGroups.find((x) => x.id === id)
-                                        ?.name ?? id}
-                                    </Pill>
-                                  ))
-                                : g.legalEntityCodes.map((c) => (
-                                    <Pill key={c} tone="entity">
-                                      {c}
-                                    </Pill>
-                                  ))}
+                              {g.scope === 'ALL' ? (
+                                <Pill tone="scope">All accounts</Pill>
+                              ) : g.scope === 'LEGAL_ENTITY' ? (
+                                g.legalEntityCodes.map((c) => (
+                                  <Pill key={c} tone="entity">
+                                    {c}
+                                  </Pill>
+                                ))
+                              ) : (
+                                <Pill tone="scope">
+                                  {g.accountIds.length} picked
+                                </Pill>
+                              )}
                             </div>
                           </TableCell>
                           <TableCell className="tabular-nums">

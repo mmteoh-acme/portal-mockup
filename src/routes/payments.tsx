@@ -704,11 +704,11 @@ function PaymentsMain() {
                     retry?.status === 'Pending approval'
                   const canReviewRefund =
                     isPendingRefund &&
-                    can('payment.approve_reject') &&
+                    can('Payment Approvals') &&
                     refund?.requester !== user.name
                   const canReviewRetry =
                     isPendingRetry &&
-                    can('payment.approve_reject') &&
+                    can('Payment Approvals') &&
                     retry?.requester !== user.name
                   const canReview = canReviewRefund || canReviewRetry
                   const statusPill = refund ? (
@@ -921,7 +921,7 @@ function PaymentsMain() {
               approve their own submissions.
             </p>
           </div>
-          {!can('payment.approve_reject') && (
+          {!can('Payment Approvals') && (
             <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2.5 text-xs text-amber-800">
               <AlertCircleIcon className="mt-0.5 size-4 shrink-0" />
               <span>
@@ -966,7 +966,7 @@ function PaymentsMain() {
                 <TableBody>
                   {pendingReview.map((r) => {
                     const canAct =
-                      can('payment.approve_reject') && r.requester !== user.name
+                      can('Payment Approvals') && r.requester !== user.name
                     const approve = () => {
                       if (r.store === 'retry') {
                         approveRetry(r.id, { name: user.name, actingAs: roles[0]?.name ?? 'No role' })
@@ -1911,7 +1911,7 @@ function NewRefundFromTxn({ txn }: { txn: Txn | null }) {
         </p>
       </div>
 
-      {can('payment.approve_reject') && (
+      {can('Payment Approvals') && (
         <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2.5 text-xs text-amber-800">
           <AlertCircleIcon className="mt-0.5 size-4 shrink-0" />
           <span>
@@ -2386,7 +2386,7 @@ function NewPaymentPage() {
         </p>
       </div>
 
-      {can('payment.approve_reject') && (
+      {can('Payment Approvals') && (
         <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2.5 text-xs text-amber-800">
           <AlertCircleIcon className="mt-0.5 size-4 shrink-0" />
           <span>
@@ -3155,7 +3155,7 @@ function NewRetryFromPayment({ payment }: { payment: Payment | null }) {
         </p>
       </div>
 
-      {can('payment.approve_reject') && (
+      {can('Payment Approvals') && (
         <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2.5 text-xs text-amber-800">
           <AlertCircleIcon className="mt-0.5 size-4 shrink-0" />
           <span>

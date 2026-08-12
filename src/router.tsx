@@ -7,13 +7,11 @@ import {
 } from '@tanstack/react-router'
 import { AppShell } from '@/components/app-shell'
 import { LoginPage } from '@/routes/login'
-import { DashboardPage } from '@/routes/dashboard'
 import { TransactionsPage } from '@/routes/transactions'
 import { PaymentsPage } from '@/routes/payments'
 import { InternalAccountsPage } from '@/routes/internal-accounts'
 import { ApiKeysPage } from '@/routes/api-keys'
 import { WebhooksPage } from '@/routes/webhooks'
-import { AccountGroupsPage } from '@/routes/account-groups'
 import { UserManagementPage } from '@/routes/user-management'
 import { ActivityPage } from '@/routes/activity'
 
@@ -39,12 +37,6 @@ const appLayoutRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: 'app',
   component: AppShell,
-})
-
-const dashboardRoute = createRoute({
-  getParentRoute: () => appLayoutRoute,
-  path: '/dashboard',
-  component: DashboardPage,
 })
 
 const transactionsRoute = createRoute({
@@ -84,12 +76,6 @@ const webhooksRoute = createRoute({
   component: WebhooksPage,
 })
 
-const accountGroupsRoute = createRoute({
-  getParentRoute: () => appLayoutRoute,
-  path: '/account-groups',
-  component: AccountGroupsPage,
-})
-
 const userManagementRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: '/user-management',
@@ -106,13 +92,11 @@ const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
   appLayoutRoute.addChildren([
-    dashboardRoute,
     transactionsRoute,
     paymentsRoute,
     internalAccountsRoute,
     apiKeysRoute,
     webhooksRoute,
-    accountGroupsRoute,
     userManagementRoute,
     activityRoute,
   ]),

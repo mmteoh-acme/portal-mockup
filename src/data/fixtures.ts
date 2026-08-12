@@ -1,7 +1,6 @@
 export const currentUser = {
   name: 'Ming Miin',
-  email: 'ming@tryacme.com',
-  permissionSet: 'administrator',
+  email: 'ming@ripple.com',
 }
 
 // ---------------------------------------------------------------------------
@@ -33,20 +32,10 @@ export type LegalEntity = {
 }
 
 export const LEGAL_ENTITIES: LegalEntity[] = [
-  { code: 'ALSG', name: 'Acme Labs', country: 'SG', countryName: 'Singapore' },
-  {
-    code: 'AMID',
-    name: 'Acme Markets Indonesia',
-    country: 'ID',
-    countryName: 'Indonesia',
-  },
-  {
-    code: 'AMVN',
-    name: 'Acme Markets Vietnam',
-    country: 'VN',
-    countryName: 'Vietnam',
-  },
-  { code: 'AMEA', name: 'Acme Middle East', country: 'AE', countryName: 'UAE' },
+  { code: 'RMA', name: 'Ripple Markets APAC', country: 'SG', countryName: 'Singapore' },
+  { code: 'RLKY', name: 'Ripple Labs Cayman', country: 'KY', countryName: 'Cayman Islands' },
+  { code: 'RMDE', name: 'Ripple Markets Delaware', country: 'US', countryName: 'United States' },
+  { code: 'RMEA', name: 'Ripple Markets Middle East', country: 'AE', countryName: 'UAE' },
 ]
 
 // A connection is the backend connection profile serving an account — what
@@ -102,7 +91,7 @@ export const ACCOUNTS: Account[] = [
     iban: '',
     createdAt: '2025-03-12T09:24:00',
     bank: 'DBS Singapore',
-    legalEntity: 'ALSG',
+    legalEntity: 'RMA',
     country: 'SG',
     connectionId: 'conn_dbs_sg_01',
   },
@@ -119,7 +108,7 @@ export const ACCOUNTS: Account[] = [
     iban: '',
     createdAt: '2025-04-18T14:11:00',
     bank: 'DBS Singapore',
-    legalEntity: 'ALSG',
+    legalEntity: 'RMA',
     country: 'SG',
     connectionId: 'conn_dbs_sg_01',
   },
@@ -136,7 +125,7 @@ export const ACCOUNTS: Account[] = [
     iban: '',
     createdAt: '2025-08-15T10:00:00',
     bank: 'DBS Singapore',
-    legalEntity: 'ALSG',
+    legalEntity: 'RMA',
     country: 'SG',
     connectionId: 'conn_dbs_sg_01',
   },
@@ -153,7 +142,7 @@ export const ACCOUNTS: Account[] = [
     iban: '',
     createdAt: '2025-06-02T08:43:00',
     bank: 'CIMB Singapore',
-    legalEntity: 'ALSG',
+    legalEntity: 'RMA',
     country: 'SG',
     // Same CIMB connection serves two legal entities — see intacc_0KERZSJHKXM2P.
     connectionId: 'conn_cimb_sg_01',
@@ -171,7 +160,7 @@ export const ACCOUNTS: Account[] = [
     iban: '',
     createdAt: '2025-10-07T11:26:00',
     bank: 'CIMB Singapore',
-    legalEntity: 'AMID',
+    legalEntity: 'RLKY',
     country: 'SG',
     connectionId: 'conn_cimb_sg_01',
   },
@@ -188,7 +177,7 @@ export const ACCOUNTS: Account[] = [
     iban: '',
     createdAt: '2025-07-29T16:55:00',
     bank: 'DBS Singapore',
-    legalEntity: 'AMID',
+    legalEntity: 'RLKY',
     country: 'SG',
     connectionId: 'conn_dbs_sg_02',
   },
@@ -205,7 +194,7 @@ export const ACCOUNTS: Account[] = [
     iban: '',
     createdAt: '2025-09-08T11:02:00',
     bank: 'DBS Singapore',
-    legalEntity: 'AMID',
+    legalEntity: 'RLKY',
     country: 'SG',
     connectionId: 'conn_dbs_sg_02',
   },
@@ -222,7 +211,7 @@ export const ACCOUNTS: Account[] = [
     iban: '',
     createdAt: '2025-11-20T13:48:00',
     bank: 'DBS Singapore',
-    legalEntity: 'AMID',
+    legalEntity: 'RLKY',
     country: 'SG',
     connectionId: 'conn_dbs_sg_02',
   },
@@ -239,7 +228,7 @@ export const ACCOUNTS: Account[] = [
     iban: '',
     createdAt: '2026-01-14T10:30:00',
     bank: 'DBS Singapore',
-    legalEntity: 'AMID',
+    legalEntity: 'RLKY',
     country: 'SG',
     connectionId: 'conn_dbs_sg_02',
   },
@@ -256,7 +245,7 @@ export const ACCOUNTS: Account[] = [
     iban: '',
     createdAt: '2026-02-26T15:17:00',
     bank: 'DBS Singapore',
-    legalEntity: 'AMID',
+    legalEntity: 'RLKY',
     country: 'SG',
     connectionId: 'conn_dbs_sg_02',
   },
@@ -273,7 +262,7 @@ export const ACCOUNTS: Account[] = [
     iban: '',
     createdAt: '2026-04-09T09:08:00',
     bank: 'DBS Singapore',
-    legalEntity: 'AMID',
+    legalEntity: 'RLKY',
     country: 'SG',
     connectionId: 'conn_dbs_sg_02',
   },
@@ -292,7 +281,7 @@ export const ACCOUNTS: Account[] = [
     iban: '',
     createdAt: '2026-05-28T10:12:00',
     bank: 'SCB Vietnam',
-    legalEntity: 'AMVN',
+    legalEntity: 'RMDE',
     country: 'VN',
     connectionId: 'conn_scb_vn_01',
   },
@@ -309,7 +298,7 @@ export const ACCOUNTS: Account[] = [
     iban: 'AE070331234567890123456',
     createdAt: '2026-05-30T09:41:00',
     bank: 'Zand UAE',
-    legalEntity: 'AMEA',
+    legalEntity: 'RMEA',
     country: 'AE',
     connectionId: 'conn_zand_ae_01',
   },
@@ -365,36 +354,30 @@ export function accountLabel(a: Account): string {
 // permission sets. The client composes roles from sets, then grants roles to a
 // group and scopes that group to account groups (ACME-2178).
 
-export type PermissionGroup = 'Read' | 'Export' | 'Payment' | 'Admin'
+// Permission -> Permission Set -> Role -> Group -> User.
+//
+// Acme owns the permissions and the permission sets. The client composes roles
+// from the sets, because each organization narrows them differently, and grants
+// roles to a group. Account access is defined by the group (ACME-2178).
 
 export type Permission = {
   key: string
-  group: PermissionGroup
   allows: string
 }
 
 export const PERMISSION_CATALOGUE: Permission[] = [
-  { key: 'transaction.read', group: 'Read', allows: 'View transactions' },
-  { key: 'balance.read', group: 'Read', allows: 'View balances, including refresh' },
-  { key: 'statement.read', group: 'Read', allows: 'View and retrieve statement documents' },
-  { key: 'payment.read', group: 'Read', allows: 'View payments and their status' },
-  { key: 'events.read', group: 'Read', allows: 'View the event / audit log' },
-  { key: 'data.export', group: 'Export', allows: 'Export transactions, statements, reports' },
-  { key: 'events.export', group: 'Export', allows: 'Export the event / audit log' },
-  { key: 'payment.create_edit', group: 'Payment', allows: 'Create and edit a payment' },
-  { key: 'payment.approve_reject', group: 'Payment', allows: 'Approve or reject a payment' },
-  { key: 'account_group.manage', group: 'Admin', allows: 'Define account groups' },
-  { key: 'user_group.manage', group: 'Admin', allows: 'Define groups, roles and their mapping' },
-  { key: 'approval_policy.manage', group: 'Admin', allows: 'Configure the maker-checker matrix' },
-  { key: 'user.invite_assign', group: 'Admin', allows: 'Invite a user and assign a role' },
+  { key: 'All', allows: 'Every permission in the catalogue' },
+  { key: 'Transactions', allows: 'View transactions and balances' },
+  { key: 'Payment Orders', allows: 'Create and submit payment orders' },
+  { key: 'Payment Orders Edit', allows: 'Edit a payment order raised by someone else' },
+  { key: 'Payment Approvals', allows: 'Approve or reject a payment order' },
 ]
 
 export function permission(key: string): Permission | undefined {
   return PERMISSION_CATALOGUE.find((p) => p.key === key)
 }
 
-// A permission set is an Acme-managed bundle. Clients don't compose their own
-// in MVP, which is why every set below is marked managed.
+// Permission sets are managed by Acme. Clients do not author their own.
 export type PermissionSet = {
   id: string
   name: string
@@ -403,50 +386,52 @@ export type PermissionSet = {
   permissions: string[]
 }
 
-const READ_KEYS = PERMISSION_CATALOGUE.filter((p) => p.group === 'Read').map(
-  (p) => p.key,
-)
-
 export const PERMISSION_SETS: PermissionSet[] = [
   {
-    id: 'ps_read_only',
-    name: 'Read Only',
+    id: 'ps_administrator',
+    name: 'Administrator',
     description: 'This is a managed permission set created by Acme',
     managed: true,
-    permissions: READ_KEYS,
+    permissions: ['All'],
   },
   {
-    id: 'ps_data_export',
-    name: 'Data Export',
+    id: 'ps_recon_operations',
+    name: 'Recon Operations',
     description: 'This is a managed permission set created by Acme',
     managed: true,
-    permissions: ['data.export', 'events.export'],
+    permissions: ['Transactions'],
   },
   {
     id: 'ps_payments',
     name: 'Payments',
     description: 'This is a managed permission set created by Acme',
     managed: true,
-    permissions: ['payment.read', 'payment.create_edit'],
+    permissions: ['Transactions', 'Payment Orders'],
   },
   {
-    id: 'ps_payment_approval',
-    name: 'Payment Approval',
+    id: 'ps_finance',
+    name: 'Finance',
     description: 'This is a managed permission set created by Acme',
     managed: true,
-    permissions: ['payment.read', 'payment.approve_reject'],
+    permissions: ['Transactions', 'Payment Approvals'],
   },
   {
-    id: 'ps_administration',
-    name: 'Administration',
+    id: 'ps_reviewer',
+    name: 'Reviewer',
     description: 'This is a managed permission set created by Acme',
     managed: true,
-    permissions: [
-      'account_group.manage',
-      'user_group.manage',
-      'approval_policy.manage',
-      'user.invite_assign',
-    ],
+    permissions: ['Payment Orders Edit'],
+  },
+  {
+    id: 'ps_engineer',
+    name: 'Engineer',
+    description:
+      'This is a managed permission set created by Acme. Permissions not yet specified.',
+    managed: true,
+    // Referenced by the Engineering role but never enumerated. Left empty on
+    // purpose rather than guessed — see the open question in
+    // organization-background.md.
+    permissions: [],
   },
 ]
 
@@ -454,10 +439,8 @@ export function getPermissionSet(id: string): PermissionSet | undefined {
   return PERMISSION_SETS.find((s) => s.id === id)
 }
 
-// A role composes permission sets. These are the client's teams — the six
-// personas in organization-background.md — plus the two payment capabilities
-// kept as separate roles, because one person can be a maker in one group and a
-// checker in another.
+// A role narrows the permission sets for one organization's way of working, so
+// roles are the customizable layer.
 export type Role = {
   id: string
   name: string
@@ -469,50 +452,38 @@ export const ROLES: Role[] = [
   {
     id: 'role_administrator',
     name: 'Administrator',
-    description: 'Configures groups, roles and account groups. Cannot approve payments.',
-    permissionSetIds: ['ps_administration', 'ps_read_only', 'ps_data_export'],
+    description: 'Full administration of groups, roles and users.',
+    permissionSetIds: ['ps_administrator'],
   },
   {
-    id: 'role_trading_markets',
-    name: 'Trading & Markets',
-    description: 'Internal FIAT automation and trading pay-ins and payouts. Low volume, high value.',
-    permissionSetIds: ['ps_payments', 'ps_read_only', 'ps_data_export'],
+    id: 'role_engineering',
+    name: 'Engineering',
+    description: 'Integration and API work.',
+    permissionSetIds: ['ps_engineer'],
   },
   {
-    id: 'role_tm_recon',
-    name: 'Trading & Markets Recon',
-    description: 'Reads transactions, balances and payments for analysis and reconciliation.',
-    permissionSetIds: ['ps_read_only'],
+    id: 'role_operations',
+    name: 'Operations',
+    description: 'Raises payment orders and monitors transactions.',
+    permissionSetIds: ['ps_payments'],
   },
   {
-    id: 'role_payment_ops',
-    name: 'Payment Ops',
-    description: 'Raises payments and reconciles payment status across an entity.',
-    permissionSetIds: ['ps_payments', 'ps_read_only', 'ps_data_export'],
+    id: 'role_reconciliation',
+    name: 'Reconciliation',
+    description: 'Reads transactions for analysis and reconciliation.',
+    permissionSetIds: ['ps_recon_operations'],
   },
   {
-    id: 'role_payment_approver',
-    name: 'Payment Approver',
-    description: 'Approves or rejects payments. Assignable per group so a maker elsewhere can check here.',
-    permissionSetIds: ['ps_payment_approval', 'ps_read_only'],
+    id: 'role_customer_support',
+    name: 'Customer Support',
+    description: 'Edits payment orders on behalf of a requester.',
+    permissionSetIds: ['ps_reviewer'],
   },
   {
-    id: 'role_treasury',
-    name: 'Treasury',
-    description: 'Ledger reconciliation at daily close and month end, through the treasury system.',
-    permissionSetIds: ['ps_read_only', 'ps_data_export'],
-  },
-  {
-    id: 'role_fiat_zeus',
-    name: 'FIAT / Zeus',
-    description: 'FIAT function. Makes payments from every account.',
-    permissionSetIds: ['ps_payments', 'ps_read_only', 'ps_data_export'],
-  },
-  {
-    id: 'role_payment_product',
-    name: 'Payment Product',
-    description: 'Product work on core payment features. Needs to cross-check what Acme returns.',
-    permissionSetIds: ['ps_read_only', 'ps_data_export'],
+    id: 'role_finance_treasury',
+    name: 'Finance and Treasury',
+    description: 'Approves payment orders for the entities in scope.',
+    permissionSetIds: ['ps_finance'],
   },
 ]
 
@@ -524,6 +495,7 @@ export function permissionsForRole(role: Role): Permission[] {
   const keys = new Set(
     role.permissionSetIds.flatMap((id) => getPermissionSet(id)?.permissions ?? []),
   )
+  if (keys.has('All')) return PERMISSION_CATALOGUE
   return PERMISSION_CATALOGUE.filter((p) => keys.has(p.key))
 }
 
@@ -540,60 +512,44 @@ export type PortalUser = {
 
 export const portalUsers: PortalUser[] = [
   {
-    id: 'usr_01',
+    id: 'usr_jx',
+    name: 'Jx',
+    email: 'jx@ripple.com',
+    status: 'active',
+    approvalLimit: null,
+    lastActive: '12 Aug, 2026',
+  },
+  {
+    id: 'usr_ming',
     name: 'Ming Miin',
-    email: 'ming@tryacme.com',
+    email: 'ming@ripple.com',
     status: 'active',
     approvalLimit: null,
-    lastActive: '1 Jun, 2026',
+    lastActive: '12 Aug, 2026',
   },
   {
-    id: 'usr_02',
-    name: 'Priya Lim',
-    email: 'priya@tryacme.com',
+    id: 'usr_nigel',
+    name: 'Nigel',
+    email: 'nigel@ripple.com',
     status: 'active',
-    approvalLimit: 'Up to S$2,000,000',
-    lastActive: '1 Jun, 2026',
+    approvalLimit: 'Up to US$2,000,000',
+    lastActive: '11 Aug, 2026',
   },
   {
-    id: 'usr_03',
-    name: 'Alice Wong',
-    email: 'alice@tryacme.com',
-    status: 'active',
-    approvalLimit: null,
-    lastActive: '31 May, 2026',
-  },
-  {
-    id: 'usr_04',
-    name: 'Gary Tan',
-    email: 'gary.tan@tryacme.com',
-    status: 'invited',
-    approvalLimit: null,
-    lastActive: '—',
-  },
-  {
-    id: 'usr_05',
-    name: 'James Audit',
-    email: 'james@auditors.com',
+    id: 'usr_cayter',
+    name: 'Cayter',
+    email: 'cayter@ripple.com',
     status: 'active',
     approvalLimit: null,
-    lastActive: '15 Apr, 2026',
+    lastActive: '11 Aug, 2026',
   },
   {
-    id: 'usr_06',
-    name: 'CS Team',
-    email: 'cs-ops@tryacme.com',
+    id: 'usr_benoit',
+    name: 'Benoit',
+    email: 'benoit@ripple.com',
     status: 'active',
     approvalLimit: null,
-    lastActive: '1 Jun, 2026',
-  },
-  {
-    id: 'usr_07',
-    name: 'Dewi Putri',
-    email: 'dewi@tryacme.com',
-    status: 'active',
-    approvalLimit: null,
-    lastActive: '30 May, 2026',
+    lastActive: '10 Aug, 2026',
   },
 ]
 
@@ -601,86 +557,10 @@ export function getPortalUser(id: string): PortalUser | undefined {
   return portalUsers.find((u) => u.id === id)
 }
 
-// How an account group picks up its members. MANUAL = admin hand-picks
-// accounts. LEGAL_ENTITY = every account tagged with the entity, including
-// ones onboarded later.
-export type AccountGroupRule = 'MANUAL' | 'LEGAL_ENTITY'
-
-export type AccountGroup = {
-  id: string
-  name: string
-  description: string
-  rule: AccountGroupRule
-  // Only set when rule is LEGAL_ENTITY.
-  legalEntityCode: string | null
-  // Only used when rule is MANUAL.
-  accountIds: string[]
-  createdBy: string
-  createdAt: string
-  updatedAt: string
-}
-
-export const accountGroupsSeed: AccountGroup[] = [
-  {
-    id: 'ag_all_sg_ops',
-    name: 'SG Operating',
-    description: 'Singapore-booked operating and settlement accounts.',
-    rule: 'MANUAL',
-    legalEntityCode: null,
-    accountIds: [
-      'intacc_0KT8ZSCRKXP0O',
-      'intacc_0KT8ZSFGUSDOP',
-      'intacc_0KERZSCDKXV0O',
-    ],
-    createdBy: 'Ming Miin',
-    createdAt: '2026-02-14T10:22:00',
-    updatedAt: '2026-05-19T16:04:00',
-  },
-  {
-    id: 'ag_client_money',
-    name: 'Client Money',
-    description:
-      'Segregated client money accounts. Deliberately narrow — treasury only.',
-    rule: 'MANUAL',
-    legalEntityCode: null,
-    accountIds: ['intacc_0KT8ZSDEKXCAN'],
-    createdBy: 'Ming Miin',
-    createdAt: '2026-02-14T10:31:00',
-    updatedAt: '2026-02-14T10:31:00',
-  },
-  {
-    id: 'ag_amid_all',
-    name: 'Acme Markets Indonesia — all',
-    description:
-      'Every account tagged AMID, including accounts onboarded later.',
-    rule: 'LEGAL_ENTITY',
-    legalEntityCode: 'AMID',
-    accountIds: [],
-    createdBy: 'Ming Miin',
-    createdAt: '2026-03-02T09:15:00',
-    updatedAt: '2026-04-28T11:47:00',
-  },
-  {
-    id: 'ag_reserves',
-    name: 'Reserves & receivables',
-    description: 'Read-mostly balances used for reporting and reconciliation.',
-    rule: 'MANUAL',
-    legalEntityCode: null,
-    accountIds: [
-      'intacc_0KT8Z0K6V5SHW',
-      'intacc_0KT8Z24YB5VF7',
-      'intacc_0PKDW88MCZNQ0',
-    ],
-    createdBy: 'Priya Lim',
-    createdAt: '2026-04-11T14:08:00',
-    updatedAt: '2026-05-06T09:52:00',
-  },
-]
-
-// A user group scopes *account visibility* only — it does not assign
-// permissions. What a member may do comes from the permission set granted to
-// them; which accounts they may do it on comes from here (ACME-2178).
-export type UserGroupScope = 'ACCOUNT_GROUP' | 'LEGAL_ENTITY'
+// Account access is defined by the group. The account-group layer is gone: a
+// group scopes straight onto accounts, either every account, the accounts of
+// named legal entities, or a hand-picked list.
+export type UserGroupScope = 'ALL' | 'LEGAL_ENTITY' | 'ACCOUNT'
 
 export type UserGroup = {
   id: string
@@ -690,8 +570,8 @@ export type UserGroup = {
   // role -> permission set -> permission.
   roleIds: string[]
   scope: UserGroupScope
-  accountGroupIds: string[]
   legalEntityCodes: string[]
+  accountIds: string[]
   memberIds: string[]
   createdBy: string
   createdAt: string
@@ -701,170 +581,70 @@ export type UserGroup = {
 export const userGroupsSeed: UserGroup[] = [
   {
     id: 'ug_administrators',
-    roleIds: ['role_administrator'],
     name: 'Administrators',
-    description: 'Full access to every account in the client group.',
-    scope: 'ACCOUNT_GROUP',
-    accountGroupIds: ['ag_all_sg_ops', 'ag_client_money', 'ag_amid_all', 'ag_reserves'],
+    description: 'Full administration across every account in the client group.',
+    roleIds: ['role_administrator'],
+    scope: 'ALL',
     legalEntityCodes: [],
-    memberIds: ['usr_01'],
+    accountIds: [],
+    memberIds: ['usr_jx', 'usr_ming'],
     createdBy: 'Acme Ops',
     createdAt: '2026-01-08T08:59:00',
     updatedAt: '2026-05-19T16:05:00',
   },
   {
-    id: 'ug_sg_payment_ops',
-    roleIds: ['role_payment_ops'],
-    name: 'SG Payment Ops',
-    description: 'Makers raising payments out of the Singapore accounts.',
-    scope: 'ACCOUNT_GROUP',
-    accountGroupIds: ['ag_all_sg_ops'],
+    id: 'ug_trading_markets',
+    name: 'Trading and Markets',
+    description: 'Raises payment orders for trading pay-ins and payouts.',
+    roleIds: ['role_operations'],
+    scope: 'ALL',
     legalEntityCodes: [],
-    memberIds: ['usr_03', 'usr_04'],
+    accountIds: [],
+    memberIds: ['usr_benoit'],
     createdBy: 'Ming Miin',
     createdAt: '2026-02-14T10:40:00',
     updatedAt: '2026-05-02T13:19:00',
   },
   {
-    id: 'ug_treasury_approvers',
-    roleIds: ['role_payment_approver'],
-    name: 'Treasury Approvers',
-    description: 'Checkers approving payments across SG and client money.',
-    scope: 'ACCOUNT_GROUP',
-    accountGroupIds: ['ag_all_sg_ops', 'ag_client_money'],
+    id: 'ug_engineers',
+    name: 'Engineers',
+    description: 'Integration and API work.',
+    roleIds: ['role_engineering'],
+    scope: 'ALL',
     legalEntityCodes: [],
-    memberIds: ['usr_02'],
+    accountIds: [],
+    memberIds: ['usr_cayter'],
     createdBy: 'Ming Miin',
-    createdAt: '2026-02-14T10:44:00',
-    updatedAt: '2026-03-30T15:02:00',
+    createdAt: '2026-03-04T09:12:00',
+    updatedAt: '2026-03-04T09:12:00',
   },
   {
-    id: 'ug_indo_ops',
-    roleIds: ['role_payment_ops'],
-    name: 'Indonesia Ops',
-    description:
-      'Scoped by legal-entity tag instead of a hand-built account group.',
+    id: 'ug_rma_signers',
+    name: 'RMA Signers',
+    description: 'Approves payment orders on Ripple Markets APAC accounts.',
+    roleIds: ['role_finance_treasury'],
     scope: 'LEGAL_ENTITY',
-    accountGroupIds: [],
-    legalEntityCodes: ['AMID'],
-    memberIds: ['usr_07'],
+    legalEntityCodes: ['RMA'],
+    accountIds: [],
+    memberIds: ['usr_jx', 'usr_nigel'],
     createdBy: 'Ming Miin',
-    createdAt: '2026-03-02T09:20:00',
+    createdAt: '2026-02-20T11:05:00',
     updatedAt: '2026-04-28T11:50:00',
   },
   {
-    id: 'ug_external_audit',
-    roleIds: ['role_tm_recon'],
-    name: 'External Audit',
-    description: 'Read-only access to reserve and receivable balances.',
-    scope: 'ACCOUNT_GROUP',
-    accountGroupIds: ['ag_reserves'],
-    legalEntityCodes: [],
-    memberIds: ['usr_05'],
-    createdBy: 'Priya Lim',
-    createdAt: '2026-04-11T14:15:00',
-    updatedAt: '2026-04-11T14:15:00',
-  },
-  {
-    id: 'ug_cs_readonly',
-    roleIds: ['role_tm_recon'],
-    name: 'CS Read-only',
-    description: 'Customer support — transaction lookup on SG accounts.',
-    scope: 'ACCOUNT_GROUP',
-    accountGroupIds: ['ag_all_sg_ops'],
-    legalEntityCodes: [],
-    memberIds: ['usr_06'],
+    id: 'ug_rlky_signers',
+    name: 'RLKY Signers',
+    description: 'Approves payment orders on Ripple Labs Cayman accounts.',
+    roleIds: ['role_finance_treasury'],
+    scope: 'LEGAL_ENTITY',
+    legalEntityCodes: ['RLKY'],
+    accountIds: [],
+    memberIds: ['usr_jx'],
     createdBy: 'Ming Miin',
-    createdAt: '2026-02-20T11:05:00',
-    updatedAt: '2026-02-20T11:05:00',
+    createdAt: '2026-02-20T11:08:00',
+    updatedAt: '2026-04-28T11:52:00',
   },
 ]
-
-export function accountsInAccountGroup(
-  group: AccountGroup,
-  accounts: Account[] = ACCOUNTS,
-): Account[] {
-  if (group.rule === 'LEGAL_ENTITY') {
-    return accounts.filter((a) => a.legalEntity === group.legalEntityCode)
-  }
-  return accounts.filter((a) => group.accountIds.includes(a.id))
-}
-
-export function accountGroupSize(
-  group: AccountGroup,
-  accounts: Account[] = ACCOUNTS,
-): number {
-  return accountsInAccountGroup(group, accounts).length
-}
-
-export function accountGroupCurrencies(
-  group: AccountGroup,
-  accounts: Account[] = ACCOUNTS,
-): string[] {
-  return [
-    ...new Set(accountsInAccountGroup(group, accounts).map((a) => a.currency)),
-  ].sort()
-}
-
-export function accountGroupsForAccount(
-  accountId: string,
-  groups: AccountGroup[],
-  accounts: Account[] = ACCOUNTS,
-): AccountGroup[] {
-  return groups.filter((g) =>
-    accountsInAccountGroup(g, accounts).some((a) => a.id === accountId),
-  )
-}
-
-// New accounts are invisible by default — they belong to no group until an
-// admin puts them in one. This is the state the admin has to be able to see.
-export function unassignedAccounts(
-  groups: AccountGroup[],
-  accounts: Account[] = ACCOUNTS,
-): Account[] {
-  const assigned = new Set(
-    groups.flatMap((g) => accountsInAccountGroup(g, accounts).map((a) => a.id)),
-  )
-  return accounts.filter((a) => !assigned.has(a.id))
-}
-
-export function accountsForUserGroup(
-  group: UserGroup,
-  accountGroups: AccountGroup[],
-  accounts: Account[] = ACCOUNTS,
-): Account[] {
-  const ids = new Set<string>()
-  if (group.scope === 'LEGAL_ENTITY') {
-    for (const a of accounts) {
-      if (group.legalEntityCodes.includes(a.legalEntity)) ids.add(a.id)
-    }
-  } else {
-    for (const agId of group.accountGroupIds) {
-      const ag = accountGroups.find((g) => g.id === agId)
-      if (!ag) continue
-      for (const a of accountsInAccountGroup(ag, accounts)) ids.add(a.id)
-    }
-  }
-  return accounts.filter((a) => ids.has(a.id))
-}
-
-// Everything a user may do: the union of the permission sets of the roles
-// granted by every group they belong to.
-export function permissionsForUser(
-  userId: string,
-  userGroups: UserGroup[],
-): Permission[] {
-  const keys = new Set<string>()
-  for (const g of userGroups) {
-    if (!g.memberIds.includes(userId)) continue
-    for (const roleId of g.roleIds) {
-      const role = getRole(roleId)
-      if (!role) continue
-      for (const p of permissionsForRole(role)) keys.add(p.key)
-    }
-  }
-  return PERMISSION_CATALOGUE.filter((p) => keys.has(p.key))
-}
 
 export function rolesForUserGroup(group: UserGroup): Role[] {
   return group.roleIds
@@ -879,6 +659,39 @@ export function permissionSetsForUserGroup(group: UserGroup): PermissionSet[] {
   return PERMISSION_SETS.filter((s) => ids.has(s.id))
 }
 
+export function accountsForUserGroup(
+  group: UserGroup,
+  accounts: Account[] = ACCOUNTS,
+): Account[] {
+  if (group.scope === 'ALL') return accounts
+  if (group.scope === 'LEGAL_ENTITY') {
+    return accounts.filter((a) => group.legalEntityCodes.includes(a.legalEntity))
+  }
+  return accounts.filter((a) => group.accountIds.includes(a.id))
+}
+
+export function groupsSeeingAccount(
+  accountId: string,
+  userGroups: UserGroup[],
+  accounts: Account[] = ACCOUNTS,
+): UserGroup[] {
+  return userGroups.filter((g) =>
+    accountsForUserGroup(g, accounts).some((a) => a.id === accountId),
+  )
+}
+
+// An account inside no group's scope is invisible to everyone. Onboarding a new
+// account creates exactly this state, so it has to be visible to an admin.
+export function accountsOutsideEveryGroup(
+  userGroups: UserGroup[],
+  accounts: Account[] = ACCOUNTS,
+): Account[] {
+  const seen = new Set(
+    userGroups.flatMap((g) => accountsForUserGroup(g, accounts).map((a) => a.id)),
+  )
+  return accounts.filter((a) => !seen.has(a.id))
+}
+
 export function userGroupsForUser(
   userId: string,
   userGroups: UserGroup[],
@@ -886,29 +699,33 @@ export function userGroupsForUser(
   return userGroups.filter((g) => g.memberIds.includes(userId))
 }
 
-// Effective access preview: the union of every user group the person is in.
+// Everything a user may do: the union of the permission sets of the roles
+// granted by every group they belong to.
+export function permissionsForUser(
+  userId: string,
+  userGroups: UserGroup[],
+): Permission[] {
+  const keys = new Set<string>()
+  for (const g of userGroupsForUser(userId, userGroups)) {
+    for (const role of rolesForUserGroup(g)) {
+      for (const p of permissionsForRole(role)) keys.add(p.key)
+    }
+  }
+  if (keys.has('All')) return PERMISSION_CATALOGUE
+  return PERMISSION_CATALOGUE.filter((p) => keys.has(p.key))
+}
+
+// Effective account access: the union across the user's groups.
 export function accountsForUser(
   userId: string,
   userGroups: UserGroup[],
-  accountGroups: AccountGroup[],
   accounts: Account[] = ACCOUNTS,
 ): Account[] {
   const ids = new Set<string>()
-  for (const ug of userGroupsForUser(userId, userGroups)) {
-    for (const a of accountsForUserGroup(ug, accountGroups, accounts)) {
-      ids.add(a.id)
-    }
+  for (const g of userGroupsForUser(userId, userGroups)) {
+    for (const a of accountsForUserGroup(g, accounts)) ids.add(a.id)
   }
   return accounts.filter((a) => ids.has(a.id))
-}
-
-export function userGroupsUsingAccountGroup(
-  accountGroupId: string,
-  userGroups: UserGroup[],
-): UserGroup[] {
-  return userGroups.filter((g) =>
-    g.scope === 'ACCOUNT_GROUP' && g.accountGroupIds.includes(accountGroupId),
-  )
 }
 
 export function formatSGD(amount: number): string {

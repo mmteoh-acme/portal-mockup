@@ -20,7 +20,7 @@ import {
 import {
   ACCOUNTS,
   LEGAL_ENTITIES,
-  accountGroupsForAccount,
+  groupsSeeingAccount,
   bankNames,
   formatMoney,
   getConnection,
@@ -28,7 +28,7 @@ import {
   legalEntityName,
   type Account,
 } from '@/data/fixtures'
-import { useAccountGroups } from '@/lib/admin-store'
+import { useUserGroups } from '@/lib/admin-store'
 import {
   Select,
   SelectContent,
@@ -152,10 +152,8 @@ function AccountDetailSheet({
   account: Account | null
   onClose: () => void
 }) {
-  const accountGroups = useAccountGroups()
-  const groups = account
-    ? accountGroupsForAccount(account.id, accountGroups)
-    : []
+  const userGroups = useUserGroups()
+  const groups = account ? groupsSeeingAccount(account.id, userGroups) : []
   const entity = account ? getLegalEntity(account.legalEntity) : undefined
   const connection = account ? getConnection(account.connectionId) : undefined
 
@@ -208,12 +206,12 @@ function AccountDetailSheet({
                     <div className="text-sm">{account.country}</div>
                   </DetailField>
                   <div className="col-span-2 space-y-1">
-                    <SectionLabel>Account groups</SectionLabel>
+                    <SectionLabel>Visible to groups</SectionLabel>
                     {groups.length === 0 ? (
                       <div className="flex items-center gap-1.5">
                         <TriangleAlertIcon className="size-3.5 text-amber-600" />
                         <span className="text-sm text-amber-700">
-                          Unassigned — invisible to every non-admin user
+                          No group — invisible to everyone
                         </span>
                       </div>
                     ) : (
@@ -297,7 +295,7 @@ export function InternalAccountsPage() {
   const [legalEntity, setLegalEntity] = React.useState('all')
   const [country, setCountry] = React.useState('all')
   const [currency, setCurrency] = React.useState('all')
-  const accountGroups = useAccountGroups()
+  const userGroups = useUserGroups()
 
   const banks = React.useMemo(() => bankNames(ACCOUNTS), [])
   const countries = React.useMemo(
@@ -314,11 +312,11 @@ export function InternalAccountsPage() {
     for (const a of ACCOUNTS) {
       map.set(
         a.id,
-        accountGroupsForAccount(a.id, accountGroups).map((g) => g.name),
+        groupsSeeingAccount(a.id, userGroups).map((g) => g.name),
       )
     }
     return map
-  }, [accountGroups])
+  }, [userGroups])
 
   const accounts = React.useMemo(() => {
     const needle = q.trim().toLowerCase()
@@ -359,14 +357,12 @@ export function InternalAccountsPage() {
           <TriangleAlertIcon className="size-4 shrink-0" />
           <span className="flex-1">
             <span className="font-medium">
-              {unassignedCount} account{unassignedCount === 1 ? '' : 's'} not in
-              any account group.
+              {unassignedCount} account{unassignedCount === 1 ? '' : 's'} outside every group.
             </span>{' '}
-            Unassigned accounts are invisible to every non-admin user until an
-            admin assigns them.
+An account inside no group's scope is invisible to everyone.
           </span>
           <Button asChild variant="outline" size="sm" className="h-7 bg-white">
-            <Link to="/account-groups">Assign accounts</Link>
+            <Link to="/user-management">Review groups</Link>
           </Button>
         </div>
       )}
@@ -484,7 +480,7 @@ export function InternalAccountsPage() {
                     <TableHead>Legal entity</TableHead>
                     <TableHead>Country</TableHead>
                     <TableHead>Currency</TableHead>
-                    <TableHead>Account groups</TableHead>
+                    <TableHead>Visible to groups</TableHead>
                     <TableHead>Internal account ID</TableHead>
                     <TableHead>Connection</TableHead>
                     <TableHead>Mode</TableHead>
@@ -533,8 +529,8 @@ export function InternalAccountsPage() {
                         </TableCell>
                         <TableCell>
                           {groupNames.length === 0 ? (
-                            <TagPill tone="warning" title="Not in any account group">
-                              Unassigned
+                            <TagPill tone="warning" title="Inside no group's scope">
+                              No group
                             </TagPill>
                           ) : (
                             <div className="flex flex-wrap gap-1">

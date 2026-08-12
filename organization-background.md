@@ -12,48 +12,49 @@ Background for the redesign of the account group, user group, role and permissio
 * Ripple is the client. Ripple holds multiple legal entities under one company.
 * The client group is the top layer. Accounts sit flat under it, per ACME-2177.
 
-## Proposed hierarchy
+## Hierarchy
 
 ```mermaid
 graph TD
     C["<b>Company</b><br/>Ripple"]
-    G["<b>Group</b><br/>Administrator"]
-    R["<b>Roles</b><br/>Payment-Ops"]
-    A["<b>Accounts</b><br/>attributes: legal entity, bank, currencies"]
-    PS["<b>Permission Set</b><br/>Payments"]
-    P1["<b>Permission</b><br/>payment-read"]
-    P2["<b>Permission</b><br/>payment-write"]
+    G["<b>Group</b><br/>e.g. RMA Signers<br/>defines account access"]
+    R["<b>Role</b><br/>e.g. Finance and Treasury<br/>client-customizable"]
+    PS["<b>Permission Set</b><br/>e.g. Finance<br/>managed by Acme"]
+    P1["<b>Permission</b><br/>Transactions"]
+    P2["<b>Permission</b><br/>Payment Approvals"]
+    A["<b>Accounts</b><br/>attributes: legal entity, bank, currency"]
+    U["<b>Users</b><br/>assigned to one or more Groups"]
 
     C --> G
     G --> R
-    G --> A
     R --> PS
-    A --> PS
     PS --> P1
     PS --> P2
+    G --> A
+    G --> U
 ```
 
 The same shape without mermaid:
 
 ```
 Company (Ripple)
-└── Group (Administrator)
-    ├── Roles (Payment-Ops) ──┐
-    │                         ├── Permission Set (Payments)
-    └── Accounts ─────────────┘        ├── Permission (payment-read)
-        attributes:                    └── Permission (payment-write)
-          legal entity
-          bank
-          currencies
+└── Group  ......................  defines account access, grants roles, holds users
+    ├── Role  ..................  narrows the permission sets. Client-customizable
+    │   └── Permission Set  ....  managed by Acme
+    │       └── Permission  ....  managed by Acme
+    ├── Accounts in scope  .....  all, by legal entity, or hand-picked
+    └── Users  .................  a user can be in several groups
 ```
 
 Reading the chart:
 
-* A Company contains Groups.
-* A Group contains Roles and Accounts.
-* A Role and a set of Accounts together carry a Permission Set.
-* A Permission Set is a bundle of individual Permissions.
-* Accounts are described by attributes, not by position in a tree. The attributes are legal entity, bank and currencies.
+* A **Group** defines account access. It grants one or more Roles and holds Users.
+* A **Role** narrows the permission sets. Each organization works differently, so roles are the customizable layer.
+* A **Permission Set** and its **Permissions** are managed by Acme. Clients do not author them.
+* **Accounts** are described by attributes, not by position in a tree. The attributes are legal entity, bank and currency.
+* A **User** is assigned to one or more Groups, and holds no permission of their own.
+
+There is no account-group layer. A group scopes onto accounts directly.
 
 ## Legal entities
 
@@ -61,50 +62,89 @@ Ripple holds four legal entities. The names and codes below are recorded exactly
 
 | Legal entity | Code |
 | --- | --- |
-| Ripple Markets APAC | AMA |
-| Ripple Labs Cayman | AL |
-| Ripple Markets Delaware | AMDE |
-| Acme Markets Middle East | AMEL |
+| Ripple Markets APAC | RMA |
+| Ripple Labs Cayman | RLKY |
+| Ripple Markets Delaware | RMDE |
+| Ripple Markets Middle East | RMEA |
 
-## Roles
+The codes are the R-prefixed set. They come from the group definitions below, which name RMA and RLKY accounts, and they match ACME-2177. This supersedes the earlier AMA / AL / AMDE / AMEL list.
 
-Each team below becomes a Role.
+## The configuration
+
+### Groups
+
+A group defines account access, grants roles and holds users.
+
+| Group | Role | Accounts in scope |
+| --- | --- | --- |
+| Administrators | Administrator | All |
+| Trading and Markets | Operations | All |
+| Engineers | Engineering | All |
+| RMA Signers | Finance and Treasury | RMA accounts |
+| RLKY Signers | Finance and Treasury | RLKY accounts |
+
+The two Signers groups are the same role over different account scopes. That is how one person signs for one entity and not another.
+
+### Roles
+
+A role narrows the permission sets for how this organization works. Roles are customizable per client.
+
+| Role | Permission sets |
+| --- | --- |
+| Administrator | Administrator |
+| Engineering | Engineer |
+| Operations | Payments |
+| Reconciliation | Recon Operations |
+| Customer Support | Reviewer |
+| Finance and Treasury | Finance |
+
+### Permission sets and permissions
+
+Managed by Acme.
+
+| Permission set | Permissions |
+| --- | --- |
+| Administrator | All |
+| Recon Operations | Transactions |
+| Payments | Transactions, Payment Orders |
+| Finance | Transactions, Payment Approvals |
+| Reviewer | Payment Orders Edit |
+| Engineer | Not yet specified |
+
+### Users
+
+A user is assigned to one or more groups. Account access and permissions both follow from that.
+
+| User | Groups |
+| --- | --- |
+| Jx | Administrators, RMA Signers, RLKY Signers |
+| Ming | Administrators |
+| Nigel | RMA Signers |
+| Cayter | Engineers |
+| Benoit | Trading and Markets |
+
+Jx is in both Signers groups, so Jx can sign for RMA and for RLKY. Nigel can sign for RMA only.
+
+## Team functions
+
+Background on the teams the roles are named after.
 
 ### Trading and Markets (RTM team)
 
-Function:
-
-* Supports all internal FIAT operations automation, including trading operations such as pay-ins and payouts with external trading counterparties.
+* Supports all internal FIAT operations automation, including trading pay-ins and payouts with external trading counterparties.
 * Operations are time-sensitive.
 * Payment volume is low. Payment values are high.
 * Sole user of the maker-checker feature.
 * Phased out H2H after migrating all their functions by integrating the Acme maker-checker key into their internal portal.
 * One user holding the payment-checker role in one group can hold payment-maker in another group.
 
-Access implications:
-
-* Maker and checker must be assignable per group. They cannot be a property of the person.
-* One person can hold maker in one group and checker in another at the same time.
-* The four-eyes check must therefore be evaluated per payment, not per user.
-* This team consumes maker-checker through a key on their own portal. Grants must apply to API keys, not only to dashboard users.
-
 ### Trading and Markets Recon team
-
-Function:
 
 * Sub-team of the above.
 * Consumes transaction, balance and payment-read data only, for analysis and reconciliation.
 * Data quality is the priority. The data must be accurate against the bank raw data.
 
-Access implications:
-
-* Needs a read-only Permission Set. The two presets in ACME-2178 do not include one.
-* Needs statement and raw payload access so the team can compare Acme's output against the bank's raw data.
-* No payment capability of any kind.
-
 ### Payment Ops team
-
-Function:
 
 * Supported by the internal dashboard built by the Trading and Markets team.
 * Has historically handled payment ops functions such as making payments from the bank portal and reconciling payment status.
@@ -112,63 +152,37 @@ Function:
 * Should have visibility of all accounts of a given legal entity.
 * Can be maker or checker for different accounts.
 
-Access implications:
-
-* Entity-wide visibility matters. Scoping by legal entity tag is as important as scoping by a hand-built account group.
-* Maker and checker vary by account, so the unit of a grant is a capability paired with an account scope.
-
 ### Ripple Treasury team
-
-Function:
 
 * Runs a treasury management system. Ripple acquired GTreasury in 2025 and uses GTreasury for the treasury function.
 * Ledger reconciliation, at daily close and at month end.
 
-Access implications:
-
-* Consumes data through a system integration rather than the dashboard, so API key scoping applies.
-* Needs balances and statements at close. Read only.
-
 ### FIAT and Zeus team
-
-Function:
 
 * Owns the FIAT function.
 * Previously integrated Acme into Trovata. Ripple is now sunsetting the Trovata connection.
 * Makes payments from all accounts.
 
-Access implications:
-
-* Needs payment creation across every account. This is the widest payment scope of any role here.
-* A scope of "all accounts" must stay correct as new accounts are onboarded. A legal entity tag rule or an explicit all-accounts scope handles this. A hand-picked account group does not.
-
 ### Payment Product team
-
-Function:
 
 * Works on Ripple core product features such as Ripple Pay.
 * In discussion on a virtual account API for an MXN bank.
 * May need access to API key management, webhook retriggering, and cross-checking the API response against what Acme presents.
 
-Access implications:
+## What the mockup reflects
 
-* Needs `api_key.manage` and `webhook.manage`.
-* ACME-2178 defers both and hard-codes API keys and webhooks to administrator.
-* Under that decision this team can only be served by granting the administrator set, which also grants `approval_policy.manage`. That is more privilege than the team's function requires.
+Deployed: <https://portal-mockup-virid.vercel.app>
 
-## What this changes against the shipped model
-
-The mockup currently implements ACME-2178 as written. The proposed chart differs in three ways.
-
-* Roles return as a layer. ACME-2178 removed roles and granted permission sets directly. The chart puts Roles between the Group and the Permission Set.
-* The chart shows no user or person node. Where a user attaches, and whether a user joins a Group or a Role, is undefined.
-* Accounts carry "currencies" as a plural attribute. Each account in the current model carries exactly one currency.
+* The landing page is Transactions. The home page is removed for MVP.
+* The account groups page is removed. A group scopes onto accounts directly.
+* User Management carries the four tabs: Groups, Roles, Permission Sets, Users.
+* The five groups, six roles, six permission sets and five users above are the seeded data.
 
 ## Open questions
 
-* The brief opens with "Acme group has multiple legal entities", but every entity listed is a Ripple entity and the chart names the Company as Ripple. Confirm that Ripple is the client and Acme is the platform.
-* "Acme Markets Middle East (AMEL)" is the only Acme-named entity in a Ripple list. Confirm whether this should read Ripple Markets Middle East.
-* The codes AMA, AL and AMDE do not match ACME-2177, which uses RMA, RMDE and RLKY for Ripple entities. Confirm which set is canonical before either is built.
-* Confirm whether a Permission Set attaches to a Role, to a Role paired with an account scope, or to a user.
-* Confirm whether Group means the administrative boundary for a set of Roles, or the account group that scopes visibility. The chart uses "Group (Administrator)", which reads as the former.
-* Two of the six Roles need read-only access and one needs API key and webhook management. Neither is expressible with the current presets. Confirm whether the preset catalogue expands, or whether these Roles are served another way.
+* The **Engineer** permission set is named by the Engineering role but its permissions were never listed. It is seeded empty rather than guessed. What does an engineer get? Candidates are API keys, webhooks and request logs, all of which ACME-2178 currently defers and hard-codes to administrator.
+* The **Engineers** group is not in the group list, but Cayter is assigned to it. It has been added with the Engineering role and all-account scope. Confirm the scope.
+* **Reconciliation** and **Customer Support** roles exist but no group grants them, so nobody holds them. Confirm whether groups for those teams are coming.
+* **Payment Orders Edit** is the only permission in the Reviewer set. Confirm that Customer Support edits payment orders without being able to view transactions.
+* The brief opened with "Acme group has multiple legal entities" while every entity is a Ripple entity. Read as Ripple being the client and Acme the platform. Confirm.
+* **Administrator holds All**, which includes Payment Approvals. ACME-2178 states that an administrator configures who approves and does not approve. Those two statements conflict. Confirm which holds.
