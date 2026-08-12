@@ -1,8 +1,10 @@
 import * as React from 'react'
 import {
+  ROLES,
   accountGroupsSeed,
   userGroupsSeed,
   type AccountGroup,
+  type Role,
   type UserGroup,
 } from '@/data/fixtures'
 
@@ -10,6 +12,8 @@ import {
 // sessionStorage so they survive navigation, seeded from the fixtures on first
 // read. Same pattern as the refunds store.
 
+const ROLES_KEY = 'portal-mockup:roles'
+const ROLES_EVENT = 'portal-mockup:roles-updated'
 const ACCOUNT_GROUPS_KEY = 'portal-mockup:accountGroups'
 const USER_GROUPS_KEY = 'portal-mockup:userGroups'
 const ACCOUNT_GROUPS_EVENT = 'portal-mockup:account-groups-updated'
@@ -121,6 +125,34 @@ export function deleteUserGroup(id: string): void {
     USER_GROUPS_EVENT,
     readUserGroups().filter((g) => g.id !== id),
   )
+}
+
+// ---------------------------------------------------------------------------
+// Roles — Acme ships the permission sets, the client composes roles from them
+// ---------------------------------------------------------------------------
+
+export function readRoles(): Role[] {
+  return read(ROLES_KEY, ROLES)
+}
+
+export function useRoles(): Role[] {
+  return useStore(ROLES_KEY, ROLES_EVENT, ROLES)
+}
+
+export function addRole(role: Role): void {
+  write(ROLES_KEY, ROLES_EVENT, [...readRoles(), role])
+}
+
+export function updateRole(id: string, patch: Partial<Role>): void {
+  write(
+    ROLES_KEY,
+    ROLES_EVENT,
+    readRoles().map((r) => (r.id === id ? { ...r, ...patch } : r)),
+  )
+}
+
+export function deleteRole(id: string): void {
+  write(ROLES_KEY, ROLES_EVENT, readRoles().filter((r) => r.id !== id))
 }
 
 // ---------------------------------------------------------------------------

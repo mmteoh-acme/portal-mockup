@@ -140,8 +140,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/api-keys': 'API Keys',
   '/webhooks': 'Webhooks',
   '/account-groups': 'Account Groups',
-  '/user-groups': 'User Groups',
-  '/users': 'Users',
+  '/user-management': 'User Management',
   '/activity': 'Activity',
 }
 

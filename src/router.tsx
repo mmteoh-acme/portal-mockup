@@ -13,9 +13,8 @@ import { PaymentsPage } from '@/routes/payments'
 import { InternalAccountsPage } from '@/routes/internal-accounts'
 import { ApiKeysPage } from '@/routes/api-keys'
 import { WebhooksPage } from '@/routes/webhooks'
-import { UsersPage } from '@/routes/users'
 import { AccountGroupsPage } from '@/routes/account-groups'
-import { UserGroupsPage } from '@/routes/user-groups'
+import { UserManagementPage } from '@/routes/user-management'
 import { ActivityPage } from '@/routes/activity'
 
 const rootRoute = createRootRoute({
@@ -91,16 +90,10 @@ const accountGroupsRoute = createRoute({
   component: AccountGroupsPage,
 })
 
-const userGroupsRoute = createRoute({
+const userManagementRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
-  path: '/user-groups',
-  component: UserGroupsPage,
-})
-
-const usersRoute = createRoute({
-  getParentRoute: () => appLayoutRoute,
-  path: '/users',
-  component: UsersPage,
+  path: '/user-management',
+  component: UserManagementPage,
 })
 
 const activityRoute = createRoute({
@@ -120,8 +113,7 @@ const routeTree = rootRoute.addChildren([
     apiKeysRoute,
     webhooksRoute,
     accountGroupsRoute,
-    userGroupsRoute,
-    usersRoute,
+    userManagementRoute,
     activityRoute,
   ]),
 ])

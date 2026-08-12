@@ -1,62 +1,75 @@
 import * as React from 'react'
-import type { PermissionSet } from '@/data/fixtures'
+import {
+  getPortalUser,
+  permissionsForUser,
+  portalUsers,
+  rolesForUserGroup,
+  userGroupsForUser,
+  type Permission,
+  type PortalUser,
+  type Role,
+} from '@/data/fixtures'
+import { useUserGroups } from '@/lib/admin-store'
 
-// Who you are signed in as. There are no roles: a user is granted one of
-// Acme's permission sets, and four-eyes falls out of the catalogue — an
-// administrator creates and edits payments but cannot approve, an approver
-// can approve but holds no admin permissions (ACME-2178).
-export type User = {
-  name: string
-  email: string
-  permissionSet: PermissionSet
-}
+// Who you are signed in as. A user holds no permissions of their own: they
+// belong to groups, groups grant roles, roles bundle permission sets, and
+// permission sets hold permissions. Everything below is derived from the
+// group membership, so editing a group in the UI changes what this user can
+// do (ACME-2178).
 
-const ADMINISTRATOR: User = {
-  name: 'Ming Miin',
-  email: 'ming@tryacme.com',
-  permissionSet: 'administrator',
-}
-const APPROVER: User = {
-  name: 'Priya Lim',
-  email: 'priya@tryacme.com',
-  permissionSet: 'approver',
-}
+// The two personas the mockup can switch between: an administrator, and an
+// approver who can check payments but holds no admin permissions.
+const DEMO_USER_IDS = ['usr_01', 'usr_02']
 
-const ALL_USERS: User[] = [ADMINISTRATOR, APPROVER]
-
-const STORAGE_KEY = 'portal-mockup:activePermissionSet'
+const STORAGE_KEY = 'portal-mockup:activeUserId'
 
 type UserContextValue = {
-  user: User
-  setPermissionSet: (s: PermissionSet) => void
-  allUsers: User[]
+  user: PortalUser
+  roles: Role[]
+  permissions: Permission[]
+  can: (permissionKey: string) => boolean
+  setUserId: (id: string) => void
+  demoUsers: PortalUser[]
 }
 
 const UserContext = React.createContext<UserContextValue | undefined>(undefined)
 
-function readFromStorage(): PermissionSet {
-  if (typeof window === 'undefined') return 'administrator'
+function readFromStorage(): string {
+  if (typeof window === 'undefined') return DEMO_USER_IDS[0]
   const v = window.sessionStorage.getItem(STORAGE_KEY)
-  return v === 'approver' ? 'approver' : 'administrator'
+  return v && DEMO_USER_IDS.includes(v) ? v : DEMO_USER_IDS[0]
 }
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
-  const [permissionSet, setState] = React.useState<PermissionSet>(() =>
+  const userGroups = useUserGroups()
+  const [userId, setUserIdState] = React.useState<string>(() =>
     readFromStorage(),
   )
 
-  const setPermissionSet = React.useCallback((s: PermissionSet) => {
-    setState(s)
+  const setUserId = React.useCallback((id: string) => {
+    setUserIdState(id)
     if (typeof window === 'undefined') return
-    window.sessionStorage.setItem(STORAGE_KEY, s)
+    window.sessionStorage.setItem(STORAGE_KEY, id)
   }, [])
 
-  const user = permissionSet === 'approver' ? APPROVER : ADMINISTRATOR
+  const user = getPortalUser(userId) ?? portalUsers[0]
 
-  const value = React.useMemo<UserContextValue>(
-    () => ({ user, setPermissionSet, allUsers: ALL_USERS }),
-    [user, setPermissionSet],
-  )
+  const value = React.useMemo<UserContextValue>(() => {
+    const permissions = permissionsForUser(user.id, userGroups)
+    const roles = userGroupsForUser(user.id, userGroups).flatMap((g) =>
+      rolesForUserGroup(g),
+    )
+    return {
+      user,
+      roles,
+      permissions,
+      can: (key: string) => permissions.some((p) => p.key === key),
+      setUserId,
+      demoUsers: DEMO_USER_IDS.map((id) => getPortalUser(id)).filter(
+        (u): u is PortalUser => !!u,
+      ),
+    }
+  }, [user, userGroups, setUserId])
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>
 }

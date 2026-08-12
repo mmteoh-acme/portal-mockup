@@ -1,9 +1,8 @@
 import * as React from 'react'
-import type { PermissionSet } from '@/data/fixtures'
 
 export type RetryReviewer = {
   name: string
-  permissionSet: PermissionSet
+  actingAs: string
   at: string
 }
 
@@ -69,7 +68,7 @@ function formatReviewedAt(now: Date = new Date()): string {
 function updateRetryStatus(
   id: string,
   status: 'Approved' | 'Rejected',
-  reviewer: { name: string; permissionSet: PermissionSet },
+  reviewer: { name: string; actingAs: string },
 ): void {
   const items = readFromStorage()
   const next = items.map((r) =>
@@ -79,7 +78,7 @@ function updateRetryStatus(
           status,
           reviewer: {
             name: reviewer.name,
-            permissionSet: reviewer.permissionSet,
+            actingAs: reviewer.actingAs,
             at: formatReviewedAt(),
           },
         }
@@ -90,14 +89,14 @@ function updateRetryStatus(
 
 export function approveRetry(
   id: string,
-  reviewer: { name: string; permissionSet: PermissionSet },
+  reviewer: { name: string; actingAs: string },
 ): void {
   updateRetryStatus(id, 'Approved', reviewer)
 }
 
 export function rejectRetry(
   id: string,
-  reviewer: { name: string; permissionSet: PermissionSet },
+  reviewer: { name: string; actingAs: string },
 ): void {
   updateRetryStatus(id, 'Rejected', reviewer)
 }

@@ -487,7 +487,7 @@ export function AccountGroupSheet({
                   Accounts ({accounts.length})
                 </TabsTrigger>
                 <TabsTrigger value="user-groups">
-                  User groups ({mappedUserGroups.length})
+                  Groups ({mappedUserGroups.length})
                 </TabsTrigger>
               </TabsList>
 
@@ -600,13 +600,13 @@ export function AccountGroupSheet({
               <TabsContent value="user-groups" className="mt-4">
                 {mappedUserGroups.length === 0 ? (
                   <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                    Not mapped to any user group yet, so nobody sees these
+                    Not mapped to any group yet, so nobody sees these
                     accounts.{' '}
                     <Link
-                      to="/user-groups"
+                      to="/user-management"
                       className="font-medium underline underline-offset-4"
                     >
-                      Map it to a user group →
+                      Map it to a group →
                     </Link>
                   </div>
                 ) : (
@@ -615,7 +615,7 @@ export function AccountGroupSheet({
                       <TableHeader>
                         <TableRow>
                           <TableHead className="text-[0.7rem] uppercase tracking-wider">
-                            User group
+                            Group
                           </TableHead>
 
                           <TableHead className="text-right text-[0.7rem] uppercase tracking-wider">

@@ -5,7 +5,6 @@ import {
   WebhookIcon,
   ArrowLeftRightIcon,
   WalletIcon,
-  UserRoundIcon,
   ActivityIcon,
   ChevronsUpDownIcon,
   LogOutIcon,
@@ -61,8 +60,7 @@ const OPERATIONS: ReadonlyArray<NavItem> = [
 const ADMIN: ReadonlyArray<NavItem> = [
   { title: 'Internal Accounts', icon: LandmarkIcon, to: '/internal-accounts' },
   { title: 'Account Groups', icon: LayersIcon, to: '/account-groups' },
-  { title: 'User Groups', icon: UsersRoundIcon, to: '/user-groups' },
-  { title: 'Users', icon: UserRoundIcon, to: '/users' },
+  { title: 'User Management', icon: UsersRoundIcon, to: '/user-management' },
   { title: 'API Keys', icon: KeyRoundIcon, to: '/api-keys' },
   { title: 'Webhooks', icon: WebhookIcon, to: '/webhooks' },
   { title: 'Activity', icon: ActivityIcon, to: '/activity' },
@@ -105,7 +103,7 @@ function NavLink({
 export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const navigate = useNavigate()
-  const { user, setPermissionSet, allUsers } = useUser()
+  const { user, roles, setUserId, demoUsers } = useUser()
   const accountCount = ACCOUNTS.length
   const entityCount = (code: LegalEntity['code']) =>
     ACCOUNTS.filter((a) => a.legalEntity === code).length
@@ -245,7 +243,7 @@ export function AppSidebar() {
                       {user.name}
                     </span>
                     <span className="truncate text-[0.65rem] uppercase tracking-wider text-muted-foreground">
-                      {user.permissionSet}
+                      {roles[0]?.name ?? 'No role'}
                     </span>
                   </div>
                   <ChevronsUpDownIcon className="ml-auto size-4 opacity-60" />
@@ -268,15 +266,15 @@ export function AppSidebar() {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">
-                  Switch permission set
+                  Switch user
                 </DropdownMenuLabel>
                 <DropdownMenuGroup>
-                  {allUsers.map((u) => {
-                    const active = u.permissionSet === user.permissionSet
+                  {demoUsers.map((u) => {
+                    const active = u.id === user.id
                     return (
                       <DropdownMenuItem
-                        key={u.permissionSet}
-                        onClick={() => setPermissionSet(u.permissionSet)}
+                        key={u.id}
+                        onClick={() => setUserId(u.id)}
                       >
                         <div className="flex aspect-square size-6 items-center justify-center rounded-sm border bg-muted text-[10px] font-semibold">
                           {u.name
@@ -289,7 +287,7 @@ export function AppSidebar() {
                         <div className="flex flex-1 flex-col leading-tight">
                           <span className="truncate text-sm">{u.name}</span>
                           <span className="truncate text-[0.6rem] uppercase tracking-wider text-muted-foreground">
-                            {u.permissionSet}
+                            {u.email}
                           </span>
                         </div>
                         {active && (

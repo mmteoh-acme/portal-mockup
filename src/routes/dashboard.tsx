@@ -638,7 +638,7 @@ function AccountGroupsPanel() {
           <p className="mt-0.5 text-xs text-muted-foreground">
             Group accounts for access and reporting. Mapping a group to a{' '}
             <Link
-              to="/user-groups"
+              to="/user-management"
               className="font-medium text-foreground underline underline-offset-4"
             >
               user group

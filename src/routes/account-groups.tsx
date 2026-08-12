@@ -59,7 +59,7 @@ export function AccountGroupsPage() {
             rules need — by legal entity, country, function — then map a group
             to a{' '}
             <Link
-              to="/user-groups"
+              to="/user-management"
               className="font-medium text-foreground underline underline-offset-4"
             >
               user group

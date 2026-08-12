@@ -1,0 +1,1596 @@
+import * as React from 'react'
+import { Link } from '@tanstack/react-router'
+import { toast } from 'sonner'
+import {
+  ChevronDownIcon,
+  LayersIcon,
+  LockIcon,
+  TagIcon,
+  TriangleAlertIcon,
+  UserRoundPlusIcon,
+  UsersRoundIcon,
+  XIcon,
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  LEGAL_ENTITIES,
+  PERMISSION_SETS,
+  accountsForUserGroup,
+  accountsInAccountGroup,
+  formatMoney,
+  getPermissionSet,
+  getPortalUser,
+  legalEntityName,
+  permissionsForRole,
+  permissionsForUser,
+  portalUsers,
+  rolesForUserGroup,
+  userGroupsForUser,
+  type PermissionSet,
+  type Role,
+  type UserGroup,
+  type UserGroupScope,
+} from '@/data/fixtures'
+import { formatWhen } from '@/lib/format'
+import { RulePill } from '@/components/account-group-config'
+import {
+  addRole,
+  addUserGroup,
+  deleteRole,
+  deleteUserGroup,
+  nowIso,
+  updateUserGroup,
+  useAccountGroups,
+  useRoles,
+  useUserGroups,
+} from '@/lib/admin-store'
+
+// User Management, structured as Modern Treasury does it: permissions bundle
+// into permission sets, sets compose into roles, roles are granted to a group,
+// and users belong to groups. Acme's addition is the account scope on the
+// group, because no grant in this product is unscoped (ACME-2178).
+
+function Pill({
+  children,
+  tone = 'default',
+  title,
+}: {
+  children: React.ReactNode
+  tone?: 'default' | 'entity' | 'warning' | 'scope' | 'set'
+  title?: string
+}) {
+  const cls =
+    tone === 'entity'
+      ? 'border-violet-300 bg-violet-50 text-violet-700'
+      : tone === 'warning'
+        ? 'border-amber-300 bg-amber-50 text-amber-700'
+        : tone === 'scope'
+          ? 'border-blue-300 bg-blue-50 text-blue-700'
+          : tone === 'set'
+            ? 'border-border bg-background text-foreground'
+            : 'border-border bg-muted text-muted-foreground'
+  return (
+    <span
+      title={title}
+      className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[0.65rem] font-medium ${cls}`}
+    >
+      {children}
+    </span>
+  )
+}
+
+function PermissionKeyPill({ k }: { k: string }) {
+  return (
+    <span className="inline-flex items-center rounded border bg-muted px-1.5 py-0.5 font-mono text-[0.6rem] uppercase tracking-wider text-muted-foreground">
+      {k}
+    </span>
+  )
+}
+
+function initials(name: string): string {
+  return name
+    .split(' ')
+    .map((s) => s[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase()
+}
+
+// ---------------------------------------------------------------------------
+// Shared editors
+// ---------------------------------------------------------------------------
+
+function RolePicker({
+  roles,
+  selected,
+  onToggle,
+}: {
+  roles: Role[]
+  selected: Set<string>
+  onToggle: (id: string, checked: boolean) => void
+}) {
+  return (
+    <div className="space-y-2">
+      <Label>Roles</Label>
+      <div className="max-h-56 overflow-y-auto rounded-md border">
+        {roles.map((r) => (
+          <label
+            key={r.id}
+            className="flex cursor-pointer items-start gap-3 border-b px-3 py-2 last:border-b-0 hover:bg-muted/50"
+          >
+            <Checkbox
+              className="mt-0.5"
+              checked={selected.has(r.id)}
+              onCheckedChange={(c) => onToggle(r.id, c === true)}
+            />
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-medium">{r.name}</div>
+              <div className="truncate text-[0.65rem] text-muted-foreground">
+                {r.description}
+              </div>
+              <div className="mt-1 flex flex-wrap gap-1">
+                {r.permissionSetIds.map((id) => (
+                  <Pill key={id} tone="set">
+                    {getPermissionSet(id)?.name ?? id}
+                  </Pill>
+                ))}
+              </div>
+            </div>
+          </label>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function ScopeEditor({
+  scope,
+  setScope,
+  accountGroupIds,
+  toggleAccountGroup,
+  legalEntityCodes,
+  toggleLegalEntity,
+}: {
+  scope: UserGroupScope
+  setScope: (s: UserGroupScope) => void
+  accountGroupIds: Set<string>
+  toggleAccountGroup: (id: string, checked: boolean) => void
+  legalEntityCodes: Set<string>
+  toggleLegalEntity: (code: string, checked: boolean) => void
+}) {
+  const accountGroups = useAccountGroups()
+
+  return (
+    <div className="space-y-3">
+      <Label>Account scope</Label>
+      <p className="text-xs text-muted-foreground">
+        Every grant is scoped. The roles above apply only to the accounts
+        selected here.
+      </p>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <button
+          type="button"
+          onClick={() => setScope('ACCOUNT_GROUP')}
+          className={`rounded-md border px-3 py-2 text-left text-sm ${
+            scope === 'ACCOUNT_GROUP'
+              ? 'border-primary bg-muted'
+              : 'hover:bg-muted/50'
+          }`}
+        >
+          <div className="flex items-center gap-1.5 font-medium">
+            <LayersIcon className="size-3.5" /> Account groups
+          </div>
+        </button>
+        <button
+          type="button"
+          onClick={() => setScope('LEGAL_ENTITY')}
+          className={`rounded-md border px-3 py-2 text-left text-sm ${
+            scope === 'LEGAL_ENTITY'
+              ? 'border-primary bg-muted'
+              : 'hover:bg-muted/50'
+          }`}
+        >
+          <div className="flex items-center gap-1.5 font-medium">
+            <TagIcon className="size-3.5" /> Legal entity tags
+          </div>
+        </button>
+      </div>
+
+      {scope === 'ACCOUNT_GROUP' ? (
+        <div className="max-h-52 overflow-y-auto rounded-md border">
+          {accountGroups.length === 0 && (
+            <div className="px-3 py-6 text-center text-sm text-muted-foreground">
+              No account groups yet.{' '}
+              <Link
+                to="/account-groups"
+                className="font-medium underline underline-offset-4"
+              >
+                Create one first
+              </Link>
+              .
+            </div>
+          )}
+          {accountGroups.map((ag) => (
+            <label
+              key={ag.id}
+              className="flex cursor-pointer items-center gap-3 border-b px-3 py-2 last:border-b-0 hover:bg-muted/50"
+            >
+              <Checkbox
+                checked={accountGroupIds.has(ag.id)}
+                onCheckedChange={(c) => toggleAccountGroup(ag.id, c === true)}
+              />
+              <div className="min-w-0 flex-1 truncate text-sm font-medium">
+                {ag.name}
+              </div>
+              <Pill>
+                {accountsInAccountGroup(ag).length} account
+                {accountsInAccountGroup(ag).length === 1 ? '' : 's'}
+              </Pill>
+            </label>
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-md border">
+          {LEGAL_ENTITIES.map((e) => (
+            <label
+              key={e.code}
+              className="flex cursor-pointer items-center gap-3 border-b px-3 py-2 last:border-b-0 hover:bg-muted/50"
+            >
+              <Checkbox
+                checked={legalEntityCodes.has(e.code)}
+                onCheckedChange={(c) => toggleLegalEntity(e.code, c === true)}
+              />
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-medium">{e.name}</div>
+                <div className="truncate text-[0.65rem] text-muted-foreground">
+                  {e.code} · {e.countryName}
+                </div>
+              </div>
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function MemberEditor({
+  memberIds,
+  toggleMember,
+}: {
+  memberIds: Set<string>
+  toggleMember: (id: string, checked: boolean) => void
+}) {
+  return (
+    <div className="space-y-2">
+      <Label>Members</Label>
+      <div className="max-h-52 overflow-y-auto rounded-md border">
+        {portalUsers.map((u) => (
+          <label
+            key={u.id}
+            className="flex cursor-pointer items-center gap-3 border-b px-3 py-2 last:border-b-0 hover:bg-muted/50"
+          >
+            <Checkbox
+              checked={memberIds.has(u.id)}
+              onCheckedChange={(c) => toggleMember(u.id, c === true)}
+            />
+            <Avatar className="h-7 w-7 rounded-md">
+              <AvatarImage
+                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.name)}`}
+                alt={u.name}
+              />
+              <AvatarFallback className="rounded-md text-[0.6rem]">
+                {initials(u.name)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-medium">{u.name}</div>
+              <div className="truncate text-[0.65rem] text-muted-foreground">
+                {u.email}
+              </div>
+            </div>
+          </label>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Create dialogs
+// ---------------------------------------------------------------------------
+
+function CreateGroupDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean
+  onOpenChange: (o: boolean) => void
+}) {
+  const roles = useRoles()
+  const accountGroups = useAccountGroups()
+  const [name, setName] = React.useState('')
+  const [description, setDescription] = React.useState('')
+  const [roleIds, setRoleIds] = React.useState<Set<string>>(new Set())
+  const [scope, setScope] = React.useState<UserGroupScope>('ACCOUNT_GROUP')
+  const [agIds, setAgIds] = React.useState<Set<string>>(new Set())
+  const [leCodes, setLeCodes] = React.useState<Set<string>>(new Set())
+  const [memberIds, setMemberIds] = React.useState<Set<string>>(new Set())
+
+  const reset = () => {
+    setName('')
+    setDescription('')
+    setRoleIds(new Set())
+    setScope('ACCOUNT_GROUP')
+    setAgIds(new Set())
+    setLeCodes(new Set())
+    setMemberIds(new Set())
+  }
+
+  const draft: UserGroup = {
+    id: 'preview',
+    name,
+    description,
+    roleIds: [...roleIds],
+    scope,
+    accountGroupIds: [...agIds],
+    legalEntityCodes: [...leCodes],
+    memberIds: [...memberIds],
+    createdBy: '',
+    createdAt: '',
+    updatedAt: '',
+  }
+  const preview = accountsForUserGroup(draft, accountGroups)
+  const hasScope = scope === 'ACCOUNT_GROUP' ? agIds.size > 0 : leCodes.size > 0
+  const canSubmit = name.trim().length > 0 && roleIds.size > 0 && hasScope
+
+  const submit = () => {
+    addUserGroup({
+      ...draft,
+      id: `ug_${name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').slice(0, 24)}`,
+      name: name.trim(),
+      description: description.trim(),
+      createdBy: 'Ming Miin',
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+    })
+    toast.success('Group created', {
+      description: `${name.trim()} · ${roleIds.size} role${roleIds.size === 1 ? '' : 's'} over ${preview.length} account${preview.length === 1 ? '' : 's'}.`,
+    })
+    reset()
+    onOpenChange(false)
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) reset()
+        onOpenChange(o)
+      }}
+    >
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Create group</DialogTitle>
+          <DialogDescription>
+            A group grants roles to its members, over a set of accounts.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="g-name">Name</Label>
+              <Input
+                id="g-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="SG Payment Ops"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="g-desc">Description</Label>
+              <Input
+                id="g-desc"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Raises payments out of the SG accounts"
+              />
+            </div>
+          </div>
+
+          <RolePicker
+            roles={roles}
+            selected={roleIds}
+            onToggle={(id, checked) =>
+              setRoleIds((prev) => {
+                const next = new Set(prev)
+                if (checked) next.add(id)
+                else next.delete(id)
+                return next
+              })
+            }
+          />
+
+          <ScopeEditor
+            scope={scope}
+            setScope={setScope}
+            accountGroupIds={agIds}
+            toggleAccountGroup={(id, checked) =>
+              setAgIds((prev) => {
+                const next = new Set(prev)
+                if (checked) next.add(id)
+                else next.delete(id)
+                return next
+              })
+            }
+            legalEntityCodes={leCodes}
+            toggleLegalEntity={(code, checked) =>
+              setLeCodes((prev) => {
+                const next = new Set(prev)
+                if (checked) next.add(code)
+                else next.delete(code)
+                return next
+              })
+            }
+          />
+
+          <MemberEditor
+            memberIds={memberIds}
+            toggleMember={(id, checked) =>
+              setMemberIds((prev) => {
+                const next = new Set(prev)
+                if (checked) next.add(id)
+                else next.delete(id)
+                return next
+              })
+            }
+          />
+
+          <div className="rounded-md border border-dashed bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+            <span className="font-medium text-foreground">Effective grant:</span>{' '}
+            {memberIds.size} member{memberIds.size === 1 ? '' : 's'} ×{' '}
+            {roleIds.size} role{roleIds.size === 1 ? '' : 's'} ×{' '}
+            {preview.length} account{preview.length === 1 ? '' : 's'}
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button disabled={!canSubmit} onClick={submit}>
+            Create group
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function CreateRoleDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean
+  onOpenChange: (o: boolean) => void
+}) {
+  const [name, setName] = React.useState('')
+  const [description, setDescription] = React.useState('')
+  const [setIds, setSetIds] = React.useState<Set<string>>(new Set())
+
+  const reset = () => {
+    setName('')
+    setDescription('')
+    setSetIds(new Set())
+  }
+
+  const canSubmit = name.trim().length > 0 && setIds.size > 0
+
+  // The one grant-time check the catalogue can enforce: a role that both
+  // creates and approves payments would break four-eyes on its own.
+  const keys = new Set(
+    [...setIds].flatMap((id) => getPermissionSet(id)?.permissions ?? []),
+  )
+  const conflict =
+    keys.has('payment.create_edit') && keys.has('payment.approve_reject')
+
+  const submit = () => {
+    addRole({
+      id: `role_${name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').slice(0, 24)}`,
+      name: name.trim(),
+      description: description.trim(),
+      permissionSetIds: [...setIds],
+    })
+    toast.success('Role created', {
+      description: `${name.trim()} · ${setIds.size} permission set${setIds.size === 1 ? '' : 's'}.`,
+    })
+    reset()
+    onOpenChange(false)
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) reset()
+        onOpenChange(o)
+      }}
+    >
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Create role</DialogTitle>
+          <DialogDescription>
+            A role is a bundle of Acme's permission sets. Grant it to a group to
+            put it to work.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="r-name">Name</Label>
+              <Input
+                id="r-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Payment Ops"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="r-desc">Description</Label>
+              <Input
+                id="r-desc"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Raises payments and reconciles status"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Permission sets</Label>
+            <div className="max-h-72 overflow-y-auto rounded-md border">
+              {PERMISSION_SETS.map((ps) => (
+                <label
+                  key={ps.id}
+                  className="flex cursor-pointer items-start gap-3 border-b px-3 py-2 last:border-b-0 hover:bg-muted/50"
+                >
+                  <Checkbox
+                    className="mt-0.5"
+                    checked={setIds.has(ps.id)}
+                    onCheckedChange={(c) =>
+                      setSetIds((prev) => {
+                        const next = new Set(prev)
+                        if (c === true) next.add(ps.id)
+                        else next.delete(ps.id)
+                        return next
+                      })
+                    }
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 text-sm font-medium">
+                      {ps.name}
+                      {ps.managed && (
+                        <Pill title="Managed by Acme. Clients don't compose their own sets in MVP.">
+                          <LockIcon className="size-2.5" /> managed
+                        </Pill>
+                      )}
+                    </div>
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {ps.permissions.map((k) => (
+                        <PermissionKeyPill key={k} k={k} />
+                      ))}
+                    </div>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {conflict && (
+            <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              <TriangleAlertIcon className="mt-0.5 size-3.5 shrink-0" />
+              <span>
+                This role can both create and approve payments. Four-eyes is
+                still enforced per payment at runtime, but granting both in one
+                role defeats the intent.
+              </span>
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button disabled={!canSubmit} onClick={submit}>
+            Create role
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Detail sheets
+// ---------------------------------------------------------------------------
+
+function SummaryRow({
+  label,
+  children,
+}: {
+  label: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4 px-4 py-2.5">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <span className="text-right text-sm">{children}</span>
+    </div>
+  )
+}
+
+function GroupSheet({
+  group,
+  onClose,
+}: {
+  group: UserGroup | null
+  onClose: () => void
+}) {
+  const accountGroups = useAccountGroups()
+  const allRoles = useRoles()
+  const [editing, setEditing] = React.useState(false)
+  const [roleIds, setRoleIds] = React.useState<Set<string>>(
+    () => new Set(group?.roleIds ?? []),
+  )
+  const [memberIds, setMemberIds] = React.useState<Set<string>>(
+    () => new Set(group?.memberIds ?? []),
+  )
+
+  if (!group) return null
+
+  const roles = rolesForUserGroup(group)
+  const visible = accountsForUserGroup(group, accountGroups)
+  const members = group.memberIds
+    .map((id) => getPortalUser(id))
+    .filter((u): u is NonNullable<typeof u> => !!u)
+  const sets = PERMISSION_SETS.filter((ps) =>
+    roles.some((r) => r.permissionSetIds.includes(ps.id)),
+  )
+
+  const save = () => {
+    updateUserGroup(group.id, {
+      roleIds: [...roleIds],
+      memberIds: [...memberIds],
+    })
+    setEditing(false)
+    toast.success('Group updated', {
+      description: `${group.name} now grants ${roleIds.size} role${roleIds.size === 1 ? '' : 's'} to ${memberIds.size} member${memberIds.size === 1 ? '' : 's'}.`,
+    })
+  }
+
+  return (
+    <Sheet open={!!group} onOpenChange={(o) => !o && onClose()}>
+      <SheetContent className="w-full overflow-y-auto p-0 sm:max-w-2xl">
+        <div className="flex h-full flex-col">
+          <SheetHeader className="border-b px-6 py-5">
+            <SheetTitle className="text-lg font-semibold">
+              {group.name}
+            </SheetTitle>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {group.description || 'No description'}
+            </p>
+          </SheetHeader>
+
+          <div className="flex-1 space-y-4 p-6">
+            <div className="divide-y rounded-lg border bg-card">
+              <SummaryRow label="ID">
+                <span className="font-mono text-xs text-muted-foreground">
+                  {group.id}
+                </span>
+              </SummaryRow>
+              <SummaryRow label="Roles">
+                <div className="flex flex-wrap justify-end gap-1">
+                  {roles.length === 0 ? (
+                    <Pill tone="warning">No role granted</Pill>
+                  ) : (
+                    roles.map((r) => <Pill key={r.id}>{r.name}</Pill>)
+                  )}
+                </div>
+              </SummaryRow>
+              <SummaryRow label="Permission sets">
+                <div className="flex flex-wrap justify-end gap-1">
+                  {sets.map((ps) => (
+                    <Pill key={ps.id} tone="set">
+                      {ps.name}
+                    </Pill>
+                  ))}
+                </div>
+              </SummaryRow>
+              <SummaryRow label="Members">{members.length}</SummaryRow>
+              <SummaryRow label="Accounts in scope">
+                {visible.length}
+              </SummaryRow>
+              <SummaryRow label="Updated">
+                {formatWhen(group.updatedAt)}
+              </SummaryRow>
+            </div>
+
+            <Tabs defaultValue="roles">
+              <TabsList>
+                <TabsTrigger value="roles">Roles ({roles.length})</TabsTrigger>
+                <TabsTrigger value="access">
+                  Account scope ({visible.length})
+                </TabsTrigger>
+                <TabsTrigger value="members">
+                  Members ({members.length})
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="roles" className="mt-4 space-y-3">
+                {editing ? (
+                  <>
+                    <RolePicker
+                      roles={allRoles}
+                      selected={roleIds}
+                      onToggle={(id, checked) =>
+                        setRoleIds((prev) => {
+                          const next = new Set(prev)
+                          if (checked) next.add(id)
+                          else next.delete(id)
+                          return next
+                        })
+                      }
+                    />
+                    <MemberEditor
+                      memberIds={memberIds}
+                      toggleMember={(id, checked) =>
+                        setMemberIds((prev) => {
+                          const next = new Set(prev)
+                          if (checked) next.add(id)
+                          else next.delete(id)
+                          return next
+                        })
+                      }
+                    />
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setEditing(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button size="sm" onClick={save}>
+                        Save group
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex justify-end">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setEditing(true)}
+                      >
+                        Edit group
+                      </Button>
+                    </div>
+                    <div className="overflow-x-auto rounded-lg border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                              Role
+                            </TableHead>
+                            <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                              Permission sets
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {roles.map((r) => (
+                            <TableRow key={r.id}>
+                              <TableCell>
+                                <div className="text-sm font-medium">
+                                  {r.name}
+                                </div>
+                                <div className="text-[0.65rem] text-muted-foreground">
+                                  {r.description}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex flex-wrap gap-1">
+                                  {r.permissionSetIds.map((id) => (
+                                    <Pill key={id} tone="set">
+                                      {getPermissionSet(id)?.name ?? id}
+                                    </Pill>
+                                  ))}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </>
+                )}
+              </TabsContent>
+
+              <TabsContent value="access" className="mt-4 space-y-3">
+                <div className="text-[0.7rem] font-semibold uppercase tracking-wider text-foreground/70">
+                  {group.scope === 'ACCOUNT_GROUP'
+                    ? 'Account groups in scope'
+                    : 'Legal entity tags in scope'}
+                </div>
+                <div className="overflow-x-auto rounded-lg border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                          {group.scope === 'ACCOUNT_GROUP'
+                            ? 'Account group'
+                            : 'Legal entity'}
+                        </TableHead>
+                        <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                          Membership
+                        </TableHead>
+                        <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                          Accounts
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {group.scope === 'ACCOUNT_GROUP'
+                        ? group.accountGroupIds.map((id) => {
+                            const ag = accountGroups.find((g) => g.id === id)
+                            return (
+                              <TableRow key={id}>
+                                <TableCell className="text-sm font-medium">
+                                  {ag?.name ?? id}
+                                </TableCell>
+                                <TableCell>
+                                  {ag ? <RulePill rule={ag.rule} /> : '—'}
+                                </TableCell>
+                                <TableCell className="text-sm tabular-nums">
+                                  {ag ? accountsInAccountGroup(ag).length : 0}
+                                </TableCell>
+                              </TableRow>
+                            )
+                          })
+                        : group.legalEntityCodes.map((c) => (
+                            <TableRow key={c}>
+                              <TableCell className="text-sm font-medium">
+                                <Pill tone="entity">{c}</Pill>{' '}
+                                {legalEntityName(c)}
+                              </TableCell>
+                              <TableCell className="text-xs text-muted-foreground">
+                                Every account carrying the tag
+                              </TableCell>
+                              <TableCell className="text-sm tabular-nums">
+                                {visible.filter((a) => a.legalEntity === c).length}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                <div className="text-[0.7rem] font-semibold uppercase tracking-wider text-foreground/70">
+                  Accounts in scope ({visible.length})
+                </div>
+                <div className="overflow-x-auto rounded-lg border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                          Account
+                        </TableHead>
+                        <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                          Bank
+                        </TableHead>
+                        <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                          Entity
+                        </TableHead>
+                        <TableHead className="text-right text-[0.7rem] uppercase tracking-wider">
+                          Available
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {visible.length === 0 && (
+                        <TableRow>
+                          <TableCell
+                            colSpan={4}
+                            className="py-8 text-center text-sm text-muted-foreground"
+                          >
+                            Members of this group see no accounts.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                      {visible.map((a) => (
+                        <TableRow key={a.id}>
+                          <TableCell>
+                            <div className="text-sm font-medium">{a.name}</div>
+                            <div className="font-mono text-[0.65rem] text-muted-foreground">
+                              {a.number}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm">{a.bank}</TableCell>
+                          <TableCell>
+                            <Pill tone="entity">{a.legalEntity}</Pill>
+                          </TableCell>
+                          <TableCell className="text-right text-sm tabular-nums">
+                            {formatMoney(a.currency, a.lastBalance)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="members" className="mt-4">
+                <div className="overflow-x-auto rounded-lg border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                          User
+                        </TableHead>
+                        <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                          Status
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {members.length === 0 && (
+                        <TableRow>
+                          <TableCell
+                            colSpan={2}
+                            className="py-8 text-center text-sm text-muted-foreground"
+                          >
+                            No members yet.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                      {members.map((u) => (
+                        <TableRow key={u.id}>
+                          <TableCell>
+                            <div className="text-sm font-medium">{u.name}</div>
+                            <div className="text-[0.65rem] text-muted-foreground">
+                              {u.email}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {u.status}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
+
+          <div className="flex items-center justify-between border-t px-6 py-4">
+            <Button
+              variant="ghost"
+              className="text-destructive hover:text-destructive"
+              onClick={() => {
+                deleteUserGroup(group.id)
+                toast.success('Group deleted', {
+                  description: `${group.name} was removed. Its members lose those grants.`,
+                })
+                onClose()
+              }}
+            >
+              Delete group
+            </Button>
+            <Button variant="outline" onClick={onClose}>
+              <XIcon className="size-3.5" /> Close
+            </Button>
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
+  )
+}
+
+function RoleSheet({
+  role,
+  onClose,
+}: {
+  role: Role | null
+  onClose: () => void
+}) {
+  const groups = useUserGroups()
+  if (!role) return null
+
+  const permissions = permissionsForRole(role)
+  const usedBy = groups.filter((g) => g.roleIds.includes(role.id))
+
+  return (
+    <Sheet open={!!role} onOpenChange={(o) => !o && onClose()}>
+      <SheetContent className="w-full overflow-y-auto p-0 sm:max-w-xl">
+        <div className="flex h-full flex-col">
+          <SheetHeader className="border-b px-6 py-5">
+            <SheetTitle className="text-lg font-semibold">
+              {role.name}
+            </SheetTitle>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {role.description}
+            </p>
+          </SheetHeader>
+
+          <div className="flex-1 space-y-4 p-6">
+            <div className="divide-y rounded-lg border bg-card">
+              <SummaryRow label="ID">
+                <span className="font-mono text-xs text-muted-foreground">
+                  {role.id}
+                </span>
+              </SummaryRow>
+              <SummaryRow label="Permission sets">
+                {role.permissionSetIds.length}
+              </SummaryRow>
+              <SummaryRow label="Permissions">{permissions.length}</SummaryRow>
+              <SummaryRow label="Granted by">
+                <div className="flex flex-wrap justify-end gap-1">
+                  {usedBy.length === 0 ? (
+                    <Pill tone="warning">No group</Pill>
+                  ) : (
+                    usedBy.map((g) => <Pill key={g.id}>{g.name}</Pill>)
+                  )}
+                </div>
+              </SummaryRow>
+            </div>
+
+            <div className="text-[0.7rem] font-semibold uppercase tracking-wider text-foreground/70">
+              Permission sets
+            </div>
+            <div className="space-y-3">
+              {role.permissionSetIds.map((id) => {
+                const ps = getPermissionSet(id)
+                if (!ps) return null
+                return (
+                  <div key={id} className="rounded-lg border">
+                    <div className="flex items-center gap-1.5 border-b px-3 py-2 text-sm font-medium">
+                      {ps.name}
+                      {ps.managed && (
+                        <Pill>
+                          <LockIcon className="size-2.5" /> managed
+                        </Pill>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-1 p-3">
+                      {ps.permissions.map((k) => (
+                        <PermissionKeyPill key={k} k={k} />
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between border-t px-6 py-4">
+            <Button
+              variant="ghost"
+              className="text-destructive hover:text-destructive"
+              disabled={usedBy.length > 0}
+              title={
+                usedBy.length > 0
+                  ? 'Remove the role from every group before deleting it'
+                  : undefined
+              }
+              onClick={() => {
+                deleteRole(role.id)
+                toast.success('Role deleted', { description: role.name })
+                onClose()
+              }}
+            >
+              Delete role
+            </Button>
+            <Button variant="outline" onClick={onClose}>
+              <XIcon className="size-3.5" /> Close
+            </Button>
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
+
+export function UserManagementPage() {
+  const groups = useUserGroups()
+  const roles = useRoles()
+  const accountGroups = useAccountGroups()
+  const [openGroup, setOpenGroup] = React.useState<UserGroup | null>(null)
+  const [openRole, setOpenRole] = React.useState<Role | null>(null)
+  const [createGroup, setCreateGroup] = React.useState(false)
+  const [createRole, setCreateRole] = React.useState(false)
+
+  const openGroupLive = openGroup
+    ? groups.find((g) => g.id === openGroup.id) ?? null
+    : null
+  const openRoleLive = openRole
+    ? roles.find((r) => r.id === openRole.id) ?? null
+    : null
+
+  const ungrouped = portalUsers.filter(
+    (u) => !groups.some((g) => g.memberIds.includes(u.id)),
+  )
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">User Management</h1>
+          <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+            Permissions bundle into permission sets, sets compose into roles,
+            roles are granted to a group, and users belong to groups. Every
+            grant is scoped to a set of accounts.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="gap-2">
+            <UserRoundPlusIcon className="size-3.5" />
+            Invite user
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" className="gap-1.5">
+                Create
+                <ChevronDownIcon className="size-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => setCreateGroup(true)}>
+                Group
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setCreateRole(true)}>
+                Role
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled>
+                Permission set (Acme-managed)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
+      {ungrouped.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <TriangleAlertIcon className="size-4 shrink-0" />
+          <span className="flex-1">
+            <span className="font-medium">
+              {ungrouped.length} user{ungrouped.length === 1 ? '' : 's'} in no
+              group:
+            </span>{' '}
+            {ungrouped.map((u) => u.name).join(', ')}. They can sign in and hold
+            no permissions.
+          </span>
+        </div>
+      )}
+
+      <Tabs defaultValue="groups">
+        <TabsList>
+          <TabsTrigger value="groups">Groups ({groups.length})</TabsTrigger>
+          <TabsTrigger value="roles">Roles ({roles.length})</TabsTrigger>
+          <TabsTrigger value="sets">
+            Permission Sets ({PERMISSION_SETS.length})
+          </TabsTrigger>
+          <TabsTrigger value="users">Users ({portalUsers.length})</TabsTrigger>
+        </TabsList>
+
+        {/* Groups */}
+        <TabsContent value="groups" className="mt-4">
+          <Card>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                        Name
+                      </TableHead>
+                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                        Roles
+                      </TableHead>
+                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                        Permission sets
+                      </TableHead>
+                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                        Account scope
+                      </TableHead>
+                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                        Accounts
+                      </TableHead>
+                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                        Members
+                      </TableHead>
+                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                        Updated
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {groups.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={7} className="py-14">
+                          <div className="flex flex-col items-center gap-3 text-center">
+                            <div className="flex aspect-square size-11 items-center justify-center rounded-full border bg-muted">
+                              <UsersRoundIcon className="size-5 text-muted-foreground" />
+                            </div>
+                            <p className="text-sm font-medium">No groups yet</p>
+                            <p className="text-sm text-muted-foreground">
+                              Nobody holds a permission until they are in a
+                              group.
+                            </p>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {groups.map((g) => {
+                      const gRoles = rolesForUserGroup(g)
+                      const gSets = PERMISSION_SETS.filter((ps) =>
+                        gRoles.some((r) => r.permissionSetIds.includes(ps.id)),
+                      )
+                      const visible = accountsForUserGroup(g, accountGroups)
+                      return (
+                        <TableRow
+                          key={g.id}
+                          className="cursor-pointer"
+                          onClick={() => setOpenGroup(g)}
+                        >
+                          <TableCell className="whitespace-nowrap">
+                            <div className="font-medium">{g.name}</div>
+                            <div className="max-w-xs truncate text-[0.65rem] text-muted-foreground">
+                              {g.description}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              {gRoles.length === 0 ? (
+                                <Pill tone="warning">No role</Pill>
+                              ) : (
+                                gRoles.map((r) => (
+                                  <Pill key={r.id}>{r.name}</Pill>
+                                ))
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              {gSets.map((ps) => (
+                                <Pill key={ps.id} tone="set">
+                                  {ps.name}
+                                </Pill>
+                              ))}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              {g.scope === 'ACCOUNT_GROUP'
+                                ? g.accountGroupIds.map((id) => (
+                                    <Pill key={id} tone="scope">
+                                      {accountGroups.find((x) => x.id === id)
+                                        ?.name ?? id}
+                                    </Pill>
+                                  ))
+                                : g.legalEntityCodes.map((c) => (
+                                    <Pill key={c} tone="entity">
+                                      {c}
+                                    </Pill>
+                                  ))}
+                            </div>
+                          </TableCell>
+                          <TableCell className="tabular-nums">
+                            {visible.length}
+                          </TableCell>
+                          <TableCell className="tabular-nums">
+                            {g.memberIds.length}
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
+                            {formatWhen(g.updatedAt)}
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Roles */}
+        <TabsContent value="roles" className="mt-4">
+          <Card>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                        Name
+                      </TableHead>
+                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                        Description
+                      </TableHead>
+                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                        Permission sets
+                      </TableHead>
+                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                        Granted by
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {roles.map((r) => {
+                      const usedBy = groups.filter((g) =>
+                        g.roleIds.includes(r.id),
+                      )
+                      return (
+                        <TableRow
+                          key={r.id}
+                          className="cursor-pointer"
+                          onClick={() => setOpenRole(r)}
+                        >
+                          <TableCell className="whitespace-nowrap font-medium">
+                            {r.name}
+                          </TableCell>
+                          <TableCell className="max-w-sm text-xs text-muted-foreground">
+                            {r.description}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              {r.permissionSetIds.map((id) => (
+                                <Pill key={id} tone="set">
+                                  {getPermissionSet(id)?.name ?? id}
+                                </Pill>
+                              ))}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              {usedBy.length === 0 ? (
+                                <span className="text-xs text-muted-foreground">
+                                  Not granted
+                                </span>
+                              ) : (
+                                usedBy.map((g) => (
+                                  <Pill key={g.id}>{g.name}</Pill>
+                                ))
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Permission sets — Acme-managed, read only */}
+        <TabsContent value="sets" className="mt-4">
+          <Card>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                        Name
+                      </TableHead>
+                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                        Description
+                      </TableHead>
+                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                        Permissions
+                      </TableHead>
+                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                        Used by roles
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {PERMISSION_SETS.map((ps: PermissionSet) => {
+                      const usedBy = roles.filter((r) =>
+                        r.permissionSetIds.includes(ps.id),
+                      )
+                      return (
+                        <TableRow key={ps.id}>
+                          <TableCell className="whitespace-nowrap">
+                            <div className="flex items-center gap-1.5 font-medium">
+                              <LockIcon className="size-3 text-muted-foreground" />
+                              {ps.name}
+                            </div>
+                          </TableCell>
+                          <TableCell className="max-w-xs text-xs text-muted-foreground">
+                            {ps.description}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              {ps.permissions.map((k) => (
+                                <PermissionKeyPill key={k} k={k} />
+                              ))}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              {usedBy.map((r) => (
+                                <Pill key={r.id}>{r.name}</Pill>
+                              ))}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+          <p className="mt-3 text-xs text-muted-foreground">
+            Permission sets are defined by Acme. Clients compose roles from them
+            rather than composing their own sets.
+          </p>
+        </TabsContent>
+
+        {/* Users */}
+        <TabsContent value="users" className="mt-4">
+          <Card>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                        User
+                      </TableHead>
+                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                        Groups
+                      </TableHead>
+                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                        Effective permissions
+                      </TableHead>
+                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                        Status
+                      </TableHead>
+                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                        Last active
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {portalUsers.map((u) => {
+                      const memberOf = userGroupsForUser(u.id, groups)
+                      const perms = permissionsForUser(u.id, groups)
+                      return (
+                        <TableRow key={u.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-8 w-8 rounded-md">
+                                <AvatarImage
+                                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.name)}`}
+                                  alt={u.name}
+                                />
+                                <AvatarFallback className="rounded-md text-xs">
+                                  {initials(u.name)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <div className="text-sm font-medium">
+                                  {u.name}
+                                </div>
+                                <div className="text-[0.65rem] text-muted-foreground">
+                                  {u.email}
+                                </div>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {memberOf.length === 0 ? (
+                              <span className="text-xs text-amber-700">
+                                No group
+                              </span>
+                            ) : (
+                              <div className="flex flex-wrap gap-1">
+                                {memberOf.map((g) => (
+                                  <Pill key={g.id}>{g.name}</Pill>
+                                ))}
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell
+                            className="text-xs text-muted-foreground"
+                            title={perms.map((p) => p.key).join('\n')}
+                          >
+                            {perms.length} permission
+                            {perms.length === 1 ? '' : 's'}
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {u.status}
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {u.lastActive}
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      <div className="rounded-md border border-dashed bg-muted/20 px-4 py-3 text-xs text-muted-foreground">
+        <span className="font-medium text-foreground">How access resolves:</span>{' '}
+        Permission → Permission Set → Role → Group → User, with the Group also
+        carrying the account scope. A user's effective access is the union of
+        every group they belong to.
+      </div>
+
+      <CreateGroupDialog open={createGroup} onOpenChange={setCreateGroup} />
+      <CreateRoleDialog open={createRole} onOpenChange={setCreateRole} />
+      <GroupSheet
+        key={openGroupLive?.id ?? 'none'}
+        group={openGroupLive}
+        onClose={() => setOpenGroup(null)}
+      />
+      <RoleSheet
+        key={openRoleLive?.id ?? 'none-role'}
+        role={openRoleLive}
+        onClose={() => setOpenRole(null)}
+      />
+    </div>
+  )
+}

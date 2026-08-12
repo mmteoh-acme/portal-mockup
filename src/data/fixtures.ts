@@ -360,7 +360,10 @@ export function accountLabel(a: Account): string {
 // Permissions are Acme-defined; clients don't compose their own in MVP. A user
 // is granted a permission set, and every grant is scoped by account group —
 // there is no unscoped grant (ACME-2178).
-export type PermissionSet = 'administrator' | 'approver'
+// Permission → Permission Set → Role → Group → User, following Modern
+// Treasury's user-management structure. Acme defines the permissions and the
+// permission sets. The client composes roles from sets, then grants roles to a
+// group and scopes that group to account groups (ACME-2178).
 
 export type PermissionGroup = 'Read' | 'Export' | 'Payment' | 'Admin'
 
@@ -381,30 +384,147 @@ export const PERMISSION_CATALOGUE: Permission[] = [
   { key: 'payment.create_edit', group: 'Payment', allows: 'Create and edit a payment' },
   { key: 'payment.approve_reject', group: 'Payment', allows: 'Approve or reject a payment' },
   { key: 'account_group.manage', group: 'Admin', allows: 'Define account groups' },
-  { key: 'user_group.manage', group: 'Admin', allows: 'Define user groups and their mapping' },
+  { key: 'user_group.manage', group: 'Admin', allows: 'Define groups, roles and their mapping' },
   { key: 'approval_policy.manage', group: 'Admin', allows: 'Configure the maker-checker matrix' },
-  { key: 'user.invite_assign', group: 'Admin', allows: 'Invite a user, assign a set, scope it' },
+  { key: 'user.invite_assign', group: 'Admin', allows: 'Invite a user and assign a role' },
 ]
 
-// Administrator gets everything except approve/reject — an administrator
-// configures who can approve, and does not approve. Approver gets read, export
-// and approve/reject, and no Admin permissions.
-export const PERMISSION_SET_GRANTS: Record<PermissionSet, string[]> = {
-  administrator: PERMISSION_CATALOGUE.filter(
-    (p) => p.key !== 'payment.approve_reject',
-  ).map((p) => p.key),
-  approver: [
-    ...PERMISSION_CATALOGUE.filter((p) => p.group === 'Read').map((p) => p.key),
-    'data.export',
-    'payment.approve_reject',
-  ],
+export function permission(key: string): Permission | undefined {
+  return PERMISSION_CATALOGUE.find((p) => p.key === key)
 }
 
-export const PERMISSION_SETS: PermissionSet[] = ['administrator', 'approver']
+// A permission set is an Acme-managed bundle. Clients don't compose their own
+// in MVP, which is why every set below is marked managed.
+export type PermissionSet = {
+  id: string
+  name: string
+  description: string
+  managed: boolean
+  permissions: string[]
+}
 
-export function permissionsFor(set: PermissionSet): Permission[] {
-  const keys = PERMISSION_SET_GRANTS[set]
-  return PERMISSION_CATALOGUE.filter((p) => keys.includes(p.key))
+const READ_KEYS = PERMISSION_CATALOGUE.filter((p) => p.group === 'Read').map(
+  (p) => p.key,
+)
+
+export const PERMISSION_SETS: PermissionSet[] = [
+  {
+    id: 'ps_read_only',
+    name: 'Read Only',
+    description: 'This is a managed permission set created by Acme',
+    managed: true,
+    permissions: READ_KEYS,
+  },
+  {
+    id: 'ps_data_export',
+    name: 'Data Export',
+    description: 'This is a managed permission set created by Acme',
+    managed: true,
+    permissions: ['data.export', 'events.export'],
+  },
+  {
+    id: 'ps_payments',
+    name: 'Payments',
+    description: 'This is a managed permission set created by Acme',
+    managed: true,
+    permissions: ['payment.read', 'payment.create_edit'],
+  },
+  {
+    id: 'ps_payment_approval',
+    name: 'Payment Approval',
+    description: 'This is a managed permission set created by Acme',
+    managed: true,
+    permissions: ['payment.read', 'payment.approve_reject'],
+  },
+  {
+    id: 'ps_administration',
+    name: 'Administration',
+    description: 'This is a managed permission set created by Acme',
+    managed: true,
+    permissions: [
+      'account_group.manage',
+      'user_group.manage',
+      'approval_policy.manage',
+      'user.invite_assign',
+    ],
+  },
+]
+
+export function getPermissionSet(id: string): PermissionSet | undefined {
+  return PERMISSION_SETS.find((s) => s.id === id)
+}
+
+// A role composes permission sets. These are the client's teams — the six
+// personas in organization-background.md — plus the two payment capabilities
+// kept as separate roles, because one person can be a maker in one group and a
+// checker in another.
+export type Role = {
+  id: string
+  name: string
+  description: string
+  permissionSetIds: string[]
+}
+
+export const ROLES: Role[] = [
+  {
+    id: 'role_administrator',
+    name: 'Administrator',
+    description: 'Configures groups, roles and account groups. Cannot approve payments.',
+    permissionSetIds: ['ps_administration', 'ps_read_only', 'ps_data_export'],
+  },
+  {
+    id: 'role_trading_markets',
+    name: 'Trading & Markets',
+    description: 'Internal FIAT automation and trading pay-ins and payouts. Low volume, high value.',
+    permissionSetIds: ['ps_payments', 'ps_read_only', 'ps_data_export'],
+  },
+  {
+    id: 'role_tm_recon',
+    name: 'Trading & Markets Recon',
+    description: 'Reads transactions, balances and payments for analysis and reconciliation.',
+    permissionSetIds: ['ps_read_only'],
+  },
+  {
+    id: 'role_payment_ops',
+    name: 'Payment Ops',
+    description: 'Raises payments and reconciles payment status across an entity.',
+    permissionSetIds: ['ps_payments', 'ps_read_only', 'ps_data_export'],
+  },
+  {
+    id: 'role_payment_approver',
+    name: 'Payment Approver',
+    description: 'Approves or rejects payments. Assignable per group so a maker elsewhere can check here.',
+    permissionSetIds: ['ps_payment_approval', 'ps_read_only'],
+  },
+  {
+    id: 'role_treasury',
+    name: 'Treasury',
+    description: 'Ledger reconciliation at daily close and month end, through the treasury system.',
+    permissionSetIds: ['ps_read_only', 'ps_data_export'],
+  },
+  {
+    id: 'role_fiat_zeus',
+    name: 'FIAT / Zeus',
+    description: 'FIAT function. Makes payments from every account.',
+    permissionSetIds: ['ps_payments', 'ps_read_only', 'ps_data_export'],
+  },
+  {
+    id: 'role_payment_product',
+    name: 'Payment Product',
+    description: 'Product work on core payment features. Needs to cross-check what Acme returns.',
+    permissionSetIds: ['ps_read_only', 'ps_data_export'],
+  },
+]
+
+export function getRole(id: string): Role | undefined {
+  return ROLES.find((r) => r.id === id)
+}
+
+export function permissionsForRole(role: Role): Permission[] {
+  const keys = new Set(
+    role.permissionSetIds.flatMap((id) => getPermissionSet(id)?.permissions ?? []),
+  )
+  return PERMISSION_CATALOGUE.filter((p) => keys.has(p.key))
 }
 
 export type UserStatus = 'active' | 'invited' | 'suspended'
@@ -413,7 +533,6 @@ export type PortalUser = {
   id: string
   name: string
   email: string
-  permissionSet: PermissionSet
   status: UserStatus
   approvalLimit: string | null
   lastActive: string
@@ -424,7 +543,6 @@ export const portalUsers: PortalUser[] = [
     id: 'usr_01',
     name: 'Ming Miin',
     email: 'ming@tryacme.com',
-    permissionSet: 'administrator',
     status: 'active',
     approvalLimit: null,
     lastActive: '1 Jun, 2026',
@@ -433,7 +551,6 @@ export const portalUsers: PortalUser[] = [
     id: 'usr_02',
     name: 'Priya Lim',
     email: 'priya@tryacme.com',
-    permissionSet: 'approver',
     status: 'active',
     approvalLimit: 'Up to S$2,000,000',
     lastActive: '1 Jun, 2026',
@@ -442,7 +559,6 @@ export const portalUsers: PortalUser[] = [
     id: 'usr_03',
     name: 'Alice Wong',
     email: 'alice@tryacme.com',
-    permissionSet: 'administrator',
     status: 'active',
     approvalLimit: null,
     lastActive: '31 May, 2026',
@@ -451,7 +567,6 @@ export const portalUsers: PortalUser[] = [
     id: 'usr_04',
     name: 'Gary Tan',
     email: 'gary.tan@tryacme.com',
-    permissionSet: 'administrator',
     status: 'invited',
     approvalLimit: null,
     lastActive: '—',
@@ -460,7 +575,6 @@ export const portalUsers: PortalUser[] = [
     id: 'usr_05',
     name: 'James Audit',
     email: 'james@auditors.com',
-    permissionSet: 'administrator',
     status: 'active',
     approvalLimit: null,
     lastActive: '15 Apr, 2026',
@@ -469,7 +583,6 @@ export const portalUsers: PortalUser[] = [
     id: 'usr_06',
     name: 'CS Team',
     email: 'cs-ops@tryacme.com',
-    permissionSet: 'administrator',
     status: 'active',
     approvalLimit: null,
     lastActive: '1 Jun, 2026',
@@ -478,7 +591,6 @@ export const portalUsers: PortalUser[] = [
     id: 'usr_07',
     name: 'Dewi Putri',
     email: 'dewi@tryacme.com',
-    permissionSet: 'administrator',
     status: 'active',
     approvalLimit: null,
     lastActive: '30 May, 2026',
@@ -574,6 +686,9 @@ export type UserGroup = {
   id: string
   name: string
   description: string
+  // Roles granted to everyone in the group. Permissions resolve through
+  // role -> permission set -> permission.
+  roleIds: string[]
   scope: UserGroupScope
   accountGroupIds: string[]
   legalEntityCodes: string[]
@@ -586,6 +701,7 @@ export type UserGroup = {
 export const userGroupsSeed: UserGroup[] = [
   {
     id: 'ug_administrators',
+    roleIds: ['role_administrator'],
     name: 'Administrators',
     description: 'Full access to every account in the client group.',
     scope: 'ACCOUNT_GROUP',
@@ -598,6 +714,7 @@ export const userGroupsSeed: UserGroup[] = [
   },
   {
     id: 'ug_sg_payment_ops',
+    roleIds: ['role_payment_ops'],
     name: 'SG Payment Ops',
     description: 'Makers raising payments out of the Singapore accounts.',
     scope: 'ACCOUNT_GROUP',
@@ -610,6 +727,7 @@ export const userGroupsSeed: UserGroup[] = [
   },
   {
     id: 'ug_treasury_approvers',
+    roleIds: ['role_payment_approver'],
     name: 'Treasury Approvers',
     description: 'Checkers approving payments across SG and client money.',
     scope: 'ACCOUNT_GROUP',
@@ -622,6 +740,7 @@ export const userGroupsSeed: UserGroup[] = [
   },
   {
     id: 'ug_indo_ops',
+    roleIds: ['role_payment_ops'],
     name: 'Indonesia Ops',
     description:
       'Scoped by legal-entity tag instead of a hand-built account group.',
@@ -635,6 +754,7 @@ export const userGroupsSeed: UserGroup[] = [
   },
   {
     id: 'ug_external_audit',
+    roleIds: ['role_tm_recon'],
     name: 'External Audit',
     description: 'Read-only access to reserve and receivable balances.',
     scope: 'ACCOUNT_GROUP',
@@ -647,6 +767,7 @@ export const userGroupsSeed: UserGroup[] = [
   },
   {
     id: 'ug_cs_readonly',
+    roleIds: ['role_tm_recon'],
     name: 'CS Read-only',
     description: 'Customer support — transaction lookup on SG accounts.',
     scope: 'ACCOUNT_GROUP',
@@ -725,6 +846,37 @@ export function accountsForUserGroup(
     }
   }
   return accounts.filter((a) => ids.has(a.id))
+}
+
+// Everything a user may do: the union of the permission sets of the roles
+// granted by every group they belong to.
+export function permissionsForUser(
+  userId: string,
+  userGroups: UserGroup[],
+): Permission[] {
+  const keys = new Set<string>()
+  for (const g of userGroups) {
+    if (!g.memberIds.includes(userId)) continue
+    for (const roleId of g.roleIds) {
+      const role = getRole(roleId)
+      if (!role) continue
+      for (const p of permissionsForRole(role)) keys.add(p.key)
+    }
+  }
+  return PERMISSION_CATALOGUE.filter((p) => keys.has(p.key))
+}
+
+export function rolesForUserGroup(group: UserGroup): Role[] {
+  return group.roleIds
+    .map((id) => getRole(id))
+    .filter((r): r is Role => !!r)
+}
+
+export function permissionSetsForUserGroup(group: UserGroup): PermissionSet[] {
+  const ids = new Set(
+    rolesForUserGroup(group).flatMap((r) => r.permissionSetIds),
+  )
+  return PERMISSION_SETS.filter((s) => ids.has(s.id))
 }
 
 export function userGroupsForUser(
