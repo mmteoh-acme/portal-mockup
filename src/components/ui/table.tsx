@@ -55,7 +55,10 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
     <tr
       data-slot="table-row"
       className={cn(
-        "border-b transition-colors hover:bg-muted/50 has-aria-expanded:bg-muted/50 data-[state=selected]:bg-muted",
+        // Hover stays neutral — it is pointer feedback, not state. Selection is
+        // state that survives the pointer leaving, so it carries the brand tint
+        // and has to win over hover.
+        "border-b transition-colors hover:bg-muted/50 has-aria-expanded:bg-muted/50 data-[state=selected]:bg-brand-subtle data-[state=selected]:hover:bg-brand-subtle",
         className
       )}
       {...props}

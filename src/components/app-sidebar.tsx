@@ -88,9 +88,9 @@ function NavLink({
           'h-10 rounded-lg px-3 text-[0.95rem] font-normal text-muted-foreground transition-colors',
           'hover:bg-muted hover:text-foreground',
           '[&>svg]:size-[18px] [&>svg]:shrink-0 [&>svg]:stroke-[1.5] [&>svg]:text-muted-foreground',
-          'data-[active=true]:bg-[#EEF2FF] data-[active=true]:font-medium data-[active=true]:text-[#1447E6]',
-          'data-[active=true]:[&>svg]:text-[#1447E6]',
-          'data-[active=true]:hover:bg-[#EEF2FF] data-[active=true]:hover:text-[#1447E6]',
+          'data-[active=true]:bg-brand-subtle data-[active=true]:font-medium data-[active=true]:text-brand',
+          'data-[active=true]:[&>svg]:text-brand',
+          'data-[active=true]:hover:bg-brand-subtle data-[active=true]:hover:text-brand',
         )}
       >
         <Link to={item.to} className="gap-3">
@@ -105,7 +105,7 @@ function NavLink({
 export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const navigate = useNavigate()
-  const { user, setRole, allUsers } = useUser()
+  const { user, setPermissionSet, allUsers } = useUser()
   const accountCount = ACCOUNTS.length
   const entityCount = (code: LegalEntity['code']) =>
     ACCOUNTS.filter((a) => a.legalEntity === code).length
@@ -245,7 +245,7 @@ export function AppSidebar() {
                       {user.name}
                     </span>
                     <span className="truncate text-[0.65rem] uppercase tracking-wider text-muted-foreground">
-                      {user.role}
+                      {user.permissionSet}
                     </span>
                   </div>
                   <ChevronsUpDownIcon className="ml-auto size-4 opacity-60" />
@@ -268,15 +268,15 @@ export function AppSidebar() {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">
-                  Switch role
+                  Switch permission set
                 </DropdownMenuLabel>
                 <DropdownMenuGroup>
                   {allUsers.map((u) => {
-                    const active = u.role === user.role
+                    const active = u.permissionSet === user.permissionSet
                     return (
                       <DropdownMenuItem
-                        key={u.role}
-                        onClick={() => setRole(u.role)}
+                        key={u.permissionSet}
+                        onClick={() => setPermissionSet(u.permissionSet)}
                       >
                         <div className="flex aspect-square size-6 items-center justify-center rounded-sm border bg-muted text-[10px] font-semibold">
                           {u.name
@@ -289,7 +289,7 @@ export function AppSidebar() {
                         <div className="flex flex-1 flex-col leading-tight">
                           <span className="truncate text-sm">{u.name}</span>
                           <span className="truncate text-[0.6rem] uppercase tracking-wider text-muted-foreground">
-                            {u.role}
+                            {u.permissionSet}
                           </span>
                         </div>
                         {active && (
