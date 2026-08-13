@@ -141,6 +141,55 @@ Permissions add up for that account. The most permissive grant wins, per account
 * A user who is in Payment Ops APAC and in Financial Control can both create and approve on an AMA account. That is intended.
 * Stopping that user approving their own payment order is a maker-checker rule, not a permission. Role-based access answers whether a person may ever do X on account Y. Segregation of duties answers whether they may do X on this particular payment. Keep the two separate.
 
+### Set level or group level
+
+Modern Treasury puts the account constraint on the permission set itself, as a set-wide "Only Include" and "And Exclude" list. That works for them and not for us, and the reason is ownership rather than taste.
+
+* Their permission sets are authored by the client, so the set is already client data and an account list belongs to it.
+* Our permission sets are managed by Acme and shared across clients, which is what lets Acme add a capability to Payments once and have every client inherit it. A shared set cannot carry one client's account numbers.
+
+The two choices are a package. Client-authored sets allow a set-level scope. Acme-managed sets force a group-level scope.
+
+| | Constraint on the permission set | Constraint on the group |
+| --- | --- | --- |
+| What it means | This bundle only ever applies to these accounts | These people exercise this bundle on these accounts |
+| Reuse | The same capabilities on another account set means cloning the set | One set reused by many groups |
+| Count to maintain | sets multiplied by scopes | sets stay fixed, groups multiply |
+| Editing scope | Touches the object that also defines capabilities | Touches the group only |
+| A new account opens | Re-open every set that should see it | Nothing, if the scope is a predicate |
+
+One thing is worth taking from their design. A constraint that is intrinsic to a capability belongs on the set, for example that Payment Support may touch payment orders and never counterparties. A constraint that is extrinsic, meaning which accounts this team looks after, belongs on the group. If both layers ever carry a constraint, the effective account list is the intersection, and an exclusion beats an inclusion.
+
+### What "limit on the account level" can mean
+
+Three different things get called the same name. Two are needed and one is not.
+
+| Meaning | Needed |
+| --- | --- |
+| A grant applies to a set of accounts | Yes. Stories 1, 5 and 6 cannot be built without it |
+| One person holds different capabilities on different accounts | Yes. See the decision below |
+| An admin ticks permissions account by account in the UI | No. That is one row of state per account per permission, and it goes stale |
+
+The first two are delivered by a group-level predicate scope. The third is what that avoids.
+
+### Decision: the maker and checker split is account level
+
+Payment Ops can be maker on some accounts and checker on others, and a person may hold both on one specific account. That is a permission difference per account, so the model carries it rather than pushing it into a policy.
+
+What follows from the decision:
+
+* Create and approve must stay in separate permission sets. Payments carries Payment Orders. Approvals carries Payment Approvals. They are never bundled.
+* A team that does both is modelled as two groups, one per function, each with its own account scope. A person joins both where they hold both.
+* Group count grows with team multiplied by function rather than team alone. Groups are cheap because they define no capability, so this is the intended place for the growth.
+* Name a group after its team, its function and its book, for example `Payment Ops APAC · Maker`. Without that the group list stops being readable once it passes twenty rows.
+
+The decision does not remove the four-eyes rule. Wherever create and approve land on the same person and the same account, something still has to stop them approving their own payment order. That check is per payment, not per account, so it stays a policy on top of the permission model.
+
+* Access control answers whether this person may ever approve on this account.
+* The four-eyes rule answers whether this person may approve this particular payment.
+
+Both are required under this decision. Only the second would have been required under a single combined Payments set.
+
 ### The scope has to be a predicate, not a list
 
 Today a group scopes with `ALL`, `LEGAL_ENTITY` or a hand-picked account list. Stories 5 and 6 need neither of the first two and should not use the third, because a hand-picked list goes stale the day a new OTC account opens.
@@ -206,6 +255,7 @@ A role names a job in this organization and composes Acme's sets. Customizable p
 | --- | --- | --- |
 | Administrator | Administrator | Existing |
 | Payment Operations | Payments | 1 |
+| Payment Approver | Approvals | 1, the checker half |
 | Reconciliation | Reporting | 2 |
 | Treasury | Payments | 3 |
 | FIAT Signer | Approvals | 4 |
@@ -225,7 +275,8 @@ A group grants roles, holds users and carries the account scope.
 | Group | Role | Accounts in scope |
 | --- | --- | --- |
 | Administrators | Administrator | All |
-| Payment Ops APAC | Payment Operations | `legalEntity = AMA` |
+| Payment Ops APAC · Maker | Payment Operations | `legalEntity = AMA` |
+| Payment Ops APAC · Checker | Payment Approver | `legalEntity = AMA AND purpose != OTC` |
 | Reconciliation | Reconciliation | All |
 | Treasury | Treasury | All |
 | FIAT Signers | FIAT Signer | All |
@@ -233,6 +284,8 @@ A group grants roles, holds users and carries the account scope.
 | Trading US | Trading Desk | `purpose = OTC AND country = US` |
 | Financial Control | Financial Controller | All |
 | Customer Support | Customer Support | All |
+
+The two Payment Ops groups are the decision above in practice. A member who is maker only joins the first. A member who checks as well joins both, and the checker scope names the accounts they are allowed to check.
 
 Only the Administrator group may define groups and roles for a user.
 
@@ -312,4 +365,5 @@ The mockup still seeds the earlier six roles and six permission sets. It does no
 * Story 8 asks for "certain payments details" only. Permissions are checked per endpoint, so a field level restriction is not expressible today. Either Acme defines a narrower payment summary permission, or customer support reads the full payment.
 * Story 4 says "sign incoming transactions". Approving an incoming transaction is not a payment approval. Confirm whether this means releasing or acknowledging incoming funds.
 * Story 7 says "before cut off" and story 4 says "real time". Both are service levels rather than permissions. Approval windows were removed from the MVP.
+* Decided: the maker and checker split is account level, so create and approve stay in separate permission sets and a team that does both is two groups. The per-payment four-eyes rule is still required on top.
 * An account needs a `purpose` attribute before OTC can be used in a scope. Currency and country also need to become scope dimensions.
