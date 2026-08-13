@@ -78,11 +78,13 @@ A group defines account access, grants roles and holds users.
 | Administrators | Administrator | All |
 | Trading and Markets | Operations | All |
 | Trading and Markets Reconciliation | Reconciliation | All |
+| Customer Support | Customer Support | All |
 | Engineers | Engineering | All |
 | RMA Signers | Finance and Treasury | RMA accounts |
 | RLKY Signers | Finance and Treasury | RLKY accounts |
 
 The two Signers groups are the same role over different account scopes. That is how one person signs for one entity and not another.
+Only Administrator Group are allow to define the group and role for an user.
 
 ### Roles
 
@@ -128,10 +130,11 @@ Jx is in both Signers groups, so Jx can sign for RMA and for RLKY. Nigel can sig
 
 Background on the teams the roles are named after.
 
-### Trading and Markets (RTM team)
+### Trading and Markets 
 
 * Supports all internal FIAT operations automation, including trading pay-ins and payouts with external trading counterparties.
 * Operations are time-sensitive.
+* Make payment only from the OTC accounts.
 * Payment volume is low. Payment values are high.
 * Sole user of the maker-checker feature.
 
@@ -149,28 +152,24 @@ Background on the teams the roles are named after.
 * Should have visibility of all accounts of a given legal entity.
 * Can be maker or checker for different accounts.
 
-### Ripple Treasury team
+### Treasury team
 
-* Runs a treasury management system. Ripple acquired GTreasury in 2025 and uses GTreasury for the treasury function.
+* Runs the treasury management system that include treasury payments, reconciliation and daily and month end closing. 
 * Ledger reconciliation, at daily close and at month end.
 
 ### FIAT and Zeus team
 
 * Owns the FIAT function.
-* Previously integrated Acme into Trovata. Ripple is now sunsetting the Trovata connection.
 * Makes payments from all accounts.
 
-### Payment Product team
-
-* Works on Ripple core product features such as Ripple Pay.
-* In discussion on a virtual account API for an MXN bank.
-* May need access to API key management, webhook retriggering, and cross-checking the API response against what Acme presents.
 
 ## What the mockup reflects
 
 Deployed: <https://portal-mockup-virid.vercel.app>
 
 * The landing page is Transactions. The home page is removed for MVP.
+* Payments is view only for MVP. Creating, retrying and approving a payment are not in this version.
+* Payments shows only the settled statuses, COMPLETED and FAILED. The interim states are removed, so there is no pending, rejected by approver or approval expired.
 * The account groups page is removed. A group scopes onto accounts directly.
 * User Management carries the four tabs: Groups, Roles, Permission Sets, Users.
 * The five groups, six roles, six permission sets and five users above are the seeded data.

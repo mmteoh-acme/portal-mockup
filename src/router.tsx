@@ -46,13 +46,6 @@ const paymentsRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: '/payments',
   component: PaymentsPage,
-  validateSearch: (
-    raw: Record<string, unknown>,
-  ): { action?: string; txnId?: string; paymentId?: string } => ({
-    action: typeof raw.action === 'string' ? raw.action : undefined,
-    txnId: typeof raw.txnId === 'string' ? raw.txnId : undefined,
-    paymentId: typeof raw.paymentId === 'string' ? raw.paymentId : undefined,
-  }),
 })
 
 const internalAccountsRoute = createRoute({

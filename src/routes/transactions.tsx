@@ -3,14 +3,9 @@ import {
   SearchIcon,
   CalendarIcon,
   ChevronDownIcon,
-  ChevronRightIcon,
   MoreHorizontalIcon,
   DownloadIcon,
-  ArrowDownIcon,
-  ArrowUpIcon,
-  ArrowUpDownIcon,
   ExternalLinkIcon,
-  InfoIcon,
 } from 'lucide-react'
 import type {
   ColumnDef,
@@ -19,7 +14,6 @@ import type {
   SortingState,
 } from '@tanstack/react-table'
 import {
-  flexRender,
   getCoreRowModel,
   getFacetedMinMaxValues,
   getFacetedRowModel,
@@ -29,19 +23,10 @@ import {
   getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-import { parse as parseDate } from 'date-fns'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import {
   Popover,
   PopoverContent,
@@ -63,27 +48,16 @@ import {
 } from '@/components/ui/sheet'
 import { toast } from 'sonner'
 import { Mono, StatusPill } from '@/components/mono'
+import { DataTable, DataTablePagination } from '@/components/data-table'
 import { DataTableFilter } from '@/components/data-table-filter'
-import { CopyButton } from '@/components/copy-button'
+import { CodeBlockField, DetailSection, Field } from '@/components/detail-list'
+import { csvFilename, downloadCsv } from '@/lib/csv'
 import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from '@/components/ui/pagination'
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
+  SELECT_ALL_STATE,
+  dateInRange,
+  formatDateRangeLabel,
+  isoDisplayDate,
+} from '@/lib/table-utils'
 import {
   ACCOUNTS,
   CLIENT_GROUP,
@@ -134,18 +108,14 @@ const CSV_HEADERS = [
   'Last updated',
 ] as const
 
-function csvEscape(v: string | undefined | null): string {
-  const s = (v ?? '').toString()
-  return `"${s.replace(/"/g, '""')}"`
-}
-
 function downloadTransactionsCsv(rows: Txn[], entityName: string): void {
-  const lines = [CSV_HEADERS.map(csvEscape).join(',')]
-  for (const t of rows) {
-    const account = getAccount(t.internalAccountId)
-    const d = txnDetail(t, account)
-    lines.push(
-      [
+  downloadCsv(
+    csvFilename('transactions', entityName),
+    CSV_HEADERS,
+    rows.map((t) => {
+      const account = getAccount(t.internalAccountId)
+      const d = txnDetail(t, account)
+      return [
         t.transactionDate,
         d.bookingDate,
         account?.number,
@@ -164,9 +134,7 @@ function downloadTransactionsCsv(rows: Txn[], entityName: string): void {
         d.virtualAccountNumber,
         t.remittanceInfo,
         t.additionalInformation,
-        d.transactionReferences
-          .map((r) => `${r.name}=${r.value}`)
-          .join('; '),
+        d.transactionReferences.map((r) => `${r.name}=${r.value}`).join('; '),
         d.messageId,
         t.dataSource,
         d.statementId,
@@ -175,50 +143,8 @@ function downloadTransactionsCsv(rows: Txn[], entityName: string): void {
         t.createdAt,
         d.updatedAt,
       ]
-        .map(csvEscape)
-        .join(','),
-    )
-  }
-  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  const slug = entityName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-  const today = new Date()
-  const y = today.getFullYear()
-  const m = String(today.getMonth() + 1).padStart(2, '0')
-  const d = String(today.getDate()).padStart(2, '0')
-  a.href = url
-  a.download = `transactions-${slug}-${y}${m}${d}.csv`
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  setTimeout(() => URL.revokeObjectURL(url), 0)
-}
-
-function formatDateRangeLabel(range: DateRange | undefined): string {
-  if (!range?.from) return 'Date range'
-  const from = range.from
-  const to = range.to ?? range.from
-  const fmt = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-  if (fmt(from) === fmt(to)) return fmt(from)
-  return `${fmt(from)} → ${fmt(to)}`
-}
-
-// Parse the CSV-style display date "1 Jun, 2026" into a Date.
-function parseTxnDate(raw: string): Date | null {
-  if (!raw) return null
-  const d = parseDate(raw, 'd MMM, yyyy', new Date())
-  return isNaN(d.getTime()) ? null : d
-}
-
-// Display date "1 Jun, 2026" → ISO "2026-06-01".
-function isoTxnDate(raw: string): string {
-  const d = parseTxnDate(raw)
-  if (!d) return raw
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${d.getFullYear()}-${m}-${day}`
+    }),
+  )
 }
 
 // Reconstruct the raw API payload for a transaction, mirroring the
@@ -228,7 +154,7 @@ function buildRawPayload(
   origin: { number: string; bic: string } | undefined,
   d: TxnDetail,
 ): string {
-  const date = isoTxnDate(t.transactionDate)
+  const date = isoDisplayDate(t.transactionDate)
   const payload = {
     data: [
       {
@@ -282,41 +208,6 @@ function buildRawPayload(
   return JSON.stringify(payload, null, 2)
 }
 
-// Page numbers with ellipsis gaps: first, last, and a window around the
-// current page — 1 … 4 5 6 … 12.
-function pageNumbers(
-  current: number,
-  total: number,
-): (number | 'ellipsis')[] {
-  if (total <= 7) {
-    return Array.from({ length: total }, (_, i) => i + 1)
-  }
-  const pages = new Set([1, total, current, current - 1, current + 1])
-  const sorted = [...pages]
-    .filter((p) => p >= 1 && p <= total)
-    .sort((a, b) => a - b)
-  const out: (number | 'ellipsis')[] = []
-  let prev = 0
-  for (const p of sorted) {
-    if (prev && p - prev > 1) out.push('ellipsis')
-    out.push(p)
-    prev = p
-  }
-  return out
-}
-
-function inRange(dateStr: string, range: DateRange | undefined): boolean {
-  if (!range?.from) return true
-  const d = parseTxnDate(dateStr)
-  if (!d) return true
-  d.setHours(0, 0, 0, 0)
-  const from = new Date(range.from)
-  from.setHours(0, 0, 0, 0)
-  const to = range.to ? new Date(range.to) : new Date(range.from)
-  to.setHours(23, 59, 59, 999)
-  return d >= from && d <= to
-}
-
 // Row shape the table works on: the transaction plus the account attributes and
 // derived values the columns sort, filter and group by.
 type TxnRow = Txn & {
@@ -326,11 +217,6 @@ type TxnRow = Txn & {
   legalEntityCode: string
   amountNumber: number
 }
-
-const SELECT_ALL_STATE = (
-  all: boolean,
-  some: boolean,
-): boolean | 'indeterminate' => (all ? true : some ? 'indeterminate' : false)
 
 export function TransactionsPage() {
   const accounts = React.useMemo(() => ACCOUNTS, [])
@@ -417,7 +303,10 @@ export function TransactionsPage() {
             txnIsoDate(b.original.transactionDate),
           ) || a.original.createdAt.localeCompare(b.original.createdAt),
         filterFn: (row, columnId, value) =>
-          inRange(row.getValue(columnId) as string, value as DateRange | undefined),
+          dateInRange(
+            row.getValue(columnId) as string,
+            value as DateRange | undefined,
+          ),
       },
       {
         id: 'accountNumber',
@@ -578,7 +467,6 @@ export function TransactionsPage() {
         size: 48,
       },
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   )
 
@@ -641,7 +529,6 @@ export function TransactionsPage() {
     [accounts],
   )
 
-  const filteredRows = table.getFilteredRowModel().rows
   const selectedRows = table.getSelectedRowModel().rows
 
   const clearFilters = () => {
@@ -652,11 +539,6 @@ export function TransactionsPage() {
   const activeFilterCount =
     columnFilters.filter((f) => f.id !== 'transactionDate').length +
     (globalFilter.trim() ? 1 : 0)
-
-  const pageIndex = table.getState().pagination.pageIndex
-  const pageSize = table.getState().pagination.pageSize
-  const pageStart = filteredRows.length === 0 ? 0 : pageIndex * pageSize + 1
-  const pageEnd = Math.min((pageIndex + 1) * pageSize, filteredRows.length)
 
   return (
     <div className="space-y-6">
@@ -809,184 +691,17 @@ export function TransactionsPage() {
           </div>
         )}
 
-        <div className="w-full overflow-x-auto border-t">
-          <Table>
-            <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id} className="bg-muted/50">
-                  {headerGroup.headers.map((header) => {
-                    const canSort = header.column.getCanSort()
-                    const sorted = header.column.getIsSorted()
-                    const tip = header.column.columnDef.meta?.headerTooltip
-                    const label = header.isPlaceholder ? null : canSort ? (
-                      <button
-                        type="button"
-                        className={`inline-flex items-center gap-1 uppercase tracking-wider ${
-                          sorted
-                            ? 'text-brand'
-                            : 'text-foreground hover:text-foreground'
-                        }`}
-                        onClick={header.column.getToggleSortingHandler()}
-                      >
-                        {flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
-                        {tip && <InfoIcon className="size-3 opacity-50" />}
-                        {sorted === 'desc' ? (
-                          <ArrowDownIcon className="size-3" />
-                        ) : sorted === 'asc' ? (
-                          <ArrowUpIcon className="size-3" />
-                        ) : (
-                          <ArrowUpDownIcon className="size-3 opacity-30" />
-                        )}
-                      </button>
-                    ) : (
-                      flexRender(
-                        header.column.columnDef.header,
-                        header.getContext(),
-                      )
-                    )
-                    return (
-                      <TableHead
-                        key={header.id}
-                        className="relative h-10 select-none text-[0.7rem] uppercase tracking-wider"
-                        style={
-                          header.column.columnDef.size
-                            ? { width: header.column.columnDef.size }
-                            : undefined
-                        }
-                      >
-                        {tip ? (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="inline-flex">{label}</span>
-                            </TooltipTrigger>
-                            <TooltipContent side="top">
-                              <InfoIcon className="size-3.5 shrink-0 opacity-80" />
-                              {tip}
-                            </TooltipContent>
-                          </Tooltip>
-                        ) : (
-                          label
-                        )}
-                      </TableHead>
-                    )
-                  })}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    data-state={row.getIsSelected() && 'selected'}
-                    className="cursor-pointer"
-                    onClick={() => setOpenTxn(row.original)}
-                  >
-                    {row.getVisibleCells().map((cell) => {
-                      const stopClick =
-                        cell.column.id === 'select' ||
-                        cell.column.id === 'actions'
-                      return (
-                        <TableCell
-                          key={cell.id}
-                          onClick={
-                            stopClick ? (e) => e.stopPropagation() : undefined
-                          }
-                        >
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext(),
-                          )}
-                        </TableCell>
-                      )
-                    })}
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={table.getVisibleFlatColumns().length}
-                    className="h-24 text-center text-sm text-muted-foreground"
-                  >
-                    {data.length === 0
-                      ? 'No transactions yet.'
-                      : 'No transactions match your filters'}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
+        <DataTable
+          table={table}
+          onRowClick={setOpenTxn}
+          emptyMessage={
+            data.length === 0
+              ? 'No transactions yet.'
+              : 'No transactions match your filters'
+          }
+        />
 
-        {filteredRows.length > 0 && (
-          <div className="flex items-center justify-between border-t px-4 py-3">
-            <div className="text-[0.7rem] uppercase tracking-wider text-muted-foreground">
-              Showing {pageStart}–{pageEnd} of {filteredRows.length}
-            </div>
-            <Pagination className="mx-0 w-auto justify-end">
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    href="#"
-                    aria-disabled={!table.getCanPreviousPage()}
-                    className={
-                      table.getCanPreviousPage()
-                        ? undefined
-                        : 'pointer-events-none opacity-40'
-                    }
-                    onClick={(e) => {
-                      e.preventDefault()
-                      table.previousPage()
-                    }}
-                  />
-                </PaginationItem>
-                {pageNumbers(pageIndex + 1, table.getPageCount()).map((p, i) =>
-                  p === 'ellipsis' ? (
-                    <PaginationItem key={`gap-${i}`}>
-                      <PaginationEllipsis />
-                    </PaginationItem>
-                  ) : (
-                    <PaginationItem key={p}>
-                      <PaginationLink
-                        href="#"
-                        isActive={p === pageIndex + 1}
-                        className={
-                          p === pageIndex + 1
-                            ? 'border-brand bg-brand text-brand-foreground hover:bg-brand hover:text-brand-foreground'
-                            : undefined
-                        }
-                        onClick={(e) => {
-                          e.preventDefault()
-                          table.setPageIndex(p - 1)
-                        }}
-                      >
-                        {p}
-                      </PaginationLink>
-                    </PaginationItem>
-                  ),
-                )}
-                <PaginationItem>
-                  <PaginationNext
-                    href="#"
-                    aria-disabled={!table.getCanNextPage()}
-                    className={
-                      table.getCanNextPage()
-                        ? undefined
-                        : 'pointer-events-none opacity-40'
-                    }
-                    onClick={(e) => {
-                      e.preventDefault()
-                      table.nextPage()
-                    }}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
-          </div>
-        )}
+        <DataTablePagination table={table} />
       </div>
 
       <Sheet open={!!openTxn} onOpenChange={(o) => !o && setOpenTxn(null)}>
@@ -1059,89 +774,6 @@ export function TransactionsPage() {
   )
 }
 
-// A description-list row: label in the first column, value in the remaining
-// two. `stacked` drops the grid and puts the value under the label, for blocks
-// that need the full width — raw payloads, the references table, the timeline.
-//
-// Follows the shadcn description-list pattern, tightened from its py-6/text-base
-// to suit a side sheet carrying ~20 fields rather than a four-row marketing list.
-function Field({
-  label,
-  children,
-  stacked,
-}: {
-  label: string
-  children: React.ReactNode
-  stacked?: boolean
-}) {
-  if (stacked) {
-    return (
-      <div className="space-y-2 py-3">
-        <dt className="text-sm font-medium">{label}</dt>
-        <dd>{children}</dd>
-      </div>
-    )
-  }
-  return (
-    <div className="py-3 sm:grid sm:grid-cols-3 sm:gap-4">
-      <dt className="text-sm font-medium">{label}</dt>
-      <dd className="mt-1 sm:col-span-2 sm:mt-0">{children}</dd>
-    </div>
-  )
-}
-
-function DetailSection({
-  title,
-  children,
-}: {
-  title: string
-  children: React.ReactNode
-}) {
-  return (
-    <div>
-      <h3 className="text-[0.7rem] font-semibold uppercase tracking-wider text-foreground/70">
-        {title}
-      </h3>
-      <dl className="mt-2 divide-y border-t">{children}</dl>
-    </div>
-  )
-}
-
-// Raw payloads are long and rarely the reason someone opened this sheet, so
-// they start collapsed with a copy button — the common action is "give me this
-// to paste into a support ticket", not "read it here".
-function CodeBlockField({ label, code }: { label: string; code: string }) {
-  const [open, setOpen] = React.useState(false)
-  const lineCount = code.split('\n').length
-
-  return (
-    <div className="space-y-2 py-3">
-      <Collapsible open={open} onOpenChange={setOpen}>
-        <div className="flex items-center justify-between gap-2">
-          <dt className="text-sm font-medium">
-            <CollapsibleTrigger className="inline-flex items-center gap-1.5 hover:text-foreground/70">
-              <ChevronRightIcon
-                className={`size-3.5 transition-transform ${open ? 'rotate-90' : ''}`}
-              />
-              {label}
-              <span className="text-[0.7rem] font-normal text-muted-foreground">
-                {lineCount} lines
-              </span>
-            </CollapsibleTrigger>
-          </dt>
-          <CopyButton value={code} />
-        </div>
-        <dd>
-          <CollapsibleContent>
-            <pre className="mt-2 max-h-96 overflow-auto rounded border bg-muted/30 p-3 font-mono text-[0.7rem] leading-relaxed text-foreground/90">
-              {code}
-            </pre>
-          </CollapsibleContent>
-        </dd>
-      </Collapsible>
-    </div>
-  )
-}
 
 // Every field the spec assigns to the Detail view, in spec order.
 // organization_id and statement_entry_id are deliberately not rendered.

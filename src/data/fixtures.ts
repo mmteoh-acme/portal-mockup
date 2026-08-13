@@ -900,62 +900,6 @@ export function balanceHistory(
   })
 }
 
-export type KpiCard = {
-  label: string
-  value: string
-  delta: string
-  sub: string
-}
-
-export type ActivityItem = {
-  id: string
-  text: string
-  time: string
-  actor: string
-}
-
-export function clientKpis(): KpiCard[] {
-  const txnsCount = TRANSACTIONS.length
-  const pendingFromRefunds = unprocessedRefunds.length
-  const failedFromWithdrawals = allPayments.filter(
-    (p) => p.status === 'FAILED',
-  ).length
-  return [
-    {
-      label: 'Transactions today',
-      value: String(txnsCount),
-      delta: txnsCount > 0 ? '+' + txnsCount : '0',
-      sub: 'across all rails',
-    },
-    {
-      label: 'Pending approvals',
-      value: String(pendingFromRefunds),
-      delta: pendingFromRefunds > 0 ? `${pendingFromRefunds} new` : '0 new',
-      sub: '',
-    },
-    {
-      label: 'Failed payments',
-      value: String(failedFromWithdrawals),
-      delta: failedFromWithdrawals > 0 ? `+${failedFromWithdrawals}` : '0',
-      sub: 'last 24h',
-    },
-  ]
-}
-
-const RECENT_ACTIVITY: ActivityItem[] = [
-  { id: 'act_01', text: 'Refund REF-2406-882 approved', time: '12 min ago', actor: 'Acme CS' },
-  { id: 'act_02', text: 'Withdrawal DBS-WD-7740 retriggered', time: '34 min ago', actor: 'Acme Ops' },
-  { id: 'act_03', text: 'API key rotated (sk_test_*9F2)', time: '1 hr ago', actor: 'system' },
-  { id: 'act_04', text: 'stmt_0H3BQSYF6QQ0W (2026-05-21) available', time: '2 hr ago', actor: 'system' },
-  { id: 'act_05', text: 'Webhook acme-prod-payment-events redelivered', time: '4 hr ago', actor: 'system' },
-  { id: 'act_06', text: 'Deposit credited to 12344555', time: '5 hr ago', actor: 'system' },
-  { id: 'act_07', text: 'Balance snapshot refreshed', time: '6 hr ago', actor: 'system' },
-]
-
-export function recentActivity(): ActivityItem[] {
-  return RECENT_ACTIVITY
-}
-
 export type ApiKeyAccessGroup = {
   group: 'Direct debits' | 'Collections' | 'Transactions' | 'Payments' | 'Refunds'
   authorities: string[]
@@ -4979,114 +4923,11 @@ export function sortTransactionsByDateDesc(rows: Txn[]): Txn[] {
   })
 }
 
-// A flagged credit transaction pending review.
-// Return: rejection of a single payment order — the originating bank
-// returned the funds as a separate credit line; the payment needs to be
-// resubmitted.
-export type UnprocessedRefund = {
-  originalTxnId: string
-  customer: string
-  amount: string
-  reason: string
-  date: string
-  kind?: 'reversal' | 'return'
-}
-
-// Maker-checker outcomes surfaced on the Payments page: requests rejected by
-// approvers, and requests whose approval window lapsed before review.
-export type ApprovalRecord = {
-  id: string
-  kind: 'Payment' | 'Retry' | 'Refund' | 'Return'
-  amount: string
-  currency: string
-  receiverName: string
-  requester: string
-  submittedAt: string
-  reviewedBy?: string
-  reviewedAt?: string
-  rejectionReason?: string
-  expiresAt?: string
-}
-
-export const rejectedApprovalsSeed: ApprovalRecord[] = [
-  {
-    id: 'pay_0QK3M8XR2VTN',
-    kind: 'Payment',
-    amount: '45,000',
-    currency: 'SGD',
-    receiverName: 'MR LO CHUN KIT',
-    requester: 'Ming Miin',
-    submittedAt: 'May 30, 2026 at 04:12 PM',
-    reviewedBy: 'Priya Lim',
-    reviewedAt: 'May 30, 2026 at 05:47 PM',
-    rejectionReason: 'Duplicate payment; please submit a new one.',
-  },
-  {
-    id: 'rf_0QK1B4WQ8HSD',
-    kind: 'Refund',
-    amount: '3,400',
-    currency: 'SGD',
-    receiverName: 'Alice Wong',
-    requester: 'Alice Wong',
-    submittedAt: 'May 28, 2026 at 09:02 AM',
-    reviewedBy: 'Priya Lim',
-    reviewedAt: 'May 28, 2026 at 11:30 AM',
-    rejectionReason: 'Beneficiary account name does not match the original transaction.',
-  },
-]
-
-export const expiredApprovalsSeed: ApprovalRecord[] = [
-  {
-    id: 'pay_0QJ9F2LC6MKW',
-    kind: 'Payment',
-    amount: '12,500',
-    currency: 'SGD',
-    receiverName: 'Tideline Maritime Pte Ltd',
-    requester: 'Ming Miin',
-    submittedAt: 'May 25, 2026 at 03:40 PM',
-    expiresAt: 'May 27, 2026 at 03:40 PM',
-  },
-  {
-    id: 'rty_0QJ7D8NV1XPZ',
-    kind: 'Retry',
-    amount: '7,257',
-    currency: 'SGD',
-    receiverName: 'MR TANG SAU LING',
-    requester: 'Gary Tan',
-    submittedAt: 'May 24, 2026 at 10:05 AM',
-    expiresAt: 'May 26, 2026 at 10:05 AM',
-  },
-]
-
-export const unprocessedRefunds: UnprocessedRefund[] = [
-  {
-    originalTxnId: 'txn_0QJ87FX8QDVV2',
-    customer: 'Vivien Tan',
-    amount: 'SGD 12,000.00',
-    reason: 'Payment rejected — funds returned by bank, resubmission required',
-    date: '2026-05-28',
-    kind: 'return',
-  },
-  {
-    originalTxnId: 'txn_0QJ4FX8RDVD3',
-    customer: 'John Eames',
-    amount: 'SGD 620.00',
-    reason: 'Payment rejected — funds returned by bank, resubmission required',
-    date: '2026-05-27',
-    kind: 'return',
-  },
-  {
-    originalTxnId: 'txn_0QJ2AX7PQCKR8',
-    customer: 'Meridian Foods Pte Ltd',
-    amount: 'SGD 8,140.00',
-    reason: 'Payment rejected — funds returned by bank, resubmission required',
-    date: '2026-05-29',
-    kind: 'return',
-  },
-]
-
-
-export type PaymentStatus = 'FAILED' | 'COMPLETED' | 'PENDING'
+// Payments are read-only in the portal, so only the two settled states the
+// bank reports are modelled. Interim states — pending approval, rejected by an
+// approver, approval expired — belong to the maker-checker flow, which is not
+// in this version.
+export type PaymentStatus = 'FAILED' | 'COMPLETED'
 
 export type Payment = {
   id: string
@@ -5109,11 +4950,6 @@ export type Payment = {
   paymentDetails: string
 }
 
-export function paymentRequiresAttention(p: Payment): boolean {
-  if (p.status !== 'FAILED') return false
-  return ['REJECTED_BY_SENDING_BANK', 'OTHERS'].includes(p.resultCode)
-}
-
 export const allPayments: Payment[] = [
   {
     id: "pymt_0QD73TR6S6WDY",
@@ -5121,7 +4957,7 @@ export const allPayments: Payment[] = [
     createdAt: "17 May, 2026, 02:04",
     currency: "SGD",
     senderAccountId: "intacc_0KT8ZSCRKXP0O",
-    status: "PENDING",
+    status: "FAILED",
     type: "FAST",
     updatedAt: "17 May, 2026, 02:04",
     organizationId: "org_0KV2Y7N26Q6JR",
@@ -5181,7 +5017,7 @@ export const allPayments: Payment[] = [
     createdAt: "13 May, 2026, 18:16",
     currency: "SGD",
     senderAccountId: "intacc_0KT8ZSCRKXP0O",
-    status: "PENDING",
+    status: "FAILED",
     type: "FAST",
     updatedAt: "13 May, 2026, 18:16",
     organizationId: "org_0KV2Y7N26Q6JR",
@@ -5241,7 +5077,7 @@ export const allPayments: Payment[] = [
     createdAt: "17 Apr, 2026, 11:01",
     currency: "SGD",
     senderAccountId: "intacc_0KERZSCDKXV0O",
-    status: "PENDING",
+    status: "FAILED",
     type: "FAST",
     updatedAt: "17 Apr, 2026, 11:01",
     organizationId: "org_0KV2Y7N26Q6JR",
@@ -5301,7 +5137,7 @@ export const allPayments: Payment[] = [
     createdAt: "4 Apr, 2026, 20:48",
     currency: "SGD",
     senderAccountId: "intacc_0KT8ZSCRKXP0O",
-    status: "PENDING",
+    status: "FAILED",
     type: "FAST",
     updatedAt: "4 Apr, 2026, 20:48",
     organizationId: "org_0KV2Y7N26Q6JR",
@@ -5361,7 +5197,7 @@ export const allPayments: Payment[] = [
     createdAt: "26 Mar, 2026, 00:04",
     currency: "SGD",
     senderAccountId: "intacc_0KT8ZSCRKXP0O",
-    status: "PENDING",
+    status: "FAILED",
     type: "FAST",
     updatedAt: "26 Mar, 2026, 00:04",
     organizationId: "org_0KV2Y7N26Q6JR",
