@@ -62,7 +62,11 @@ export type Account = {
   id: string
   number: string
   name: string
+  // The settlement currency the balances are held in.
   currency: string
+  // Some accounts accept more than one currency. Absent means single-currency,
+  // so read this through accountCurrencyList().
+  currencies?: string[]
   lastBalance: number
   priorDayBalance: number
   status: 'ACTIVE' | 'INACTIVE'
@@ -100,6 +104,7 @@ export const ACCOUNTS: Account[] = [
     number: '0123569210',
     name: 'Client Money Accounts',
     currency: 'SGD',
+    currencies: ['SGD', 'USD'],
     lastBalance: 2415088.04,
     priorDayBalance: 2415088.04,
     status: 'ACTIVE',
@@ -152,6 +157,7 @@ export const ACCOUNTS: Account[] = [
     number: '0123569612',
     name: 'Collections',
     currency: 'SGD',
+    currencies: ['SGD', 'USD', 'EUR'],
     lastBalance: 1284770.6,
     priorDayBalance: 1240118.25,
     status: 'ACTIVE',
@@ -273,6 +279,7 @@ export const ACCOUNTS: Account[] = [
     number: '0910227634',
     name: 'USD Collections',
     currency: 'USD',
+    currencies: ['USD', 'EUR', 'GBP'],
     lastBalance: 486201.9,
     priorDayBalance: 452880.4,
     status: 'ACTIVE',
@@ -326,8 +333,14 @@ export function bankNames(accounts: Account[] = ACCOUNTS): string[] {
   )
 }
 
+// Every currency an account accepts. Single-currency accounts carry only their
+// settlement currency.
+export function accountCurrencyList(a: Account): string[] {
+  return a.currencies?.length ? a.currencies : [a.currency]
+}
+
 export function accountCurrencies(accounts: Account[] = ACCOUNTS): string[] {
-  return [...new Set(accounts.map((a) => a.currency))].sort()
+  return [...new Set(accounts.flatMap(accountCurrencyList))].sort()
 }
 
 // Flat display label: bank · legal entity · account name. Bank and entity are

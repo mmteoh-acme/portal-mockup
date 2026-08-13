@@ -51,7 +51,7 @@ const OPERATIONS: ReadonlyArray<NavItem> = [
 ]
 
 const ADMIN: ReadonlyArray<NavItem> = [
-  { title: 'Internal Accounts', icon: LandmarkIcon, to: '/internal-accounts' },
+  { title: 'Accounts', icon: LandmarkIcon, to: '/accounts' },
   { title: 'User Management', icon: UsersRoundIcon, to: '/user-management' },
 ]
 
@@ -164,7 +164,7 @@ export function AppSidebar() {
                 ))}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onClick={() => navigate({ to: '/internal-accounts' })}
+                  onClick={() => navigate({ to: '/accounts' })}
                 >
                   View all accounts
                 </DropdownMenuItem>

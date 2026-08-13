@@ -133,11 +133,9 @@ function NotificationBell() {
 }
 
 const PAGE_TITLES: Record<string, string> = {
-  '/dashboard': 'Home',
   '/transactions': 'Transactions',
   '/payments': 'Payments',
-  '/internal-accounts': 'Internal Accounts',
-  '/account-groups': 'Account Groups',
+  '/accounts': 'Accounts',
   '/user-management': 'User Management',
 }
 

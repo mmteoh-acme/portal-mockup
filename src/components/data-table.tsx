@@ -7,6 +7,8 @@ import {
   ArrowUpDownIcon,
   InfoIcon,
 } from 'lucide-react'
+import { DownloadIcon } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import {
   Table,
   TableBody,
@@ -152,6 +154,59 @@ export function DataTable<TData>({
           )}
         </TableBody>
       </Table>
+    </div>
+  )
+}
+
+// Bulk-action bar for the checkbox selection. The header checkbox only reaches
+// the rows on screen, so when a page is fully selected this offers the rest of
+// the filtered set in one click rather than a walk through the pager.
+export function DataTableSelectionBar<TData>({
+  table,
+  noun,
+  onDownloadCsv,
+}: {
+  table: TanstackTable<TData>
+  noun: string
+  onDownloadCsv: (rows: TData[]) => void
+}) {
+  const selected = table.getSelectedRowModel().rows
+  if (selected.length === 0) return null
+
+  const total = table.getFilteredRowModel().rows.length
+
+  return (
+    <div className="flex flex-wrap items-center gap-3 border-t bg-brand-subtle px-4 py-2.5">
+      <span className="text-xs font-medium text-brand-subtle-foreground">
+        {selected.length} selected
+      </span>
+      {selected.length < total && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 text-xs text-brand-subtle-foreground underline-offset-2 hover:underline"
+          onClick={() => table.toggleAllRowsSelected(true)}
+        >
+          Select all {total} {noun}
+        </Button>
+      )}
+      <Button
+        variant="outline"
+        size="sm"
+        className="h-7 gap-1.5 bg-background text-xs"
+        onClick={() => onDownloadCsv(selected.map((r) => r.original))}
+      >
+        <DownloadIcon className="size-3" />
+        Download CSV ({selected.length})
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-7 text-xs"
+        onClick={() => table.resetRowSelection()}
+      >
+        Clear selection
+      </Button>
     </div>
   )
 }

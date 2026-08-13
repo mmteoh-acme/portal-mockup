@@ -7,11 +7,8 @@ import {
   TagIcon,
   TriangleAlertIcon,
   UserRoundPlusIcon,
-  UsersRoundIcon,
-  XIcon,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -36,15 +33,18 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import type { ColumnDef, SortingState } from '@tanstack/react-table'
+import {
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+} from '@tanstack/react-table'
+import { Mono, StatusPill } from '@/components/mono'
+import { DataTable, DataTablePagination } from '@/components/data-table'
+import { DetailSection, Field } from '@/components/detail-list'
 import {
   LEGAL_ENTITIES,
   PERMISSION_SETS,
@@ -60,6 +60,7 @@ import {
   rolesForUserGroup,
   userGroupsForUser,
   type PermissionSet,
+  type PortalUser,
   type Role,
   type UserGroup,
   type UserGroupScope,
@@ -651,23 +652,8 @@ function CreateRoleDialog({
 }
 
 // ---------------------------------------------------------------------------
-// Detail sheets
+// Detail sheets — the description list Transactions and Payments use
 // ---------------------------------------------------------------------------
-
-function SummaryRow({
-  label,
-  children,
-}: {
-  label: string
-  children: React.ReactNode
-}) {
-  return (
-    <div className="flex items-start justify-between gap-4 px-4 py-2.5">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <span className="text-right text-sm">{children}</span>
-    </div>
-  )
-}
 
 function GroupSheet({
   group,
@@ -709,280 +695,26 @@ function GroupSheet({
 
   return (
     <Sheet open={!!group} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="w-full overflow-y-auto p-0 sm:max-w-2xl">
-        <div className="flex h-full flex-col">
-          <SheetHeader className="border-b px-6 py-5">
-            <SheetTitle className="text-lg font-semibold">
+      <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
+        <SheetHeader>
+          <SheetTitle className="font-mono">{group.id}</SheetTitle>
+        </SheetHeader>
+
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b px-4 pb-4">
+          <div className="space-y-1">
+            <div className="text-2xl font-bold tracking-tight">
               {group.name}
-            </SheetTitle>
-            <p className="mt-1 text-sm text-muted-foreground">
+            </div>
+            <p className="max-w-sm text-sm text-muted-foreground">
               {group.description || 'No description'}
             </p>
-          </SheetHeader>
-
-          <div className="flex-1 space-y-4 p-6">
-            <div className="divide-y rounded-lg border bg-card">
-              <SummaryRow label="ID">
-                <span className="font-mono text-xs text-muted-foreground">
-                  {group.id}
-                </span>
-              </SummaryRow>
-              <SummaryRow label="Roles">
-                <div className="flex flex-wrap justify-end gap-1">
-                  {roles.length === 0 ? (
-                    <Pill tone="warning">No role granted</Pill>
-                  ) : (
-                    roles.map((r) => <Pill key={r.id}>{r.name}</Pill>)
-                  )}
-                </div>
-              </SummaryRow>
-              <SummaryRow label="Permission sets">
-                <div className="flex flex-wrap justify-end gap-1">
-                  {sets.map((ps) => (
-                    <Pill key={ps.id} tone="set">
-                      {ps.name}
-                    </Pill>
-                  ))}
-                </div>
-              </SummaryRow>
-              <SummaryRow label="Members">{members.length}</SummaryRow>
-              <SummaryRow label="Accounts in scope">
-                {visible.length}
-              </SummaryRow>
-              <SummaryRow label="Updated">
-                {formatWhen(group.updatedAt)}
-              </SummaryRow>
-            </div>
-
-            <Tabs defaultValue="roles">
-              <TabsList>
-                <TabsTrigger value="roles">Roles ({roles.length})</TabsTrigger>
-                <TabsTrigger value="access">
-                  Account scope ({visible.length})
-                </TabsTrigger>
-                <TabsTrigger value="members">
-                  Members ({members.length})
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="roles" className="mt-4 space-y-3">
-                {editing ? (
-                  <>
-                    <RolePicker
-                      roles={allRoles}
-                      selected={roleIds}
-                      onToggle={(id, checked) =>
-                        setRoleIds((prev) => {
-                          const next = new Set(prev)
-                          if (checked) next.add(id)
-                          else next.delete(id)
-                          return next
-                        })
-                      }
-                    />
-                    <MemberEditor
-                      memberIds={memberIds}
-                      toggleMember={(id, checked) =>
-                        setMemberIds((prev) => {
-                          const next = new Set(prev)
-                          if (checked) next.add(id)
-                          else next.delete(id)
-                          return next
-                        })
-                      }
-                    />
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setEditing(false)}
-                      >
-                        Cancel
-                      </Button>
-                      <Button size="sm" onClick={save}>
-                        Save group
-                      </Button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex justify-end">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setEditing(true)}
-                      >
-                        Edit group
-                      </Button>
-                    </div>
-                    <div className="overflow-x-auto rounded-lg border">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="text-[0.7rem] uppercase tracking-wider">
-                              Role
-                            </TableHead>
-                            <TableHead className="text-[0.7rem] uppercase tracking-wider">
-                              Permission sets
-                            </TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {roles.map((r) => (
-                            <TableRow key={r.id}>
-                              <TableCell>
-                                <div className="text-sm font-medium">
-                                  {r.name}
-                                </div>
-                                <div className="text-[0.65rem] text-muted-foreground">
-                                  {r.description}
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex flex-wrap gap-1">
-                                  {r.permissionSetIds.map((id) => (
-                                    <Pill key={id} tone="set">
-                                      {getPermissionSet(id)?.name ?? id}
-                                    </Pill>
-                                  ))}
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </>
-                )}
-              </TabsContent>
-
-              <TabsContent value="access" className="mt-4 space-y-3">
-                <div className="text-[0.7rem] font-semibold uppercase tracking-wider text-foreground/70">
-                  Scope
-                </div>
-                <div className="rounded-lg border px-3 py-2 text-sm">
-                  {group.scope === 'ALL' ? (
-                    <span>
-                      <Pill tone="scope">All accounts</Pill> Every account in the
-                      client group, including accounts onboarded later.
-                    </span>
-                  ) : group.scope === 'LEGAL_ENTITY' ? (
-                    <span className="flex flex-wrap items-center gap-1">
-                      <Pill tone="scope">By legal entity</Pill>
-                      {group.legalEntityCodes.map((c) => (
-                        <Pill key={c} tone="entity">
-                          {c} · {legalEntityName(c)}
-                        </Pill>
-                      ))}
-                    </span>
-                  ) : (
-                    <span className="flex flex-wrap items-center gap-1">
-                      <Pill tone="scope">Picked accounts</Pill>
-                      {group.accountIds.length} account
-                      {group.accountIds.length === 1 ? '' : 's'}
-                    </span>
-                  )}
-                </div>
-
-                <div className="text-[0.7rem] font-semibold uppercase tracking-wider text-foreground/70">
-                  Accounts in scope ({visible.length})
-                </div>
-                <div className="overflow-x-auto rounded-lg border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-[0.7rem] uppercase tracking-wider">
-                          Account
-                        </TableHead>
-                        <TableHead className="text-[0.7rem] uppercase tracking-wider">
-                          Bank
-                        </TableHead>
-                        <TableHead className="text-[0.7rem] uppercase tracking-wider">
-                          Entity
-                        </TableHead>
-                        <TableHead className="text-right text-[0.7rem] uppercase tracking-wider">
-                          Available
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {visible.length === 0 && (
-                        <TableRow>
-                          <TableCell
-                            colSpan={4}
-                            className="py-8 text-center text-sm text-muted-foreground"
-                          >
-                            Members of this group see no accounts.
-                          </TableCell>
-                        </TableRow>
-                      )}
-                      {visible.map((a) => (
-                        <TableRow key={a.id}>
-                          <TableCell>
-                            <div className="text-sm font-medium">{a.name}</div>
-                            <div className="font-mono text-[0.65rem] text-muted-foreground">
-                              {a.number}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-sm">{a.bank}</TableCell>
-                          <TableCell>
-                            <Pill tone="entity">{a.legalEntity}</Pill>
-                          </TableCell>
-                          <TableCell className="text-right text-sm tabular-nums">
-                            {formatMoney(a.currency, a.lastBalance)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="members" className="mt-4">
-                <div className="overflow-x-auto rounded-lg border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-[0.7rem] uppercase tracking-wider">
-                          User
-                        </TableHead>
-                        <TableHead className="text-[0.7rem] uppercase tracking-wider">
-                          Status
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {members.length === 0 && (
-                        <TableRow>
-                          <TableCell
-                            colSpan={2}
-                            className="py-8 text-center text-sm text-muted-foreground"
-                          >
-                            No members yet.
-                          </TableCell>
-                        </TableRow>
-                      )}
-                      {members.map((u) => (
-                        <TableRow key={u.id}>
-                          <TableCell>
-                            <div className="text-sm font-medium">{u.name}</div>
-                            <div className="text-[0.65rem] text-muted-foreground">
-                              {u.email}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground">
-                            {u.status}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </TabsContent>
-            </Tabs>
           </div>
-
-          <div className="flex items-center justify-between border-t px-6 py-4">
+          <div className="flex items-center gap-2">
+            {!editing && (
+              <Button variant="outline" onClick={() => setEditing(true)}>
+                Edit group
+              </Button>
+            )}
             <Button
               variant="ghost"
               className="text-destructive hover:text-destructive"
@@ -994,12 +726,196 @@ function GroupSheet({
                 onClose()
               }}
             >
-              Delete group
-            </Button>
-            <Button variant="outline" onClick={onClose}>
-              <XIcon className="size-3.5" /> Close
+              Delete
             </Button>
           </div>
+        </div>
+
+        <div className="space-y-6 px-4 pb-6 pt-4">
+          {editing && (
+            <div className="space-y-3 rounded-md border bg-muted/20 p-3">
+              <RolePicker
+                roles={allRoles}
+                selected={roleIds}
+                onToggle={(id, checked) =>
+                  setRoleIds((prev) => {
+                    const next = new Set(prev)
+                    if (checked) next.add(id)
+                    else next.delete(id)
+                    return next
+                  })
+                }
+              />
+              <MemberEditor
+                memberIds={memberIds}
+                toggleMember={(id, checked) =>
+                  setMemberIds((prev) => {
+                    const next = new Set(prev)
+                    if (checked) next.add(id)
+                    else next.delete(id)
+                    return next
+                  })
+                }
+              />
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditing(false)}
+                >
+                  Cancel
+                </Button>
+                <Button size="sm" onClick={save}>
+                  Save group
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <DetailSection title="Group">
+            <Field label="Group ID">
+              <Mono>{group.id}</Mono>
+            </Field>
+            <Field label="Account scope">
+              {group.scope === 'ALL' ? (
+                <Pill tone="scope">All accounts</Pill>
+              ) : group.scope === 'LEGAL_ENTITY' ? (
+                <div className="flex flex-wrap gap-1">
+                  <Pill tone="scope">By legal entity</Pill>
+                  {group.legalEntityCodes.map((c) => (
+                    <Pill key={c} tone="entity" title={legalEntityName(c)}>
+                      {c}
+                    </Pill>
+                  ))}
+                </div>
+              ) : (
+                <Pill tone="scope">
+                  {group.accountIds.length} picked account
+                  {group.accountIds.length === 1 ? '' : 's'}
+                </Pill>
+              )}
+            </Field>
+            <Field label="Accounts in scope">
+              <span className="text-sm tabular-nums">{visible.length}</span>
+            </Field>
+            <Field label="Members">
+              <span className="text-sm tabular-nums">{members.length}</span>
+            </Field>
+            <Field label="Updated">
+              <span className="text-sm">{formatWhen(group.updatedAt)}</span>
+            </Field>
+          </DetailSection>
+
+          <DetailSection title="Roles granted">
+            <Field label="Roles" stacked>
+              {roles.length === 0 ? (
+                <Pill tone="warning">No role granted</Pill>
+              ) : (
+                <div className="overflow-hidden rounded border">
+                  <table className="w-full text-[0.78rem]">
+                    <tbody>
+                      {roles.map((r) => (
+                        <tr key={r.id} className="border-b last:border-b-0">
+                          <td className="px-2 py-2 align-top">
+                            <div className="font-medium">{r.name}</div>
+                            <div className="text-[0.7rem] text-muted-foreground">
+                              {r.description}
+                            </div>
+                          </td>
+                          <td className="px-2 py-2 align-top">
+                            <div className="flex flex-wrap justify-end gap-1">
+                              {r.permissionSetIds.map((id) => (
+                                <Pill key={id} tone="set">
+                                  {getPermissionSet(id)?.name ?? id}
+                                </Pill>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Field>
+            <Field label="Permission sets" stacked>
+              <div className="flex flex-wrap gap-1">
+                {sets.length === 0 ? (
+                  <span className="text-sm text-muted-foreground">—</span>
+                ) : (
+                  sets.map((ps) => (
+                    <Pill key={ps.id} tone="set">
+                      {ps.name}
+                    </Pill>
+                  ))
+                )}
+              </div>
+            </Field>
+          </DetailSection>
+
+          <DetailSection title="Accounts in scope">
+            <Field label={`${visible.length} accounts`} stacked>
+              {visible.length === 0 ? (
+                <span className="text-sm text-amber-700">
+                  Members of this group see no accounts.
+                </span>
+              ) : (
+                <div className="overflow-hidden rounded border">
+                  <table className="w-full text-[0.78rem]">
+                    <tbody>
+                      {visible.map((a) => (
+                        <tr key={a.id} className="border-b last:border-b-0">
+                          <td className="px-2 py-2">
+                            <div className="font-medium">{a.name}</div>
+                            <div className="font-mono text-[0.7rem] text-muted-foreground">
+                              {a.number}
+                            </div>
+                          </td>
+                          <td className="px-2 py-2">{a.bank}</td>
+                          <td className="px-2 py-2">
+                            <Pill tone="entity">{a.legalEntity}</Pill>
+                          </td>
+                          <td className="px-2 py-2 text-right tabular-nums">
+                            {formatMoney(a.currency, a.lastBalance)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Field>
+          </DetailSection>
+
+          <DetailSection title="Members">
+            <Field label={`${members.length} users`} stacked>
+              {members.length === 0 ? (
+                <span className="text-sm text-muted-foreground">
+                  No members yet.
+                </span>
+              ) : (
+                <div className="overflow-hidden rounded border">
+                  <table className="w-full text-[0.78rem]">
+                    <tbody>
+                      {members.map((u) => (
+                        <tr key={u.id} className="border-b last:border-b-0">
+                          <td className="px-2 py-2">
+                            <div className="font-medium">{u.name}</div>
+                            <div className="text-[0.7rem] text-muted-foreground">
+                              {u.email}
+                            </div>
+                          </td>
+                          <td className="px-2 py-2 text-right">
+                            <StatusPill status={u.status} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Field>
+          </DetailSection>
         </div>
       </SheetContent>
     </Sheet>
@@ -1021,92 +937,493 @@ function RoleSheet({
 
   return (
     <Sheet open={!!role} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="w-full overflow-y-auto p-0 sm:max-w-xl">
-        <div className="flex h-full flex-col">
-          <SheetHeader className="border-b px-6 py-5">
-            <SheetTitle className="text-lg font-semibold">
-              {role.name}
-            </SheetTitle>
-            <p className="mt-1 text-sm text-muted-foreground">
+      <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
+        <SheetHeader>
+          <SheetTitle className="font-mono">{role.id}</SheetTitle>
+        </SheetHeader>
+
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b px-4 pb-4">
+          <div className="space-y-1">
+            <div className="text-2xl font-bold tracking-tight">{role.name}</div>
+            <p className="max-w-sm text-sm text-muted-foreground">
               {role.description}
             </p>
-          </SheetHeader>
+          </div>
+          <Button
+            variant="ghost"
+            className="text-destructive hover:text-destructive"
+            disabled={usedBy.length > 0}
+            title={
+              usedBy.length > 0
+                ? 'Remove the role from every group before deleting it'
+                : undefined
+            }
+            onClick={() => {
+              deleteRole(role.id)
+              toast.success('Role deleted', { description: role.name })
+              onClose()
+            }}
+          >
+            Delete
+          </Button>
+        </div>
 
-          <div className="flex-1 space-y-4 p-6">
-            <div className="divide-y rounded-lg border bg-card">
-              <SummaryRow label="ID">
-                <span className="font-mono text-xs text-muted-foreground">
-                  {role.id}
-                </span>
-              </SummaryRow>
-              <SummaryRow label="Permission sets">
+        <div className="space-y-6 px-4 pb-6 pt-4">
+          <DetailSection title="Role">
+            <Field label="Role ID">
+              <Mono>{role.id}</Mono>
+            </Field>
+            <Field label="Permission sets">
+              <span className="text-sm tabular-nums">
                 {role.permissionSetIds.length}
-              </SummaryRow>
-              <SummaryRow label="Permissions">{permissions.length}</SummaryRow>
-              <SummaryRow label="Granted by">
-                <div className="flex flex-wrap justify-end gap-1">
-                  {usedBy.length === 0 ? (
-                    <Pill tone="warning">No group</Pill>
-                  ) : (
-                    usedBy.map((g) => <Pill key={g.id}>{g.name}</Pill>)
-                  )}
-                </div>
-              </SummaryRow>
-            </div>
+              </span>
+            </Field>
+            <Field label="Permissions">
+              <span className="text-sm tabular-nums">{permissions.length}</span>
+            </Field>
+            <Field label="Granted by">
+              <div className="flex flex-wrap gap-1">
+                {usedBy.length === 0 ? (
+                  <Pill tone="warning">No group</Pill>
+                ) : (
+                  usedBy.map((g) => <Pill key={g.id}>{g.name}</Pill>)
+                )}
+              </div>
+            </Field>
+          </DetailSection>
 
-            <div className="text-[0.7rem] font-semibold uppercase tracking-wider text-foreground/70">
-              Permission sets
-            </div>
-            <div className="space-y-3">
-              {role.permissionSetIds.map((id) => {
-                const ps = getPermissionSet(id)
-                if (!ps) return null
-                return (
-                  <div key={id} className="rounded-lg border">
-                    <div className="flex items-center gap-1.5 border-b px-3 py-2 text-sm font-medium">
-                      {ps.name}
-                      {ps.managed && (
-                        <Pill>
-                          <LockIcon className="size-2.5" /> managed
-                        </Pill>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap gap-1 p-3">
+          <DetailSection title="Permission sets">
+            {role.permissionSetIds.map((id) => {
+              const ps = getPermissionSet(id)
+              if (!ps) return null
+              return (
+                <Field key={id} label={ps.name} stacked>
+                  <div className="space-y-2">
+                    {ps.managed && (
+                      <Pill>
+                        <LockIcon className="size-2.5" /> Managed by Acme
+                      </Pill>
+                    )}
+                    <div className="flex flex-wrap gap-1">
                       {ps.permissions.map((k) => (
                         <PermissionKeyPill key={k} k={k} />
                       ))}
                     </div>
                   </div>
-                )
-              })}
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between border-t px-6 py-4">
-            <Button
-              variant="ghost"
-              className="text-destructive hover:text-destructive"
-              disabled={usedBy.length > 0}
-              title={
-                usedBy.length > 0
-                  ? 'Remove the role from every group before deleting it'
-                  : undefined
-              }
-              onClick={() => {
-                deleteRole(role.id)
-                toast.success('Role deleted', { description: role.name })
-                onClose()
-              }}
-            >
-              Delete role
-            </Button>
-            <Button variant="outline" onClick={onClose}>
-              <XIcon className="size-3.5" /> Close
-            </Button>
-          </div>
+                </Field>
+              )
+            })}
+          </DetailSection>
         </div>
       </SheetContent>
     </Sheet>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Tab tables — every list in the app runs through the same data table
+// ---------------------------------------------------------------------------
+
+const ADMIN_PAGE_SIZE = 10
+
+// Groups, roles, sets and users are configuration lists of a handful of rows,
+// so they get the sortable header, row click and pager but no checkbox
+// selection: there is nothing to bulk-export here.
+function useAdminTable<T>(data: T[], columns: ColumnDef<T>[], sortId: string) {
+  const [sorting, setSorting] = React.useState<SortingState>([
+    { id: sortId, desc: false },
+  ])
+  return useReactTable({
+    data,
+    columns,
+    state: { sorting },
+    initialState: { pagination: { pageIndex: 0, pageSize: ADMIN_PAGE_SIZE } },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    enableSortingRemoval: false,
+    autoResetPageIndex: true,
+  })
+}
+
+type GroupRow = UserGroup & { roleNames: string[]; accountCount: number }
+
+function GroupsTable({
+  groups,
+  onOpen,
+}: {
+  groups: UserGroup[]
+  onOpen: (g: UserGroup) => void
+}) {
+  const data = React.useMemo<GroupRow[]>(
+    () =>
+      groups.map((g) => ({
+        ...g,
+        roleNames: rolesForUserGroup(g).map((r) => r.name),
+        accountCount: accountsForUserGroup(g).length,
+      })),
+    [groups],
+  )
+
+  const columns = React.useMemo<ColumnDef<GroupRow>[]>(
+    () => [
+      {
+        id: 'name',
+        accessorKey: 'name',
+        header: 'Name',
+        cell: ({ row }) => (
+          <div className="max-w-[16rem] whitespace-nowrap">
+            <div className="font-medium">{row.original.name}</div>
+            <div className="truncate text-[0.7rem] text-muted-foreground">
+              {row.original.description}
+            </div>
+          </div>
+        ),
+      },
+      {
+        id: 'roles',
+        accessorFn: (g) => g.roleNames.join(', '),
+        header: 'Roles',
+        cell: ({ row }) => (
+          <div className="flex flex-wrap gap-1">
+            {row.original.roleNames.length === 0 ? (
+              <Pill tone="warning">No role</Pill>
+            ) : (
+              row.original.roleNames.map((n) => <Pill key={n}>{n}</Pill>)
+            )}
+          </div>
+        ),
+        enableSorting: false,
+      },
+      {
+        id: 'sets',
+        header: 'Permission sets',
+        cell: ({ row }) => {
+          const gRoles = rolesForUserGroup(row.original)
+          const gSets = PERMISSION_SETS.filter((ps) =>
+            gRoles.some((r) => r.permissionSetIds.includes(ps.id)),
+          )
+          return (
+            <div className="flex flex-wrap gap-1">
+              {gSets.map((ps) => (
+                <Pill key={ps.id} tone="set">
+                  {ps.name}
+                </Pill>
+              ))}
+            </div>
+          )
+        },
+        enableSorting: false,
+      },
+      {
+        id: 'scope',
+        accessorKey: 'scope',
+        header: 'Account scope',
+        cell: ({ row }) => {
+          const g = row.original
+          return (
+            <div className="flex flex-wrap gap-1">
+              {g.scope === 'ALL' ? (
+                <Pill tone="scope">All accounts</Pill>
+              ) : g.scope === 'LEGAL_ENTITY' ? (
+                g.legalEntityCodes.map((c) => (
+                  <Pill key={c} tone="entity" title={legalEntityName(c)}>
+                    {c}
+                  </Pill>
+                ))
+              ) : (
+                <Pill tone="scope">{g.accountIds.length} picked</Pill>
+              )}
+            </div>
+          )
+        },
+      },
+      {
+        id: 'accountCount',
+        accessorKey: 'accountCount',
+        header: 'Accounts',
+        cell: ({ row }) => (
+          <span className="tabular-nums">{row.original.accountCount}</span>
+        ),
+      },
+      {
+        id: 'members',
+        accessorFn: (g) => g.memberIds.length,
+        header: 'Members',
+        cell: ({ row }) => (
+          <span className="tabular-nums">{row.original.memberIds.length}</span>
+        ),
+      },
+      {
+        id: 'updatedAt',
+        accessorKey: 'updatedAt',
+        header: 'Updated',
+        cell: ({ row }) => (
+          <span className="whitespace-nowrap text-xs text-muted-foreground">
+            {formatWhen(row.original.updatedAt)}
+          </span>
+        ),
+      },
+    ],
+    [],
+  )
+
+  const table = useAdminTable(data, columns, 'name')
+
+  return (
+    <div className="rounded-md border bg-card">
+      <DataTable
+        table={table}
+        onRowClick={onOpen}
+        emptyMessage="No groups yet. Nobody holds a permission until they are in a group."
+      />
+      <DataTablePagination table={table} />
+    </div>
+  )
+}
+
+function RolesTable({
+  roles,
+  groups,
+  onOpen,
+}: {
+  roles: Role[]
+  groups: UserGroup[]
+  onOpen: (r: Role) => void
+}) {
+  const columns = React.useMemo<ColumnDef<Role>[]>(
+    () => [
+      {
+        id: 'name',
+        accessorKey: 'name',
+        header: 'Name',
+        cell: ({ row }) => (
+          <span className="whitespace-nowrap font-medium">
+            {row.original.name}
+          </span>
+        ),
+      },
+      {
+        id: 'description',
+        accessorKey: 'description',
+        header: 'Description',
+        cell: ({ row }) => (
+          <span className="block max-w-sm text-xs text-muted-foreground">
+            {row.original.description}
+          </span>
+        ),
+        enableSorting: false,
+      },
+      {
+        id: 'sets',
+        header: 'Permission sets',
+        cell: ({ row }) => (
+          <div className="flex flex-wrap gap-1">
+            {row.original.permissionSetIds.map((id) => (
+              <Pill key={id} tone="set">
+                {getPermissionSet(id)?.name ?? id}
+              </Pill>
+            ))}
+          </div>
+        ),
+        enableSorting: false,
+      },
+      {
+        id: 'grantedBy',
+        header: 'Granted by',
+        cell: ({ row }) => {
+          const usedBy = groups.filter((g) =>
+            g.roleIds.includes(row.original.id),
+          )
+          return (
+            <div className="flex flex-wrap gap-1">
+              {usedBy.length === 0 ? (
+                <span className="text-xs text-muted-foreground">
+                  Not granted
+                </span>
+              ) : (
+                usedBy.map((g) => <Pill key={g.id}>{g.name}</Pill>)
+              )}
+            </div>
+          )
+        },
+        enableSorting: false,
+      },
+    ],
+    [groups],
+  )
+
+  const table = useAdminTable(roles, columns, 'name')
+
+  return (
+    <div className="rounded-md border bg-card">
+      <DataTable
+        table={table}
+        onRowClick={onOpen}
+        emptyMessage="No roles yet."
+      />
+      <DataTablePagination table={table} />
+    </div>
+  )
+}
+
+function PermissionSetsTable({ roles }: { roles: Role[] }) {
+  const columns = React.useMemo<ColumnDef<PermissionSet>[]>(
+    () => [
+      {
+        id: 'name',
+        accessorKey: 'name',
+        header: 'Name',
+        cell: ({ row }) => (
+          <div className="flex items-center gap-1.5 whitespace-nowrap font-medium">
+            <LockIcon className="size-3 text-muted-foreground" />
+            {row.original.name}
+          </div>
+        ),
+      },
+      {
+        id: 'description',
+        accessorKey: 'description',
+        header: 'Description',
+        cell: ({ row }) => (
+          <span className="block max-w-xs text-xs text-muted-foreground">
+            {row.original.description}
+          </span>
+        ),
+        enableSorting: false,
+      },
+      {
+        id: 'permissions',
+        header: 'Permissions',
+        cell: ({ row }) => (
+          <div className="flex flex-wrap gap-1">
+            {row.original.permissions.map((k) => (
+              <PermissionKeyPill key={k} k={k} />
+            ))}
+          </div>
+        ),
+        enableSorting: false,
+      },
+      {
+        id: 'usedBy',
+        header: 'Used by roles',
+        cell: ({ row }) => {
+          const usedBy = roles.filter((r) =>
+            r.permissionSetIds.includes(row.original.id),
+          )
+          return (
+            <div className="flex flex-wrap gap-1">
+              {usedBy.map((r) => (
+                <Pill key={r.id}>{r.name}</Pill>
+              ))}
+            </div>
+          )
+        },
+        enableSorting: false,
+      },
+    ],
+    [roles],
+  )
+
+  const table = useAdminTable(PERMISSION_SETS, columns, 'name')
+
+  return (
+    <div className="rounded-md border bg-card">
+      <DataTable table={table} emptyMessage="No permission sets." />
+      <DataTablePagination table={table} />
+    </div>
+  )
+}
+
+function UsersTable({ groups }: { groups: UserGroup[] }) {
+  const columns = React.useMemo<ColumnDef<PortalUser>[]>(
+    () => [
+      {
+        id: 'name',
+        accessorKey: 'name',
+        header: 'User',
+        cell: ({ row }) => (
+          <div className="flex items-center gap-3">
+            <Avatar className="h-8 w-8 rounded-md">
+              <AvatarImage
+                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(row.original.name)}`}
+                alt={row.original.name}
+              />
+              <AvatarFallback className="rounded-md text-xs">
+                {initials(row.original.name)}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <div className="text-sm font-medium">{row.original.name}</div>
+              <div className="text-[0.7rem] text-muted-foreground">
+                {row.original.email}
+              </div>
+            </div>
+          </div>
+        ),
+      },
+      {
+        id: 'groups',
+        header: 'Groups',
+        cell: ({ row }) => {
+          const memberOf = userGroupsForUser(row.original.id, groups)
+          return memberOf.length === 0 ? (
+            <Pill tone="warning">No group</Pill>
+          ) : (
+            <div className="flex flex-wrap gap-1">
+              {memberOf.map((g) => (
+                <Pill key={g.id}>{g.name}</Pill>
+              ))}
+            </div>
+          )
+        },
+        enableSorting: false,
+      },
+      {
+        id: 'permissions',
+        header: 'Effective permissions',
+        cell: ({ row }) => {
+          const perms = permissionsForUser(row.original.id, groups)
+          return (
+            <span
+              className="text-xs text-muted-foreground"
+              title={perms.map((p) => p.key).join('\n')}
+            >
+              {perms.length} permission{perms.length === 1 ? '' : 's'}
+            </span>
+          )
+        },
+        enableSorting: false,
+      },
+      {
+        id: 'status',
+        accessorKey: 'status',
+        header: 'Status',
+        cell: ({ row }) => <StatusPill status={row.original.status} />,
+      },
+      {
+        id: 'lastActive',
+        accessorKey: 'lastActive',
+        header: 'Last active',
+        cell: ({ row }) => (
+          <span className="whitespace-nowrap text-xs text-muted-foreground">
+            {row.original.lastActive}
+          </span>
+        ),
+      },
+    ],
+    [groups],
+  )
+
+  const table = useAdminTable(portalUsers, columns, 'name')
+
+  return (
+    <div className="rounded-md border bg-card">
+      <DataTable table={table} emptyMessage="No users yet." />
+      <DataTablePagination table={table} />
+    </div>
   )
 }
 
@@ -1136,14 +1453,7 @@ export function UserManagementPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">User Management</h1>
-          <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-            Permissions bundle into permission sets, sets compose into roles,
-            roles are granted to a group, and users belong to groups. Every
-            grant is scoped to a set of accounts.
-          </p>
-        </div>
+        <h1 className="text-2xl font-bold tracking-tight">User Management</h1>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" className="gap-2">
             <UserRoundPlusIcon className="size-3.5" />
@@ -1195,351 +1505,25 @@ export function UserManagementPage() {
           <TabsTrigger value="users">Users ({portalUsers.length})</TabsTrigger>
         </TabsList>
 
-        {/* Groups */}
         <TabsContent value="groups" className="mt-4">
-          <Card>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
-                        Name
-                      </TableHead>
-                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
-                        Roles
-                      </TableHead>
-                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
-                        Permission sets
-                      </TableHead>
-                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
-                        Account scope
-                      </TableHead>
-                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
-                        Accounts
-                      </TableHead>
-                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
-                        Members
-                      </TableHead>
-                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
-                        Updated
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {groups.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={7} className="py-14">
-                          <div className="flex flex-col items-center gap-3 text-center">
-                            <div className="flex aspect-square size-11 items-center justify-center rounded-full border bg-muted">
-                              <UsersRoundIcon className="size-5 text-muted-foreground" />
-                            </div>
-                            <p className="text-sm font-medium">No groups yet</p>
-                            <p className="text-sm text-muted-foreground">
-                              Nobody holds a permission until they are in a
-                              group.
-                            </p>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                    {groups.map((g) => {
-                      const gRoles = rolesForUserGroup(g)
-                      const gSets = PERMISSION_SETS.filter((ps) =>
-                        gRoles.some((r) => r.permissionSetIds.includes(ps.id)),
-                      )
-                      const visible = accountsForUserGroup(g)
-                      return (
-                        <TableRow
-                          key={g.id}
-                          className="cursor-pointer"
-                          onClick={() => setOpenGroup(g)}
-                        >
-                          <TableCell className="whitespace-nowrap">
-                            <div className="font-medium">{g.name}</div>
-                            <div className="max-w-xs truncate text-[0.65rem] text-muted-foreground">
-                              {g.description}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap gap-1">
-                              {gRoles.length === 0 ? (
-                                <Pill tone="warning">No role</Pill>
-                              ) : (
-                                gRoles.map((r) => (
-                                  <Pill key={r.id}>{r.name}</Pill>
-                                ))
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap gap-1">
-                              {gSets.map((ps) => (
-                                <Pill key={ps.id} tone="set">
-                                  {ps.name}
-                                </Pill>
-                              ))}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap gap-1">
-                              {g.scope === 'ALL' ? (
-                                <Pill tone="scope">All accounts</Pill>
-                              ) : g.scope === 'LEGAL_ENTITY' ? (
-                                g.legalEntityCodes.map((c) => (
-                                  <Pill key={c} tone="entity">
-                                    {c}
-                                  </Pill>
-                                ))
-                              ) : (
-                                <Pill tone="scope">
-                                  {g.accountIds.length} picked
-                                </Pill>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="tabular-nums">
-                            {visible.length}
-                          </TableCell>
-                          <TableCell className="tabular-nums">
-                            {g.memberIds.length}
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
-                            {formatWhen(g.updatedAt)}
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+          <GroupsTable groups={groups} onOpen={setOpenGroup} />
         </TabsContent>
 
-        {/* Roles */}
         <TabsContent value="roles" className="mt-4">
-          <Card>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
-                        Name
-                      </TableHead>
-                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
-                        Description
-                      </TableHead>
-                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
-                        Permission sets
-                      </TableHead>
-                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
-                        Granted by
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {roles.map((r) => {
-                      const usedBy = groups.filter((g) =>
-                        g.roleIds.includes(r.id),
-                      )
-                      return (
-                        <TableRow
-                          key={r.id}
-                          className="cursor-pointer"
-                          onClick={() => setOpenRole(r)}
-                        >
-                          <TableCell className="whitespace-nowrap font-medium">
-                            {r.name}
-                          </TableCell>
-                          <TableCell className="max-w-sm text-xs text-muted-foreground">
-                            {r.description}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap gap-1">
-                              {r.permissionSetIds.map((id) => (
-                                <Pill key={id} tone="set">
-                                  {getPermissionSet(id)?.name ?? id}
-                                </Pill>
-                              ))}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap gap-1">
-                              {usedBy.length === 0 ? (
-                                <span className="text-xs text-muted-foreground">
-                                  Not granted
-                                </span>
-                              ) : (
-                                usedBy.map((g) => (
-                                  <Pill key={g.id}>{g.name}</Pill>
-                                ))
-                              )}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+          <RolesTable roles={roles} groups={groups} onOpen={setOpenRole} />
         </TabsContent>
 
         {/* Permission sets — Acme-managed, read only */}
         <TabsContent value="sets" className="mt-4">
-          <Card>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
-                        Name
-                      </TableHead>
-                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
-                        Description
-                      </TableHead>
-                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
-                        Permissions
-                      </TableHead>
-                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
-                        Used by roles
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {PERMISSION_SETS.map((ps: PermissionSet) => {
-                      const usedBy = roles.filter((r) =>
-                        r.permissionSetIds.includes(ps.id),
-                      )
-                      return (
-                        <TableRow key={ps.id}>
-                          <TableCell className="whitespace-nowrap">
-                            <div className="flex items-center gap-1.5 font-medium">
-                              <LockIcon className="size-3 text-muted-foreground" />
-                              {ps.name}
-                            </div>
-                          </TableCell>
-                          <TableCell className="max-w-xs text-xs text-muted-foreground">
-                            {ps.description}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap gap-1">
-                              {ps.permissions.map((k) => (
-                                <PermissionKeyPill key={k} k={k} />
-                              ))}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap gap-1">
-                              {usedBy.map((r) => (
-                                <Pill key={r.id}>{r.name}</Pill>
-                              ))}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+          <PermissionSetsTable roles={roles} />
           <p className="mt-3 text-xs text-muted-foreground">
             Permission sets are defined by Acme. Clients compose roles from them
             rather than composing their own sets.
           </p>
         </TabsContent>
 
-        {/* Users */}
         <TabsContent value="users" className="mt-4">
-          <Card>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
-                        User
-                      </TableHead>
-                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
-                        Groups
-                      </TableHead>
-                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
-                        Effective permissions
-                      </TableHead>
-                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
-                        Status
-                      </TableHead>
-                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
-                        Last active
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {portalUsers.map((u) => {
-                      const memberOf = userGroupsForUser(u.id, groups)
-                      const perms = permissionsForUser(u.id, groups)
-                      return (
-                        <TableRow key={u.id}>
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              <Avatar className="h-8 w-8 rounded-md">
-                                <AvatarImage
-                                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.name)}`}
-                                  alt={u.name}
-                                />
-                                <AvatarFallback className="rounded-md text-xs">
-                                  {initials(u.name)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <div className="text-sm font-medium">
-                                  {u.name}
-                                </div>
-                                <div className="text-[0.65rem] text-muted-foreground">
-                                  {u.email}
-                                </div>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {memberOf.length === 0 ? (
-                              <span className="text-xs text-amber-700">
-                                No group
-                              </span>
-                            ) : (
-                              <div className="flex flex-wrap gap-1">
-                                {memberOf.map((g) => (
-                                  <Pill key={g.id}>{g.name}</Pill>
-                                ))}
-                              </div>
-                            )}
-                          </TableCell>
-                          <TableCell
-                            className="text-xs text-muted-foreground"
-                            title={perms.map((p) => p.key).join('\n')}
-                          >
-                            {perms.length} permission
-                            {perms.length === 1 ? '' : 's'}
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground">
-                            {u.status}
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground">
-                            {u.lastActive}
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+          <UsersTable groups={groups} />
         </TabsContent>
       </Tabs>
 

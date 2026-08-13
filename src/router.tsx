@@ -9,7 +9,7 @@ import { AppShell } from '@/components/app-shell'
 import { LoginPage } from '@/routes/login'
 import { TransactionsPage } from '@/routes/transactions'
 import { PaymentsPage } from '@/routes/payments'
-import { InternalAccountsPage } from '@/routes/internal-accounts'
+import { AccountsPage } from '@/routes/accounts'
 import { UserManagementPage } from '@/routes/user-management'
 
 const rootRoute = createRootRoute({
@@ -48,10 +48,10 @@ const paymentsRoute = createRoute({
   component: PaymentsPage,
 })
 
-const internalAccountsRoute = createRoute({
+const accountsRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
-  path: '/internal-accounts',
-  component: InternalAccountsPage,
+  path: '/accounts',
+  component: AccountsPage,
 })
 
 const userManagementRoute = createRoute({
@@ -66,7 +66,7 @@ const routeTree = rootRoute.addChildren([
   appLayoutRoute.addChildren([
     transactionsRoute,
     paymentsRoute,
-    internalAccountsRoute,
+    accountsRoute,
     userManagementRoute,
   ]),
 ])

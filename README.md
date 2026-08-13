@@ -39,12 +39,13 @@ notification bell.
 ## Routes
 
 - `/login` — UI-only sign-in (any submit navigates to `/transactions`, the MVP landing page)
-- `/transactions` — wildcard search, per-column filters, selection to CSV, detail sheet
+- `/transactions` — per-column filters, selection to CSV, detail sheet
 - `/payments` — read-only list on the same data table as `/transactions`. View only for MVP: no create, retry or maker-checker approval, and only the settled `COMPLETED` / `FAILED` statuses
-- `/internal-accounts` — flat account list with bank / legal entity / country / currency columns, filters, and which groups can see each account
+- `/accounts` — flat account list: Bank, Name, Bank account no., Legal entity, Currencies. Everything else (internal ID, routing, balances, connection profile, which groups can see it) is in the detail sheet
 - `/user-management` — admin: Groups, Roles, Permission Sets and Users tabs. A group defines account access and grants roles
 
-Transactions and Payments share the same table components:
+Every list — Transactions, Payments, Accounts and the User Management tabs —
+shares the same table components:
 `src/components/data-table.tsx` (header, body, pager), `data-table-filter.tsx`
 (per-column filters) and `detail-list.tsx` (the detail sheet's description
 list).

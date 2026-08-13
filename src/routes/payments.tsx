@@ -1,6 +1,5 @@
 import * as React from 'react'
 import {
-  SearchIcon,
   CalendarIcon,
   ChevronDownIcon,
   MoreHorizontalIcon,
@@ -22,7 +21,6 @@ import {
   getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
@@ -45,7 +43,11 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Mono, StatusPill } from '@/components/mono'
-import { DataTable, DataTablePagination } from '@/components/data-table'
+import {
+  DataTable,
+  DataTablePagination,
+  DataTableSelectionBar,
+} from '@/components/data-table'
 import { DataTableFilter } from '@/components/data-table-filter'
 import { CodeBlockField, DetailSection, Field } from '@/components/detail-list'
 import { csvFilename, downloadCsv } from '@/lib/csv'
@@ -209,7 +211,6 @@ export function PaymentsPage() {
   )
 
   const [openPayment, setOpenPayment] = React.useState<PaymentRow | null>(null)
-  const [globalFilter, setGlobalFilter] = React.useState('')
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({})
   const [sorting, setSorting] = React.useState<SortingState>([
     { id: 'createdAt', desc: true },
@@ -243,6 +244,7 @@ export function PaymentsPage() {
         ),
         enableSorting: false,
         size: 36,
+        meta: { headerTooltip: 'Select rows to export them as CSV' },
       },
       {
         id: 'createdAt',
@@ -423,7 +425,7 @@ export function PaymentsPage() {
   const table = useReactTable({
     data,
     columns,
-    state: { sorting, columnFilters, rowSelection, globalFilter },
+    state: { sorting, columnFilters, rowSelection },
     initialState: {
       pagination: { pageIndex: 0, pageSize: PAGE_SIZE },
       columnVisibility: {
@@ -433,27 +435,9 @@ export function PaymentsPage() {
       },
     },
     getRowId: (r) => r.id,
-    globalFilterFn: (row, _columnId, value) => {
-      const needle = String(value).trim().toLowerCase()
-      if (!needle) return true
-      const r = row.original
-      return [
-        r.id,
-        r.receiverName,
-        r.receiverBankAccountNumber,
-        r.customerReference,
-        r.senderAccountId,
-        r.accountNumber,
-        r.resultCode,
-      ]
-        .join(' ')
-        .toLowerCase()
-        .includes(needle)
-    },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onRowSelectionChange: setRowSelection,
-    onGlobalFilterChange: setGlobalFilter,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -478,38 +462,17 @@ export function PaymentsPage() {
     [accounts],
   )
 
-  const selectedRows = table.getSelectedRowModel().rows
+  const activeFilterCount = columnFilters.length
 
-  const activeFilterCount =
-    columnFilters.length + (globalFilter.trim() ? 1 : 0)
-
-  const clearFilters = () => {
-    setGlobalFilter('')
-    setColumnFilters([])
-  }
+  const clearFilters = () => setColumnFilters([])
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Payments</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Select rows to export them as CSV.
-        </p>
-      </div>
+      <h1 className="text-2xl font-bold tracking-tight">Payments</h1>
 
       <div className="rounded-md border bg-card">
-        {/* Search + per-column filters */}
+        {/* Per-column filters */}
         <div className="space-y-3 px-4 py-4">
-          <div className="relative">
-            <SearchIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={globalFilter}
-              onChange={(e) => setGlobalFilter(e.target.value)}
-              placeholder="Search by payment id, receiver, receiver account, customer ref, account, result code…"
-              className="pl-9"
-            />
-          </div>
-
           <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
             <div className="space-y-1.5">
               <Label className="text-[0.7rem] uppercase tracking-wider text-muted-foreground">
@@ -608,33 +571,11 @@ export function PaymentsPage() {
           )}
         </div>
 
-        {/* Bulk actions for the checkbox selection */}
-        {selectedRows.length > 0 && (
-          <div className="flex flex-wrap items-center gap-3 border-t bg-brand-subtle px-4 py-2.5">
-            <span className="text-xs font-medium text-brand-subtle-foreground">
-              {selectedRows.length} selected
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 gap-1.5 bg-background text-xs"
-              onClick={() =>
-                downloadPaymentsCsv(selectedRows.map((r) => r.original))
-              }
-            >
-              <DownloadIcon className="size-3" />
-              Download CSV ({selectedRows.length})
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 text-xs"
-              onClick={() => setRowSelection({})}
-            >
-              Clear selection
-            </Button>
-          </div>
-        )}
+        <DataTableSelectionBar
+          table={table}
+          noun="payments"
+          onDownloadCsv={downloadPaymentsCsv}
+        />
 
         <DataTable
           table={table}
