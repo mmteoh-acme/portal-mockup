@@ -36,6 +36,8 @@ export const LEGAL_ENTITIES: LegalEntity[] = [
   { code: 'ALKY', name: 'Acme Labs Cayman', country: 'KY', countryName: 'Cayman Islands' },
   { code: 'AMDE', name: 'Acme Markets Delaware', country: 'US', countryName: 'United States' },
   { code: 'AMEA', name: 'Acme Markets Middle East', country: 'AE', countryName: 'UAE' },
+  // Added so the Payment Operations (EU) group in ACME-2178 §4 has accounts.
+  { code: 'AMEU', name: 'Acme Markets Europe', country: 'NL', countryName: 'Netherlands' },
 ]
 
 // A connection is the backend connection profile serving an account — what
@@ -293,6 +295,57 @@ export const ACCOUNTS: Account[] = [
     connectionId: 'conn_scb_vn_01',
   },
   {
+    id: 'intacc_0OTCSGD00001',
+    number: '0155300471',
+    name: 'OTC Trading SGD',
+    currency: 'SGD',
+    lastBalance: 3402118.9,
+    priorDayBalance: 3388240.15,
+    status: 'ACTIVE',
+    mode: 'LIVE',
+    swiftBic: 'DBSSSGSGXXX',
+    iban: '',
+    createdAt: '2025-11-04T09:15:00',
+    bank: 'DBS Singapore',
+    legalEntity: 'AMA',
+    country: 'SG',
+    connectionId: 'conn_dbs_sg_01',
+  },
+  {
+    id: 'intacc_0OTCUSD00001',
+    number: '0155300688',
+    name: 'OTC Trading USD',
+    currency: 'USD',
+    lastBalance: 6120744.35,
+    priorDayBalance: 6098210.4,
+    status: 'ACTIVE',
+    mode: 'LIVE',
+    swiftBic: 'DBSSSGSGXXX',
+    iban: '',
+    createdAt: '2025-11-04T09:18:00',
+    bank: 'DBS Singapore',
+    legalEntity: 'AMDE',
+    country: 'US',
+    connectionId: 'conn_dbs_sg_01',
+  },
+  {
+    id: 'intacc_0EUR4NL00001',
+    number: 'NL91ABNA0417164300',
+    name: 'EUR Operating',
+    currency: 'EUR',
+    lastBalance: 1844205.6,
+    priorDayBalance: 1802118.45,
+    status: 'ACTIVE',
+    mode: 'LIVE',
+    swiftBic: 'ABNANL2AXXX',
+    iban: 'NL91ABNA0417164300',
+    createdAt: '2026-08-10T08:40:00',
+    bank: 'ABN AMRO',
+    legalEntity: 'AMEU',
+    country: 'NL',
+    connectionId: 'conn_dbs_sg_01',
+  },
+  {
     id: 'intacc_0AE9R2KDX4P7C',
     number: '0044119887',
     name: 'USD Operating',
@@ -373,24 +426,90 @@ export function accountLabel(a: Account): string {
 // from the sets, because each organization narrows them differently, and grants
 // roles to a group. Account access is defined by the group (ACME-2178).
 
+// A permission is a feature plus an action, per the ACME-2178 catalogue. The
+// key the UI checks is `feature.action`.
+export type PermissionFeature = 'transactions' | 'payments'
+
+export type PermissionAction =
+  | 'view'
+  | 'create'
+  | 'edit'
+  | 'delete'
+  | 'approve'
+
 export type Permission = {
   key: string
+  feature: PermissionFeature
+  action: PermissionAction
   allows: string
 }
 
-export const PERMISSION_CATALOGUE: Permission[] = [
-  { key: 'All', allows: 'Every permission in the catalogue' },
-  { key: 'Transactions', allows: 'View transactions and balances' },
-  { key: 'Payment Orders', allows: 'Create and submit payment orders' },
-  { key: 'Payment Orders Edit', allows: 'Edit a payment order raised by someone else' },
-  { key: 'Payment Approvals', allows: 'Approve or reject a payment order' },
+export const PERMISSION_FEATURES: {
+  feature: PermissionFeature
+  label: string
+  actions: PermissionAction[]
+}[] = [
+  { feature: 'transactions', label: 'Transactions', actions: ['view'] },
+  {
+    feature: 'payments',
+    label: 'Payments',
+    // View, Create, Delete and Edit are the ACME-2178 catalogue. Approve is
+    // carried as well because the ticket's model table lists it and the
+    // Administrator set is defined by excluding it — see the note in
+    // organization-background.md.
+    actions: ['view', 'create', 'edit', 'delete', 'approve'],
+  },
 ]
+
+const ACTION_ALLOWS: Record<
+  PermissionFeature,
+  Partial<Record<PermissionAction, string>>
+> = {
+  transactions: { view: 'View transactions and balances' },
+  payments: {
+    view: 'View payment orders',
+    create: 'Create and submit a payment order',
+    edit: 'Amend a payment order',
+    delete: 'Delete a payment order',
+    approve: 'Approve or reject a payment order',
+  },
+}
+
+export const PERMISSION_CATALOGUE: Permission[] = PERMISSION_FEATURES.flatMap(
+  (f) =>
+    f.actions.map((action) => ({
+      key: `${f.feature}.${action}`,
+      feature: f.feature,
+      action,
+      allows: ACTION_ALLOWS[f.feature][action] ?? '',
+    })),
+)
 
 export function permission(key: string): Permission | undefined {
   return PERMISSION_CATALOGUE.find((p) => p.key === key)
 }
 
-// Permission sets are managed by Acme. Clients do not author their own.
+export function permissionKeysForFeature(
+  feature: PermissionFeature,
+): string[] {
+  return PERMISSION_CATALOGUE.filter((p) => p.feature === feature).map(
+    (p) => p.key,
+  )
+}
+
+// Group a permission list by feature, which is how the catalogue reads on the
+// Permission Sets tab: one row per feature, its actions beside it.
+export function permissionsByFeature(
+  keys: string[],
+): { feature: PermissionFeature; label: string; actions: PermissionAction[] }[] {
+  return PERMISSION_FEATURES.map((f) => ({
+    feature: f.feature,
+    label: f.label,
+    actions: f.actions.filter((a) => keys.includes(`${f.feature}.${a}`)),
+  })).filter((row) => row.actions.length > 0)
+}
+
+// Permission sets are managed by Acme. Clients do not compose their own in MVP.
 export type PermissionSet = {
   id: string
   name: string
@@ -399,52 +518,34 @@ export type PermissionSet = {
   permissions: string[]
 }
 
+// Administrator is everything except approving a payment, so an administrator
+// configures who approves rather than approving themselves (ACME-2178 §3b).
+const ADMINISTRATOR_PERMISSIONS = PERMISSION_CATALOGUE.filter(
+  (p) => p.key !== 'payments.approve',
+).map((p) => p.key)
+
 export const PERMISSION_SETS: PermissionSet[] = [
   {
-    id: 'ps_administrator',
-    name: 'Administrator',
-    description: 'This is a managed permission set created by Acme',
+    id: 'ps_operations',
+    name: 'Operations',
+    description: 'Read the transaction and balance data. Managed by Acme.',
     managed: true,
-    permissions: ['All'],
-  },
-  {
-    id: 'ps_recon_operations',
-    name: 'Recon Operations',
-    description: 'This is a managed permission set created by Acme',
-    managed: true,
-    permissions: ['Transactions'],
-  },
-  {
-    id: 'ps_payments',
-    name: 'Payments',
-    description: 'This is a managed permission set created by Acme',
-    managed: true,
-    permissions: ['Transactions', 'Payment Orders'],
+    permissions: permissionKeysForFeature('transactions'),
   },
   {
     id: 'ps_finance',
     name: 'Finance',
-    description: 'This is a managed permission set created by Acme',
+    description: 'The whole payments feature, including approval. Managed by Acme.',
     managed: true,
-    permissions: ['Transactions', 'Payment Approvals'],
+    permissions: permissionKeysForFeature('payments'),
   },
   {
-    id: 'ps_reviewer',
-    name: 'Reviewer',
-    description: 'This is a managed permission set created by Acme',
-    managed: true,
-    permissions: ['Payment Orders Edit'],
-  },
-  {
-    id: 'ps_engineer',
-    name: 'Engineer',
+    id: 'ps_administrator',
+    name: 'Administrator',
     description:
-      'This is a managed permission set created by Acme. Permissions not yet specified.',
+      'Everything except approving a payment, so an administrator configures who approves. Managed by Acme.',
     managed: true,
-    // Referenced by the Engineering role but never enumerated. Left empty on
-    // purpose rather than guessed — see the open question in
-    // organization-background.md.
-    permissions: [],
+    permissions: ADMINISTRATOR_PERMISSIONS,
   },
 ]
 
@@ -452,51 +553,46 @@ export function getPermissionSet(id: string): PermissionSet | undefined {
   return PERMISSION_SETS.find((s) => s.id === id)
 }
 
-// A role narrows the permission sets for one organization's way of working, so
-// roles are the customizable layer.
+// A role is the client's name for a job and holds one or more of Acme's sets.
+// Acme seeds the first Administrator role at onboarding, the client composes
+// the rest.
 export type Role = {
   id: string
   name: string
   description: string
   permissionSetIds: string[]
+  // Seeded by Acme at onboarding rather than composed by the client.
+  seeded?: boolean
 }
 
 export const ROLES: Role[] = [
   {
     id: 'role_administrator',
     name: 'Administrator',
-    description: 'Full administration of groups, roles and users.',
+    description:
+      'Configures groups, roles and users. Does not approve payments.',
     permissionSetIds: ['ps_administrator'],
+    seeded: true,
   },
   {
-    id: 'role_engineering',
-    name: 'Engineering',
-    description: 'Integration and API work.',
-    permissionSetIds: ['ps_engineer'],
+    id: 'role_operation_manager',
+    name: 'Operation Manager',
+    description:
+      'Runs payment operations for a region. Raises payment orders and reads the transaction data.',
+    permissionSetIds: ['ps_operations', 'ps_finance'],
   },
   {
-    id: 'role_operations',
-    name: 'Operations',
-    description: 'Raises payment orders and monitors transactions.',
-    permissionSetIds: ['ps_payments'],
-  },
-  {
-    id: 'role_reconciliation',
-    name: 'Reconciliation',
-    description: 'Reads transactions for analysis and reconciliation.',
-    permissionSetIds: ['ps_recon_operations'],
-  },
-  {
-    id: 'role_customer_support',
-    name: 'Customer Support',
-    description: 'Edits payment orders on behalf of a requester.',
-    permissionSetIds: ['ps_reviewer'],
-  },
-  {
-    id: 'role_finance_treasury',
-    name: 'Finance and Treasury',
-    description: 'Approves payment orders for the entities in scope.',
+    id: 'role_finance_controller',
+    name: 'Finance Controller',
+    description: 'Reviews and approves payment orders before cut off.',
     permissionSetIds: ['ps_finance'],
+  },
+  {
+    id: 'role_trading_desk',
+    name: 'Trading Desk',
+    description:
+      'Sights the payments the desk made and received. Read only.',
+    permissionSetIds: ['ps_operations'],
   },
 ]
 
@@ -506,9 +602,10 @@ export function getRole(id: string): Role | undefined {
 
 export function permissionsForRole(role: Role): Permission[] {
   const keys = new Set(
-    role.permissionSetIds.flatMap((id) => getPermissionSet(id)?.permissions ?? []),
+    role.permissionSetIds.flatMap(
+      (id) => getPermissionSet(id)?.permissions ?? [],
+    ),
   )
-  if (keys.has('All')) return PERMISSION_CATALOGUE
   return PERMISSION_CATALOGUE.filter((p) => keys.has(p.key))
 }
 
@@ -523,46 +620,64 @@ export type PortalUser = {
   lastActive: string
 }
 
+// The users from the worked example in ACME-2178 §4. Ee Cheah is the
+// administrator Acme seeds at onboarding, and invites everyone else.
 export const portalUsers: PortalUser[] = [
   {
-    id: 'usr_jx',
-    name: 'Jx',
-    email: 'jx@tryacme.com',
+    id: 'usr_etam',
+    name: 'Ee Cheah',
+    email: 'etam@ripple.com',
+    status: 'active',
+    approvalLimit: null,
+    lastActive: '13 Aug, 2026',
+  },
+  {
+    id: 'usr_sw',
+    name: 'SW',
+    email: 'sw@ripple.com',
+    status: 'active',
+    approvalLimit: null,
+    lastActive: '13 Aug, 2026',
+  },
+  {
+    id: 'usr_matt',
+    name: 'Matt',
+    email: 'matt@ripple.com',
     status: 'active',
     approvalLimit: null,
     lastActive: '12 Aug, 2026',
   },
   {
-    id: 'usr_ming',
-    name: 'Ming Miin',
-    email: 'ming@tryacme.com',
+    id: 'usr_avril',
+    name: 'Avril',
+    email: 'avril@ripple.com',
     status: 'active',
     approvalLimit: null,
     lastActive: '12 Aug, 2026',
   },
   {
-    id: 'usr_nigel',
-    name: 'Nigel',
-    email: 'nigel@tryacme.com',
-    status: 'active',
-    approvalLimit: 'Up to US$2,000,000',
-    lastActive: '11 Aug, 2026',
+    id: 'usr_rick',
+    name: 'Rick',
+    email: 'rick@ripple.com',
+    status: 'invited',
+    approvalLimit: null,
+    lastActive: '—',
   },
   {
-    id: 'usr_cayter',
-    name: 'Cayter',
-    email: 'cayter@tryacme.com',
+    id: 'usr_amrinder',
+    name: 'Amrinder',
+    email: 'amrinder@ripple.com',
     status: 'active',
     approvalLimit: null,
     lastActive: '11 Aug, 2026',
   },
   {
-    id: 'usr_benoit',
-    name: 'Benoit',
-    email: 'benoit@tryacme.com',
+    id: 'usr_fc',
+    name: 'FC',
+    email: 'fc@ripple.com',
     status: 'active',
-    approvalLimit: null,
-    lastActive: '10 Aug, 2026',
+    approvalLimit: 'Up to US$5,000,000',
+    lastActive: '13 Aug, 2026',
   },
 ]
 
@@ -570,9 +685,9 @@ export function getPortalUser(id: string): PortalUser | undefined {
   return portalUsers.find((u) => u.id === id)
 }
 
-// Account access is defined by the group. The account-group layer is gone: a
-// group scopes straight onto accounts, either every account, the accounts of
-// named legal entities, or a hand-picked list.
+// A group grants roles to its members and carries the account scope. Per
+// ACME-2178 a group is scoped to every account, to a legal-entity tag, or to a
+// named list of accounts. There is no account-group layer (ACME-2177).
 export type UserGroupScope = 'ALL' | 'LEGAL_ENTITY' | 'ACCOUNT'
 
 export type UserGroup = {
@@ -595,81 +710,82 @@ export const userGroupsSeed: UserGroup[] = [
   {
     id: 'ug_administrators',
     name: 'Administrators',
-    description: 'Full administration across every account in the client group.',
+    description: 'Configures access for the whole client group.',
     roleIds: ['role_administrator'],
     scope: 'ALL',
     legalEntityCodes: [],
     accountIds: [],
-    memberIds: ['usr_jx', 'usr_ming'],
+    memberIds: ['usr_etam'],
     createdBy: 'Acme Ops',
     createdAt: '2026-01-08T08:59:00',
-    updatedAt: '2026-05-19T16:05:00',
+    updatedAt: '2026-08-13T09:20:00',
+  },
+  {
+    id: 'ug_payment_ops_apac',
+    name: 'Payment Operations (APAC)',
+    description: 'Raises payment orders on the APAC accounts.',
+    roleIds: ['role_operation_manager'],
+    scope: 'LEGAL_ENTITY',
+    legalEntityCodes: ['AMA'],
+    accountIds: [],
+    memberIds: ['usr_sw', 'usr_matt'],
+    createdBy: 'Ee Cheah',
+    createdAt: '2026-02-14T10:40:00',
+    updatedAt: '2026-08-11T13:19:00',
+  },
+  {
+    id: 'ug_payment_ops_us',
+    name: 'Payment Operations (US)',
+    description: 'Raises payment orders on the US accounts.',
+    roleIds: ['role_operation_manager'],
+    scope: 'LEGAL_ENTITY',
+    legalEntityCodes: ['AMDE'],
+    accountIds: [],
+    memberIds: ['usr_avril'],
+    createdBy: 'Ee Cheah',
+    createdAt: '2026-02-14T10:44:00',
+    updatedAt: '2026-08-11T13:22:00',
+  },
+  {
+    id: 'ug_payment_ops_eu',
+    name: 'Payment Operations (EU)',
+    description: 'Raises payment orders on the EU accounts.',
+    roleIds: ['role_operation_manager'],
+    scope: 'LEGAL_ENTITY',
+    legalEntityCodes: ['AMEU'],
+    accountIds: [],
+    memberIds: ['usr_rick'],
+    createdBy: 'Ee Cheah',
+    createdAt: '2026-08-10T09:05:00',
+    updatedAt: '2026-08-10T09:05:00',
   },
   {
     id: 'ug_trading_markets',
     name: 'Trading and Markets',
-    description: 'Raises payment orders for trading pay-ins and payouts.',
-    roleIds: ['role_operations'],
-    scope: 'ALL',
+    description: 'Sights the payments the desk made and received.',
+    roleIds: ['role_trading_desk'],
+    // The OTC accounts are a named list. A predicate scope would be better and
+    // is not in ACME-2178 — see organization-background.md.
+    scope: 'ACCOUNT',
     legalEntityCodes: [],
-    accountIds: [],
-    memberIds: ['usr_benoit'],
-    createdBy: 'Ming Miin',
-    createdAt: '2026-02-14T10:40:00',
-    updatedAt: '2026-05-02T13:19:00',
-  },
-  {
-    id: 'ug_tm_reconciliation',
-    name: 'Trading and Markets Reconciliation',
-    description: 'Reads transactions and balances for analysis and reconciliation.',
-    roleIds: ['role_reconciliation'],
-    scope: 'ALL',
-    legalEntityCodes: [],
-    accountIds: [],
-    // No members listed in organization-background.md.
-    memberIds: [],
-    createdBy: 'Ming Miin',
+    accountIds: ['intacc_0OTCSGD00001', 'intacc_0OTCUSD00001'],
+    memberIds: ['usr_amrinder'],
+    createdBy: 'Ee Cheah',
     createdAt: '2026-03-02T09:20:00',
-    updatedAt: '2026-03-02T09:20:00',
+    updatedAt: '2026-08-12T10:02:00',
   },
   {
-    id: 'ug_engineers',
-    name: 'Engineers',
-    description: 'Integration and API work.',
-    roleIds: ['role_engineering'],
+    id: 'ug_finance_treasury',
+    name: 'Finance and Treasury',
+    description: 'Reviews and approves payment orders before cut off.',
+    roleIds: ['role_finance_controller'],
     scope: 'ALL',
     legalEntityCodes: [],
     accountIds: [],
-    memberIds: ['usr_cayter'],
-    createdBy: 'Ming Miin',
-    createdAt: '2026-03-04T09:12:00',
-    updatedAt: '2026-03-04T09:12:00',
-  },
-  {
-    id: 'ug_rma_signers',
-    name: 'RMA Signers',
-    description: 'Approves payment orders on Acme Markets APAC accounts.',
-    roleIds: ['role_finance_treasury'],
-    scope: 'LEGAL_ENTITY',
-    legalEntityCodes: ['AMA'],
-    accountIds: [],
-    memberIds: ['usr_jx', 'usr_nigel'],
-    createdBy: 'Ming Miin',
+    memberIds: ['usr_fc'],
+    createdBy: 'Ee Cheah',
     createdAt: '2026-02-20T11:05:00',
-    updatedAt: '2026-04-28T11:50:00',
-  },
-  {
-    id: 'ug_rlky_signers',
-    name: 'RLKY Signers',
-    description: 'Approves payment orders on Acme Labs Cayman accounts.',
-    roleIds: ['role_finance_treasury'],
-    scope: 'LEGAL_ENTITY',
-    legalEntityCodes: ['ALKY'],
-    accountIds: [],
-    memberIds: ['usr_jx'],
-    createdBy: 'Ming Miin',
-    createdAt: '2026-02-20T11:08:00',
-    updatedAt: '2026-04-28T11:52:00',
+    updatedAt: '2026-08-13T11:50:00',
   },
 ]
 
@@ -738,7 +854,6 @@ export function permissionsForUser(
       for (const p of permissionsForRole(role)) keys.add(p.key)
     }
   }
-  if (keys.has('All')) return PERMISSION_CATALOGUE
   return PERMISSION_CATALOGUE.filter((p) => keys.has(p.key))
 }
 

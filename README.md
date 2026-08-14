@@ -29,6 +29,12 @@ Permission ─> Permission Set ─> Role ─> Group ─> User
                                          + account scope
 ```
 
+A permission is a feature plus an action (`payments.create`), per ACME-2178.
+Acme defines the catalogue and the three MVP sets (Operations, Finance,
+Administrator). The client composes roles from those sets. Administrator holds
+everything except `payments.approve`, so an administrator configures who
+approves rather than approving.
+
 Permissions and permission sets are managed by Acme. A role narrows the sets for
 one organization's way of working, so roles are the customizable layer. A group
 defines account access, grants roles and holds users. A user can be in several
@@ -42,7 +48,7 @@ notification bell.
 - `/transactions` — per-column filters, selection to CSV, detail sheet
 - `/payments` — read-only list on the same data table as `/transactions`. View only for MVP: no create, retry or maker-checker approval, and only the settled `COMPLETED` / `FAILED` statuses
 - `/accounts` — flat account list: Bank, Name, Bank account no., Legal entity, Currencies. Everything else (internal ID, routing, balances, connection profile, which groups can see it) is in the detail sheet
-- `/user-management` — admin: Groups, Roles, Permission Sets and Users tabs. A group defines account access and grants roles
+- `/user-management` — admin: Groups, Roles, Permission Sets and Users tabs. A group defines account access and grants roles. Seeded from the ACME-2178 worked example: 6 groups, 4 roles, 3 permission sets, 7 users
 
 Every list — Transactions, Payments, Accounts and the User Management tabs —
 shares the same table components:

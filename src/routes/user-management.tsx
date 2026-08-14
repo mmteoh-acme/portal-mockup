@@ -54,6 +54,7 @@ import {
   getPermissionSet,
   getPortalUser,
   legalEntityName,
+  permissionsByFeature,
   permissionsForRole,
   permissionsForUser,
   portalUsers,
@@ -111,11 +112,45 @@ function Pill({
   )
 }
 
-function PermissionKeyPill({ k }: { k: string }) {
+// With `payments` as one undivided feature, any role holding the Finance set
+// can both raise and approve a payment order. That contradicts the maker and
+// checker split, so the role says so rather than hiding it.
+function holdsMakerAndChecker(role: Role): boolean {
+  const keys = new Set(permissionsForRole(role).map((p) => p.key))
+  return keys.has('payments.create') && keys.has('payments.approve')
+}
+
+// A permission set reads as one row per feature with its actions beside it,
+// which is the shape of the ACME-2178 catalogue: features carry actions.
+function PermissionMatrix({ keys }: { keys: string[] }) {
+  const rows = permissionsByFeature(keys)
+  if (rows.length === 0) {
+    return <span className="text-xs text-muted-foreground">No permission</span>
+  }
   return (
-    <span className="inline-flex items-center rounded border bg-muted px-1.5 py-0.5 font-mono text-[0.6rem] uppercase tracking-wider text-muted-foreground">
-      {k}
-    </span>
+    <div className="space-y-1">
+      {rows.map((row) => (
+        <div key={row.feature} className="flex flex-wrap items-baseline gap-1.5">
+          <span className="font-mono text-[0.65rem] uppercase tracking-wider text-foreground/70">
+            {row.feature}
+          </span>
+          <div className="flex flex-wrap gap-1">
+            {row.actions.map((a) => (
+              <span
+                key={a}
+                className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[0.6rem] font-medium uppercase tracking-wider ${
+                  a === 'approve'
+                    ? 'border-violet-300 bg-violet-50 text-violet-700'
+                    : 'border-border bg-muted text-muted-foreground'
+                }`}
+              >
+                {a}
+              </span>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
   )
 }
 
@@ -530,8 +565,7 @@ function CreateRoleDialog({
   const keys = new Set(
     [...setIds].flatMap((id) => getPermissionSet(id)?.permissions ?? []),
   )
-  const conflict =
-    keys.has('payment.create_edit') && keys.has('payment.approve_reject')
+  const conflict = keys.has('payments.create') && keys.has('payments.approve')
 
   const submit = () => {
     addRole({
@@ -615,10 +649,8 @@ function CreateRoleDialog({
                         </Pill>
                       )}
                     </div>
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {ps.permissions.map((k) => (
-                        <PermissionKeyPill key={k} k={k} />
-                      ))}
+                    <div className="mt-1.5">
+                      <PermissionMatrix keys={ps.permissions} />
                     </div>
                   </div>
                 </label>
@@ -948,6 +980,16 @@ function RoleSheet({
             <p className="max-w-sm text-sm text-muted-foreground">
               {role.description}
             </p>
+            {holdsMakerAndChecker(role) && (
+              <div className="flex items-start gap-1.5 pt-1 text-xs text-amber-700">
+                <TriangleAlertIcon className="mt-0.5 size-3.5 shrink-0" />
+                <span className="max-w-sm">
+                  Holds both create and approve on payments. The MVP catalogue
+                  treats payments as one feature, so there is no create-only set
+                  to grant instead.
+                </span>
+              </div>
+            )}
           </div>
           <Button
             variant="ghost"
@@ -1004,11 +1046,7 @@ function RoleSheet({
                         <LockIcon className="size-2.5" /> Managed by Acme
                       </Pill>
                     )}
-                    <div className="flex flex-wrap gap-1">
-                      {ps.permissions.map((k) => (
-                        <PermissionKeyPill key={k} k={k} />
-                      ))}
-                    </div>
+                    <PermissionMatrix keys={ps.permissions} />
                   </div>
                 </Field>
               )
@@ -1200,9 +1238,20 @@ function RolesTable({
         accessorKey: 'name',
         header: 'Name',
         cell: ({ row }) => (
-          <span className="whitespace-nowrap font-medium">
-            {row.original.name}
-          </span>
+          <div className="flex items-center gap-1.5 whitespace-nowrap">
+            <span className="font-medium">{row.original.name}</span>
+            {row.original.seeded && (
+              <Pill title="Seeded by Acme at onboarding">seeded</Pill>
+            )}
+            {holdsMakerAndChecker(row.original) && (
+              <Pill
+                tone="warning"
+                title="This role can raise and approve a payment order. The MVP catalogue has no create-only payments set."
+              >
+                <TriangleAlertIcon className="size-2.5" /> maker + checker
+              </Pill>
+            )}
+          </div>
         ),
       },
       {
@@ -1297,13 +1346,7 @@ function PermissionSetsTable({ roles }: { roles: Role[] }) {
       {
         id: 'permissions',
         header: 'Permissions',
-        cell: ({ row }) => (
-          <div className="flex flex-wrap gap-1">
-            {row.original.permissions.map((k) => (
-              <PermissionKeyPill key={k} k={k} />
-            ))}
-          </div>
-        ),
+        cell: ({ row }) => <PermissionMatrix keys={row.original.permissions} />,
         enableSorting: false,
       },
       {

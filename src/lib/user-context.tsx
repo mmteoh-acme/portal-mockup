@@ -17,9 +17,10 @@ import { useUserGroups } from '@/lib/admin-store'
 // group membership, so editing a group in the UI changes what this user can
 // do (ACME-2178).
 
-// Personas the mockup can switch between: an administrator, a maker who can
-// raise payment orders, and a signer who can approve them.
-const DEMO_USER_IDS = ['usr_jx', 'usr_benoit', 'usr_nigel']
+// Personas the mockup can switch between, from the ACME-2178 worked example:
+// the seeded administrator, a regional payment operator, and the finance
+// controller who approves.
+const DEMO_USER_IDS = ['usr_etam', 'usr_sw', 'usr_fc']
 
 const STORAGE_KEY = 'portal-mockup:activeUserId'
 

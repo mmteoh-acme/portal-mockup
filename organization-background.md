@@ -3,7 +3,7 @@
 Background for the redesign of the account group, user group, role and permission set hierarchy.
 
 * This document records the client's organization, the access hierarchy, and the eight teams that will be modelled as Roles.
-* It is background only. No code in this repo has changed to match it.
+* The mockup implements the ACME-2178 catalogue. Where this document and the ticket differ, the ticket wins in the code. See what the mockup reflects.
 * Related tickets are ACME-2177 (flat accounts and grouping) and ACME-2178 (RBAC catalogue, presets, account group scoping).
 
 ## Who is who
@@ -351,12 +351,39 @@ Deployed: <https://portal-mockup-virid.vercel.app>
 * User Management carries the four tabs: Groups, Roles, Permission Sets, Users.
 * Accounts is renamed from Internal Accounts. The main table shows bank, name, bank account number, legal entity and currencies. An account can hold several currencies.
 
-The mockup still seeds the earlier six roles and six permission sets. It does not yet carry the refined catalogue above. What is missing:
+The mockup now seeds the ACME-2178 catalogue, not the refined catalogue in this document. The two differ and the ticket wins in the code.
 
-* The nine groups, eight roles and five permission sets from the refined catalogue.
-* The Balances and Comments permissions.
-* The scope predicate. The group editor still offers all accounts, by legal entity, or a hand-picked list, so the two Trading scopes cannot be expressed.
-* The `purpose` attribute on an account, which marks an account as OTC.
+| | ACME-2178, now in the mockup | This document's refined catalogue |
+| --- | --- | --- |
+| Permissions | `transactions.view`, `payments.view/create/edit/delete/approve` | All, Transactions, Balances, Payment Orders, Payment Orders Edit, Payment Approvals, Comments |
+| Permission sets | Operations, Finance, Administrator | Administrator, Reporting, Payments, Approvals, Payment Support |
+| Roles | Administrator (seeded), Operation Manager, Finance Controller, Trading Desk | 9 roles |
+| Groups | Administrators, Payment Operations APAC / US / EU, Trading and Markets, Finance and Treasury | 10 groups |
+| Users | The ACME-2178 example: Ee Cheah, SW, Matt, Avril, Rick, Amrinder, FC | Jx, Ming, Nigel, Cayter, Benoit |
+
+Fixture data added so the ticket's examples resolve to real accounts:
+
+* A fifth legal entity, AMEU (Acme Markets Europe, NL), so Payment Operations (EU) has an account.
+* Three accounts: OTC Trading SGD, OTC Trading USD and EUR Operating. Trading and Markets scopes onto the two OTC accounts by name.
+
+### What building it exposed
+
+Three places where ACME-2178 contradicts itself. The mockup follows the reading named below and the ticket needs a decision on each.
+
+| Conflict | Where | What the mockup does |
+| --- | --- | --- |
+| Payment actions are create, view, edit, approve in §1 but View, Create, Delete, Edit in §2 | §1 model table against §2 catalogue | Carries all six: view, create, edit, delete and approve. Approve has to exist because §3b defines Administrator by excluding it |
+| Administrator is "all by default" in §3 but "excludes Payment Approval" in §3b | §3 against §3b | Follows §3b. Administrator is every permission except `payments.approve` |
+| Operations is `transactions` in §3 but the §4 tables show Operations users holding "transactions, payments" | §3 against §4 | Follows §3 for the set, and composes the Operation Manager role from Operations plus Finance so the effective permissions match §4 |
+
+One structural gap, which is the important one:
+
+* `payments` is a single feature and Finance holds all of it, so any role that can raise a payment order can also approve one. Operation Manager and Finance Controller both come out holding create and approve.
+* That contradicts the decision above, which needs create and approve in separate sets.
+* The MVP catalogue therefore cannot express maker and checker. It needs either a create-only payments set, or the ability for a set to select actions rather than a whole feature.
+* The mockup surfaces this rather than hiding it. Any role holding both shows a `maker + checker` warning on the Roles tab and in the role sheet.
+
+A second gap, smaller: there is no read-only payments set. A trading desk that should only sight payments has to be given the whole Finance set, which includes create, delete and approve, or nothing. Trading Desk is seeded with Operations only, so it currently sees transactions and no payments at all.
 
 ## Open questions
 
@@ -366,4 +393,6 @@ The mockup still seeds the earlier six roles and six permission sets. It does no
 * Story 4 says "sign incoming transactions". Approving an incoming transaction is not a payment approval. Confirm whether this means releasing or acknowledging incoming funds.
 * Story 7 says "before cut off" and story 4 says "real time". Both are service levels rather than permissions. Approval windows were removed from the MVP.
 * Decided: the maker and checker split is account level, so create and approve stay in separate permission sets and a team that does both is two groups. The per-payment four-eyes rule is still required on top.
-* An account needs a `purpose` attribute before OTC can be used in a scope. Currency and country also need to become scope dimensions.
+* An account needs a `purpose` attribute before OTC can be used in a scope. Currency and country also need to become scope dimensions. The mockup scopes Trading and Markets to two named OTC accounts as a stand-in.
+* ACME-2178 needs a create-only payments set, or action-level selection inside a set, before maker and checker can be expressed. See what building it exposed above.
+* The ACME-2178 example client is Ripple and the seeded users are @ripple.com, while the client group in the mockup is still Acme Group with Acme-named legal entities. Confirm which name the demo should carry.
