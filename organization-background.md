@@ -355,7 +355,7 @@ The mockup now seeds the ACME-2178 catalogue, not the refined catalogue in this 
 
 | | ACME-2178, now in the mockup | This document's refined catalogue |
 | --- | --- | --- |
-| Permissions | `transactions.view`, `payments.view/create/edit/delete/approve` | All, Transactions, Balances, Payment Orders, Payment Orders Edit, Payment Approvals, Comments |
+| Permissions | `transactions.view` and `payments.view`. View only | All, Transactions, Balances, Payment Orders, Payment Orders Edit, Payment Approvals, Comments |
 | Permission sets | Operations, Finance, Administrator | Administrator, Reporting, Payments, Approvals, Payment Support |
 | Roles | Administrator (seeded), Operation Manager, Finance Controller, Trading Desk | 9 roles |
 | Groups | Administrators, Payment Operations APAC / US / EU, Trading and Markets, Finance and Treasury | 10 groups |
@@ -372,18 +372,27 @@ Three places where ACME-2178 contradicts itself. The mockup follows the reading 
 
 | Conflict | Where | What the mockup does |
 | --- | --- | --- |
-| Payment actions are create, view, edit, approve in §1 but View, Create, Delete, Edit in §2 | §1 model table against §2 catalogue | Carries all six: view, create, edit, delete and approve. Approve has to exist because §3b defines Administrator by excluding it |
-| Administrator is "all by default" in §3 but "excludes Payment Approval" in §3b | §3 against §3b | Follows §3b. Administrator is every permission except `payments.approve` |
+| Payment actions are create, view, edit, approve in §1 but View, Create, Delete, Edit in §2 | §1 model table against §2 catalogue | Neither. The MVP catalogue is view only, so `payments.view` is the single payment permission. The other action names stay in the model for when they land |
+| Administrator is "all by default" in §3 but "excludes Payment Approval" in §3b | §3 against §3b | Follows §3b. Administrator is every permission except `payments.approve`, which currently means every permission because approval is not in the catalogue |
 | Operations is `transactions` in §3 but the §4 tables show Operations users holding "transactions, payments" | §3 against §4 | Follows §3 for the set, and composes the Operation Manager role from Operations plus Finance so the effective permissions match §4 |
 
-One structural gap, which is the important one:
+One structural gap, dormant for now:
 
-* `payments` is a single feature and Finance holds all of it, so any role that can raise a payment order can also approve one. Operation Manager and Finance Controller both come out holding create and approve.
+* `payments` is a single feature. The moment a create action and an approve action both exist, any set holding the payments feature grants both, so no role can be maker without also being checker.
 * That contradicts the decision above, which needs create and approve in separate sets.
-* The MVP catalogue therefore cannot express maker and checker. It needs either a create-only payments set, or the ability for a set to select actions rather than a whole feature.
-* The mockup surfaces this rather than hiding it. Any role holding both shows a `maker + checker` warning on the Roles tab and in the role sheet.
+* It does not bite today because the MVP catalogue is view only. It bites on the first release that adds create or approve.
+* The fix is either a create-only payments set, or letting a set select actions rather than a whole feature.
 
-A second gap, smaller: there is no read-only payments set. A trading desk that should only sight payments has to be given the whole Finance set, which includes create, delete and approve, or nothing. Trading Desk is seeded with Operations only, so it currently sees transactions and no payments at all.
+A second gap, also dormant: there is no read-only payments set distinct from the Finance set. With view-only permissions the two are the same thing, so nothing is wrong yet. Once payments gains actions, a trading desk that should only sight payments would have to be given the whole Finance set.
+
+## What the User Management page does
+
+* The page is administrator only. A user whose groups grant no role holding the Administrator permission set sees an explanation instead, and the sidebar does not list the page for them.
+* Administrator is never offered when creating a group. Acme seeds the first administrator at onboarding and the Administrators group keeps the role.
+* A role carries a name and its permission sets. There is no description field, because a role named after the job does not need one.
+* Clicking a permission set opens a permission and action table.
+* Clicking a user shows their effective permissions as the same table, the groups that granted them, their roles and their permission sets.
+* Deleting a group or a role asks for confirmation first and stays undoable while the toast is up.
 
 ## Open questions
 
@@ -394,5 +403,5 @@ A second gap, smaller: there is no read-only payments set. A trading desk that s
 * Story 7 says "before cut off" and story 4 says "real time". Both are service levels rather than permissions. Approval windows were removed from the MVP.
 * Decided: the maker and checker split is account level, so create and approve stay in separate permission sets and a team that does both is two groups. The per-payment four-eyes rule is still required on top.
 * An account needs a `purpose` attribute before OTC can be used in a scope. Currency and country also need to become scope dimensions. The mockup scopes Trading and Markets to two named OTC accounts as a stand-in.
-* ACME-2178 needs a create-only payments set, or action-level selection inside a set, before maker and checker can be expressed. See what building it exposed above.
-* The ACME-2178 example client is Ripple and the seeded users are @ripple.com, while the client group in the mockup is still Acme Group with Acme-named legal entities. Confirm which name the demo should carry.
+* ACME-2178 needs a create-only payments set, or action-level selection inside a set, before maker and checker can be expressed. Not urgent while the catalogue is view only. See what building it exposed above.
+* The seeded users are renamed for privacy and moved to acme.com. Two of them, the seeded administrator and the finance controller, are both called JX, so they are told apart by email.

@@ -32,8 +32,10 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
 import { useUser } from '@/lib/user-context'
+import { useUserGroups } from '@/lib/admin-store'
 import {
   ACCOUNTS,
+  isAdministrator,
   CLIENT_GROUP,
   LEGAL_ENTITIES,
   type LegalEntity,
@@ -93,6 +95,10 @@ export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const navigate = useNavigate()
   const { user, roles, setUserId, demoUsers } = useUser()
+  const userGroups = useUserGroups()
+  // User Management is an administrator's page, so it is not even listed for
+  // anyone else.
+  const canAdminister = isAdministrator(user.id, userGroups)
   const accountCount = ACCOUNTS.length
   const entityCount = (code: LegalEntity['code']) =>
     ACCOUNTS.filter((a) => a.legalEntity === code).length
@@ -195,7 +201,9 @@ export function AppSidebar() {
           <SidebarGroupLabel>Admin</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {ADMIN.map((item) => (
+              {ADMIN.filter(
+                (item) => item.to !== '/user-management' || canAdminister,
+              ).map((item) => (
                 <NavLink key={item.title} item={item} pathname={pathname} />
               ))}
             </SidebarMenu>

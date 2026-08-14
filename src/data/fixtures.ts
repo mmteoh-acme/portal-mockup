@@ -453,11 +453,10 @@ export const PERMISSION_FEATURES: {
   {
     feature: 'payments',
     label: 'Payments',
-    // View, Create, Delete and Edit are the ACME-2178 catalogue. Approve is
-    // carried as well because the ticket's model table lists it and the
-    // Administrator set is defined by excluding it — see the note in
-    // organization-background.md.
-    actions: ['view', 'create', 'edit', 'delete', 'approve'],
+    // View only for MVP. Create, edit, delete and approve are named in the
+    // PermissionAction union but deliberately not in the catalogue yet, so the
+    // portal grants nothing but read access.
+    actions: ['view'],
   },
 ]
 
@@ -518,8 +517,10 @@ export type PermissionSet = {
   permissions: string[]
 }
 
-// Administrator is everything except approving a payment, so an administrator
-// configures who approves rather than approving themselves (ACME-2178 §3b).
+// Administrator never holds payment approval, so an administrator configures
+// who approves rather than approving themselves (ACME-2178 §3b). With the MVP
+// catalogue at view-only there is nothing to exclude yet, and this keeps the
+// rule in place for when approval lands.
 const ADMINISTRATOR_PERMISSIONS = PERMISSION_CATALOGUE.filter(
   (p) => p.key !== 'payments.approve',
 ).map((p) => p.key)
@@ -535,7 +536,7 @@ export const PERMISSION_SETS: PermissionSet[] = [
   {
     id: 'ps_finance',
     name: 'Finance',
-    description: 'The whole payments feature, including approval. Managed by Acme.',
+    description: 'The payments feature. Managed by Acme.',
     managed: true,
     permissions: permissionKeysForFeature('payments'),
   },
@@ -543,7 +544,7 @@ export const PERMISSION_SETS: PermissionSet[] = [
     id: 'ps_administrator',
     name: 'Administrator',
     description:
-      'Everything except approving a payment, so an administrator configures who approves. Managed by Acme.',
+      'Every permission in the catalogue. Payment approval is never included, so an administrator configures who approves. Managed by Acme.',
     managed: true,
     permissions: ADMINISTRATOR_PERMISSIONS,
   },
@@ -559,7 +560,6 @@ export function getPermissionSet(id: string): PermissionSet | undefined {
 export type Role = {
   id: string
   name: string
-  description: string
   permissionSetIds: string[]
   // Seeded by Acme at onboarding rather than composed by the client.
   seeded?: boolean
@@ -569,29 +569,22 @@ export const ROLES: Role[] = [
   {
     id: 'role_administrator',
     name: 'Administrator',
-    description:
-      'Configures groups, roles and users. Does not approve payments.',
     permissionSetIds: ['ps_administrator'],
     seeded: true,
   },
   {
     id: 'role_operation_manager',
     name: 'Operation Manager',
-    description:
-      'Runs payment operations for a region. Raises payment orders and reads the transaction data.',
     permissionSetIds: ['ps_operations', 'ps_finance'],
   },
   {
     id: 'role_finance_controller',
     name: 'Finance Controller',
-    description: 'Reviews and approves payment orders before cut off.',
     permissionSetIds: ['ps_finance'],
   },
   {
     id: 'role_trading_desk',
     name: 'Trading Desk',
-    description:
-      'Sights the payments the desk made and received. Read only.',
     permissionSetIds: ['ps_operations'],
   },
 ]
@@ -625,32 +618,32 @@ export type PortalUser = {
 export const portalUsers: PortalUser[] = [
   {
     id: 'usr_etam',
-    name: 'Ee Cheah',
-    email: 'etam@ripple.com',
+    name: 'JX',
+    email: 'jx@acme.com',
     status: 'active',
     approvalLimit: null,
     lastActive: '13 Aug, 2026',
   },
   {
     id: 'usr_sw',
-    name: 'SW',
-    email: 'sw@ripple.com',
+    name: 'Ming',
+    email: 'ming@acme.com',
     status: 'active',
     approvalLimit: null,
     lastActive: '13 Aug, 2026',
   },
   {
     id: 'usr_matt',
-    name: 'Matt',
-    email: 'matt@ripple.com',
+    name: 'Alex',
+    email: 'alex@acme.com',
     status: 'active',
     approvalLimit: null,
     lastActive: '12 Aug, 2026',
   },
   {
     id: 'usr_avril',
-    name: 'Avril',
-    email: 'avril@ripple.com',
+    name: 'Jess',
+    email: 'jess@acme.com',
     status: 'active',
     approvalLimit: null,
     lastActive: '12 Aug, 2026',
@@ -658,23 +651,23 @@ export const portalUsers: PortalUser[] = [
   {
     id: 'usr_rick',
     name: 'Rick',
-    email: 'rick@ripple.com',
+    email: 'rick@acme.com',
     status: 'invited',
     approvalLimit: null,
     lastActive: '—',
   },
   {
     id: 'usr_amrinder',
-    name: 'Amrinder',
-    email: 'amrinder@ripple.com',
+    name: 'JC',
+    email: 'jc@acme.com',
     status: 'active',
     approvalLimit: null,
     lastActive: '11 Aug, 2026',
   },
   {
     id: 'usr_fc',
-    name: 'FC',
-    email: 'fc@ripple.com',
+    name: 'JX',
+    email: 'jxfc@acme.com',
     status: 'active',
     approvalLimit: 'Up to US$5,000,000',
     lastActive: '13 Aug, 2026',
@@ -729,7 +722,7 @@ export const userGroupsSeed: UserGroup[] = [
     legalEntityCodes: ['AMA'],
     accountIds: [],
     memberIds: ['usr_sw', 'usr_matt'],
-    createdBy: 'Ee Cheah',
+    createdBy: 'JX',
     createdAt: '2026-02-14T10:40:00',
     updatedAt: '2026-08-11T13:19:00',
   },
@@ -742,7 +735,7 @@ export const userGroupsSeed: UserGroup[] = [
     legalEntityCodes: ['AMDE'],
     accountIds: [],
     memberIds: ['usr_avril'],
-    createdBy: 'Ee Cheah',
+    createdBy: 'JX',
     createdAt: '2026-02-14T10:44:00',
     updatedAt: '2026-08-11T13:22:00',
   },
@@ -755,7 +748,7 @@ export const userGroupsSeed: UserGroup[] = [
     legalEntityCodes: ['AMEU'],
     accountIds: [],
     memberIds: ['usr_rick'],
-    createdBy: 'Ee Cheah',
+    createdBy: 'JX',
     createdAt: '2026-08-10T09:05:00',
     updatedAt: '2026-08-10T09:05:00',
   },
@@ -770,7 +763,7 @@ export const userGroupsSeed: UserGroup[] = [
     legalEntityCodes: [],
     accountIds: ['intacc_0OTCSGD00001', 'intacc_0OTCUSD00001'],
     memberIds: ['usr_amrinder'],
-    createdBy: 'Ee Cheah',
+    createdBy: 'JX',
     createdAt: '2026-03-02T09:20:00',
     updatedAt: '2026-08-12T10:02:00',
   },
@@ -783,7 +776,7 @@ export const userGroupsSeed: UserGroup[] = [
     legalEntityCodes: [],
     accountIds: [],
     memberIds: ['usr_fc'],
-    createdBy: 'Ee Cheah',
+    createdBy: 'JX',
     createdAt: '2026-02-20T11:05:00',
     updatedAt: '2026-08-13T11:50:00',
   },
@@ -793,6 +786,17 @@ export function rolesForUserGroup(group: UserGroup): Role[] {
   return group.roleIds
     .map((id) => getRole(id))
     .filter((r): r is Role => !!r)
+}
+
+// The Administrator permission set is what makes someone an administrator, and
+// only an administrator may open User Management.
+export function isAdministrator(
+  userId: string,
+  userGroups: UserGroup[],
+): boolean {
+  return userGroupsForUser(userId, userGroups)
+    .flatMap((g) => rolesForUserGroup(g))
+    .some((r) => r.permissionSetIds.includes('ps_administrator'))
 }
 
 export function permissionSetsForUserGroup(group: UserGroup): PermissionSet[] {

@@ -48,6 +48,9 @@ import { DetailSection, Field } from '@/components/detail-list'
 import {
   LEGAL_ENTITIES,
   PERMISSION_SETS,
+  accountsForUser,
+  isAdministrator,
+  permission,
   ACCOUNTS,
   accountsForUserGroup,
   formatMoney,
@@ -67,6 +70,7 @@ import {
   type UserGroupScope,
 } from '@/data/fixtures'
 import { formatWhen } from '@/lib/format'
+import { useUser } from '@/lib/user-context'
 import {
   addRole,
   addUserGroup,
@@ -110,14 +114,6 @@ function Pill({
       {children}
     </span>
   )
-}
-
-// With `payments` as one undivided feature, any role holding the Finance set
-// can both raise and approve a payment order. That contradicts the maker and
-// checker split, so the role says so rather than hiding it.
-function holdsMakerAndChecker(role: Role): boolean {
-  const keys = new Set(permissionsForRole(role).map((p) => p.key))
-  return keys.has('payments.create') && keys.has('payments.approve')
 }
 
 // A permission set reads as one row per feature with its actions beside it,
@@ -167,6 +163,58 @@ function initials(name: string): string {
 // Shared editors
 // ---------------------------------------------------------------------------
 
+// Deleting takes something away from real people, so it asks first and stays
+// undoable for as long as the toast is up.
+function ConfirmDeleteDialog({
+  open,
+  onOpenChange,
+  title,
+  body,
+  confirmLabel,
+  onConfirm,
+}: {
+  open: boolean
+  onOpenChange: (o: boolean) => void
+  title: string
+  body: React.ReactNode
+  confirmLabel: string
+  onConfirm: () => void
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <TriangleAlertIcon className="size-4 text-amber-600" />
+            {title}
+          </DialogTitle>
+          <DialogDescription>{body}</DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            className="bg-destructive text-white hover:bg-destructive/90"
+            onClick={() => {
+              onOpenChange(false)
+              onConfirm()
+            }}
+          >
+            {confirmLabel}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// Administrator is not offered when composing a group. Acme seeds the first
+// administrator at onboarding and the existing Administrators group keeps it.
+function isAdministratorRole(role: Role): boolean {
+  return role.permissionSetIds.includes('ps_administrator')
+}
+
 function RolePicker({
   roles,
   selected,
@@ -192,9 +240,6 @@ function RolePicker({
             />
             <div className="min-w-0 flex-1">
               <div className="truncate text-sm font-medium">{r.name}</div>
-              <div className="truncate text-[0.65rem] text-muted-foreground">
-                {r.description}
-              </div>
               <div className="mt-1 flex flex-wrap gap-1">
                 {r.permissionSetIds.map((id) => (
                   <Pill key={id} tone="set">
@@ -379,7 +424,9 @@ function CreateGroupDialog({
   open: boolean
   onOpenChange: (o: boolean) => void
 }) {
-  const roles = useRoles()
+  const allRoles = useRoles()
+  // Administrator is seeded by Acme and stays with the Administrators group.
+  const roles = allRoles.filter((r) => !isAdministratorRole(r))
   const [name, setName] = React.useState('')
   const [description, setDescription] = React.useState('')
   const [roleIds, setRoleIds] = React.useState<Set<string>>(new Set())
@@ -549,29 +596,19 @@ function CreateRoleDialog({
   onOpenChange: (o: boolean) => void
 }) {
   const [name, setName] = React.useState('')
-  const [description, setDescription] = React.useState('')
   const [setIds, setSetIds] = React.useState<Set<string>>(new Set())
 
   const reset = () => {
     setName('')
-    setDescription('')
     setSetIds(new Set())
   }
 
   const canSubmit = name.trim().length > 0 && setIds.size > 0
 
-  // The one grant-time check the catalogue can enforce: a role that both
-  // creates and approves payments would break four-eyes on its own.
-  const keys = new Set(
-    [...setIds].flatMap((id) => getPermissionSet(id)?.permissions ?? []),
-  )
-  const conflict = keys.has('payments.create') && keys.has('payments.approve')
-
   const submit = () => {
     addRole({
       id: `role_${name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').slice(0, 24)}`,
       name: name.trim(),
-      description: description.trim(),
       permissionSetIds: [...setIds],
     })
     toast.success('Role created', {
@@ -599,25 +636,17 @@ function CreateRoleDialog({
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="r-name">Name</Label>
-              <Input
-                id="r-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Payment Ops"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="r-desc">Description</Label>
-              <Input
-                id="r-desc"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Raises payments and reconciles status"
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="r-name">Name</Label>
+            <Input
+              id="r-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Payment Ops"
+            />
+            <p className="text-xs text-muted-foreground">
+              Name the role after the job the person does in the group.
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -658,16 +687,6 @@ function CreateRoleDialog({
             </div>
           </div>
 
-          {conflict && (
-            <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-              <TriangleAlertIcon className="mt-0.5 size-3.5 shrink-0" />
-              <span>
-                This role can both create and approve payments. Four-eyes is
-                still enforced per payment at runtime, but granting both in one
-                role defeats the intent.
-              </span>
-            </div>
-          )}
         </div>
 
         <DialogFooter>
@@ -696,6 +715,7 @@ function GroupSheet({
 }) {
   const allRoles = useRoles()
   const [editing, setEditing] = React.useState(false)
+  const [confirmDelete, setConfirmDelete] = React.useState(false)
   const [roleIds, setRoleIds] = React.useState<Set<string>>(
     () => new Set(group?.roleIds ?? []),
   )
@@ -706,6 +726,10 @@ function GroupSheet({
   if (!group) return null
 
   const roles = rolesForUserGroup(group)
+  // Administrator can only stay where it is already granted, never be added.
+  const grantableRoles = allRoles.filter(
+    (r) => !isAdministratorRole(r) || group.roleIds.includes(r.id),
+  )
   const visible = accountsForUserGroup(group)
   const members = group.memberIds
     .map((id) => getPortalUser(id))
@@ -750,13 +774,7 @@ function GroupSheet({
             <Button
               variant="ghost"
               className="text-destructive hover:text-destructive"
-              onClick={() => {
-                deleteUserGroup(group.id)
-                toast.success('Group deleted', {
-                  description: `${group.name} was removed. Its members lose those grants.`,
-                })
-                onClose()
-              }}
+              onClick={() => setConfirmDelete(true)}
             >
               Delete
             </Button>
@@ -767,7 +785,7 @@ function GroupSheet({
           {editing && (
             <div className="space-y-3 rounded-md border bg-muted/20 p-3">
               <RolePicker
-                roles={allRoles}
+                roles={grantableRoles}
                 selected={roleIds}
                 onToggle={(id, checked) =>
                   setRoleIds((prev) => {
@@ -850,9 +868,6 @@ function GroupSheet({
                         <tr key={r.id} className="border-b last:border-b-0">
                           <td className="px-2 py-2 align-top">
                             <div className="font-medium">{r.name}</div>
-                            <div className="text-[0.7rem] text-muted-foreground">
-                              {r.description}
-                            </div>
                           </td>
                           <td className="px-2 py-2 align-top">
                             <div className="flex flex-wrap justify-end gap-1">
@@ -949,6 +964,39 @@ function GroupSheet({
             </Field>
           </DetailSection>
         </div>
+
+        <ConfirmDeleteDialog
+          open={confirmDelete}
+          onOpenChange={setConfirmDelete}
+          title="Delete this group?"
+          body={
+            <>
+              {group.name} grants {roles.length} role
+              {roles.length === 1 ? '' : 's'} to {members.length} member
+              {members.length === 1 ? '' : 's'} across {visible.length} account
+              {visible.length === 1 ? '' : 's'}. They lose that access
+              immediately.
+            </>
+          }
+          confirmLabel="Delete group"
+          onConfirm={() => {
+            const restore = group
+            deleteUserGroup(group.id)
+            onClose()
+            toast.success('Group deleted', {
+              description: `${restore.name} was removed.`,
+              action: {
+                label: 'Undo',
+                onClick: () => {
+                  addUserGroup(restore)
+                  toast.success('Group restored', {
+                    description: restore.name,
+                  })
+                },
+              },
+            })
+          }}
+        />
       </SheetContent>
     </Sheet>
   )
@@ -962,6 +1010,7 @@ function RoleSheet({
   onClose: () => void
 }) {
   const groups = useUserGroups()
+  const [confirmDelete, setConfirmDelete] = React.useState(false)
   if (!role) return null
 
   const permissions = permissionsForRole(role)
@@ -977,19 +1026,6 @@ function RoleSheet({
         <div className="flex flex-wrap items-start justify-between gap-3 border-b px-4 pb-4">
           <div className="space-y-1">
             <div className="text-2xl font-bold tracking-tight">{role.name}</div>
-            <p className="max-w-sm text-sm text-muted-foreground">
-              {role.description}
-            </p>
-            {holdsMakerAndChecker(role) && (
-              <div className="flex items-start gap-1.5 pt-1 text-xs text-amber-700">
-                <TriangleAlertIcon className="mt-0.5 size-3.5 shrink-0" />
-                <span className="max-w-sm">
-                  Holds both create and approve on payments. The MVP catalogue
-                  treats payments as one feature, so there is no create-only set
-                  to grant instead.
-                </span>
-              </div>
-            )}
           </div>
           <Button
             variant="ghost"
@@ -1000,11 +1036,7 @@ function RoleSheet({
                 ? 'Remove the role from every group before deleting it'
                 : undefined
             }
-            onClick={() => {
-              deleteRole(role.id)
-              toast.success('Role deleted', { description: role.name })
-              onClose()
-            }}
+            onClick={() => setConfirmDelete(true)}
           >
             Delete
           </Button>
@@ -1023,7 +1055,7 @@ function RoleSheet({
             <Field label="Permissions">
               <span className="text-sm tabular-nums">{permissions.length}</span>
             </Field>
-            <Field label="Granted by">
+            <Field label="Belongs to">
               <div className="flex flex-wrap gap-1">
                 {usedBy.length === 0 ? (
                   <Pill tone="warning">No group</Pill>
@@ -1051,6 +1083,274 @@ function RoleSheet({
                 </Field>
               )
             })}
+          </DetailSection>
+        </div>
+
+        <ConfirmDeleteDialog
+          open={confirmDelete}
+          onOpenChange={setConfirmDelete}
+          title="Delete this role?"
+          body={
+            <>
+              {role.name} holds {role.permissionSetIds.length} permission set
+              {role.permissionSetIds.length === 1 ? '' : 's'}. No group grants it
+              today, so nobody loses access.
+            </>
+          }
+          confirmLabel="Delete role"
+          onConfirm={() => {
+            const restore = role
+            deleteRole(role.id)
+            onClose()
+            toast.success('Role deleted', {
+              description: restore.name,
+              action: {
+                label: 'Undo',
+                onClick: () => {
+                  addRole(restore)
+                  toast.success('Role restored', { description: restore.name })
+                },
+              },
+            })
+          }}
+        />
+      </SheetContent>
+    </Sheet>
+  )
+}
+
+
+// A permission set reads as a permission-and-action table, which is the shape
+// of the ACME-2178 catalogue.
+function PermissionActionTable({ keys }: { keys: string[] }) {
+  const rows = keys
+    .map((k) => permission(k))
+    .filter((p): p is NonNullable<typeof p> => !!p)
+
+  if (rows.length === 0) {
+    return (
+      <span className="text-sm text-muted-foreground">
+        No permission in this set.
+      </span>
+    )
+  }
+
+  return (
+    <div className="overflow-hidden rounded border">
+      <table className="w-full text-[0.8rem]">
+        <thead>
+          <tr className="border-b bg-muted/50">
+            <th className="px-3 py-2 text-left text-[0.7rem] font-semibold uppercase tracking-wider text-foreground/70">
+              Permission
+            </th>
+            <th className="px-3 py-2 text-left text-[0.7rem] font-semibold uppercase tracking-wider text-foreground/70">
+              Action
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((p) => (
+            <tr key={p.key} className="border-b last:border-b-0">
+              <td className="px-3 py-2">
+                <div className="font-medium capitalize">{p.feature}</div>
+                <div className="text-[0.7rem] text-muted-foreground">
+                  {p.allows}
+                </div>
+              </td>
+              <td className="px-3 py-2">
+                <Pill tone="set">{p.action}</Pill>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function PermissionSetSheet({
+  set,
+  roles,
+  onClose,
+}: {
+  set: PermissionSet | null
+  roles: Role[]
+  onClose: () => void
+}) {
+  if (!set) return null
+
+  const usedBy = roles.filter((r) => r.permissionSetIds.includes(set.id))
+
+  return (
+    <Sheet open={!!set} onOpenChange={(o) => !o && onClose()}>
+      <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
+        <SheetHeader>
+          <SheetTitle className="font-mono">{set.id}</SheetTitle>
+        </SheetHeader>
+
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b px-4 pb-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl font-bold tracking-tight">
+                {set.name}
+              </span>
+              {set.managed && (
+                <Pill title="Defined by Acme. Clients compose roles from these sets.">
+                  <LockIcon className="size-2.5" /> managed by Acme
+                </Pill>
+              )}
+            </div>
+            <p className="max-w-sm text-sm text-muted-foreground">
+              {set.description}
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-6 px-4 pb-6 pt-4">
+          <DetailSection title="Permissions">
+            <Field label={`${set.permissions.length} in this set`} stacked>
+              <PermissionActionTable keys={set.permissions} />
+            </Field>
+          </DetailSection>
+
+          <DetailSection title="Where it is used">
+            <Field label="Roles" stacked>
+              {usedBy.length === 0 ? (
+                <Pill tone="warning">No role holds this set</Pill>
+              ) : (
+                <div className="flex flex-wrap gap-1">
+                  {usedBy.map((r) => (
+                    <Pill key={r.id}>{r.name}</Pill>
+                  ))}
+                </div>
+              )}
+            </Field>
+          </DetailSection>
+        </div>
+      </SheetContent>
+    </Sheet>
+  )
+}
+
+function UserSheet({
+  user,
+  groups,
+  onClose,
+}: {
+  user: PortalUser | null
+  groups: UserGroup[]
+  onClose: () => void
+}) {
+  if (!user) return null
+
+  const memberOf = userGroupsForUser(user.id, groups)
+  const userRoles = memberOf.flatMap((g) => rolesForUserGroup(g))
+  const perms = permissionsForUser(user.id, groups)
+  const accounts = accountsForUser(user.id, groups)
+
+  return (
+    <Sheet open={!!user} onOpenChange={(o) => !o && onClose()}>
+      <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
+        <SheetHeader>
+          <SheetTitle className="font-mono">{user.email}</SheetTitle>
+        </SheetHeader>
+
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b px-4 pb-4">
+          <div className="flex items-center gap-3">
+            <Avatar className="h-11 w-11 rounded-md">
+              <AvatarImage
+                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.name)}`}
+                alt={user.name}
+              />
+              <AvatarFallback className="rounded-md text-sm">
+                {initials(user.name)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="space-y-1">
+              <div className="text-2xl font-bold tracking-tight">
+                {user.name}
+              </div>
+              <StatusPill status={user.status} />
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-6 px-4 pb-6 pt-4">
+          <DetailSection title="Effective permissions">
+            <Field label="Resolved through their groups" stacked>
+              <PermissionActionTable keys={perms.map((p) => p.key)} />
+            </Field>
+            <Field label="Accounts in scope">
+              <span className="text-sm tabular-nums">{accounts.length}</span>
+            </Field>
+          </DetailSection>
+
+          <DetailSection title="How they got it">
+            <Field label="Groups" stacked>
+              {memberOf.length === 0 ? (
+                <Pill tone="warning">
+                  No group, so no permission and no account
+                </Pill>
+              ) : (
+                <div className="overflow-hidden rounded border">
+                  <table className="w-full text-[0.78rem]">
+                    <tbody>
+                      {memberOf.map((g) => (
+                        <tr key={g.id} className="border-b last:border-b-0">
+                          <td className="px-2 py-2">
+                            <div className="font-medium">{g.name}</div>
+                            <div className="text-[0.7rem] text-muted-foreground">
+                              {accountsForUserGroup(g).length} account
+                              {accountsForUserGroup(g).length === 1 ? '' : 's'} in
+                              scope
+                            </div>
+                          </td>
+                          <td className="px-2 py-2 text-right">
+                            <div className="flex flex-wrap justify-end gap-1">
+                              {rolesForUserGroup(g).map((r) => (
+                                <Pill key={r.id}>{r.name}</Pill>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Field>
+            <Field label="Roles">
+              <div className="flex flex-wrap gap-1">
+                {userRoles.length === 0 ? (
+                  <span className="text-sm text-muted-foreground">—</span>
+                ) : (
+                  userRoles.map((r) => <Pill key={r.id}>{r.name}</Pill>)
+                )}
+              </div>
+            </Field>
+            <Field label="Permission sets">
+              <div className="flex flex-wrap gap-1">
+                {[
+                  ...new Set(userRoles.flatMap((r) => r.permissionSetIds)),
+                ].map((id) => (
+                  <Pill key={id} tone="set">
+                    {getPermissionSet(id)?.name ?? id}
+                  </Pill>
+                ))}
+              </div>
+            </Field>
+          </DetailSection>
+
+          <DetailSection title="Account">
+            <Field label="Email">
+              <Mono>{user.email}</Mono>
+            </Field>
+            <Field label="Status">
+              <StatusPill status={user.status} />
+            </Field>
+            <Field label="Last active">
+              <span className="text-sm">{user.lastActive}</span>
+            </Field>
           </DetailSection>
         </div>
       </SheetContent>
@@ -1243,27 +1543,8 @@ function RolesTable({
             {row.original.seeded && (
               <Pill title="Seeded by Acme at onboarding">seeded</Pill>
             )}
-            {holdsMakerAndChecker(row.original) && (
-              <Pill
-                tone="warning"
-                title="This role can raise and approve a payment order. The MVP catalogue has no create-only payments set."
-              >
-                <TriangleAlertIcon className="size-2.5" /> maker + checker
-              </Pill>
-            )}
           </div>
         ),
-      },
-      {
-        id: 'description',
-        accessorKey: 'description',
-        header: 'Description',
-        cell: ({ row }) => (
-          <span className="block max-w-sm text-xs text-muted-foreground">
-            {row.original.description}
-          </span>
-        ),
-        enableSorting: false,
       },
       {
         id: 'sets',
@@ -1280,8 +1561,8 @@ function RolesTable({
         enableSorting: false,
       },
       {
-        id: 'grantedBy',
-        header: 'Granted by',
+        id: 'belongsTo',
+        header: 'Belongs to',
         cell: ({ row }) => {
           const usedBy = groups.filter((g) =>
             g.roleIds.includes(row.original.id),
@@ -1290,7 +1571,7 @@ function RolesTable({
             <div className="flex flex-wrap gap-1">
               {usedBy.length === 0 ? (
                 <span className="text-xs text-muted-foreground">
-                  Not granted
+                  No group
                 </span>
               ) : (
                 usedBy.map((g) => <Pill key={g.id}>{g.name}</Pill>)
@@ -1318,7 +1599,13 @@ function RolesTable({
   )
 }
 
-function PermissionSetsTable({ roles }: { roles: Role[] }) {
+function PermissionSetsTable({
+  roles,
+  onOpen,
+}: {
+  roles: Role[]
+  onOpen: (s: PermissionSet) => void
+}) {
   const columns = React.useMemo<ColumnDef<PermissionSet>[]>(
     () => [
       {
@@ -1374,13 +1661,23 @@ function PermissionSetsTable({ roles }: { roles: Role[] }) {
 
   return (
     <div className="rounded-md border bg-card">
-      <DataTable table={table} emptyMessage="No permission sets." />
+      <DataTable
+        table={table}
+        onRowClick={onOpen}
+        emptyMessage="No permission sets."
+      />
       <DataTablePagination table={table} />
     </div>
   )
 }
 
-function UsersTable({ groups }: { groups: UserGroup[] }) {
+function UsersTable({
+  groups,
+  onOpen,
+}: {
+  groups: UserGroup[]
+  onOpen: (u: PortalUser) => void
+}) {
   const columns = React.useMemo<ColumnDef<PortalUser>[]>(
     () => [
       {
@@ -1464,7 +1761,7 @@ function UsersTable({ groups }: { groups: UserGroup[] }) {
 
   return (
     <div className="rounded-md border bg-card">
-      <DataTable table={table} emptyMessage="No users yet." />
+      <DataTable table={table} onRowClick={onOpen} emptyMessage="No users yet." />
       <DataTablePagination table={table} />
     </div>
   )
@@ -1477,8 +1774,11 @@ function UsersTable({ groups }: { groups: UserGroup[] }) {
 export function UserManagementPage() {
   const groups = useUserGroups()
   const roles = useRoles()
+  const { user } = useUser()
   const [openGroup, setOpenGroup] = React.useState<UserGroup | null>(null)
   const [openRole, setOpenRole] = React.useState<Role | null>(null)
+  const [openSet, setOpenSet] = React.useState<PermissionSet | null>(null)
+  const [openUser, setOpenUser] = React.useState<PortalUser | null>(null)
   const [createGroup, setCreateGroup] = React.useState(false)
   const [createRole, setCreateRole] = React.useState(false)
 
@@ -1492,6 +1792,48 @@ export function UserManagementPage() {
   const ungrouped = portalUsers.filter(
     (u) => !groups.some((g) => g.memberIds.includes(u.id)),
   )
+
+  // Configuring access is an administrator's job. Everyone else is told why
+  // rather than shown an empty page.
+  if (!isAdministrator(user.id, groups)) {
+    const myRoles = userGroupsForUser(user.id, groups).flatMap((g) =>
+      rolesForUserGroup(g),
+    )
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold tracking-tight">User Management</h1>
+        <div className="rounded-md border bg-card">
+          <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
+            <div className="flex aspect-square size-11 items-center justify-center rounded-full border bg-muted">
+              <LockIcon className="size-5 text-muted-foreground" />
+            </div>
+            <p className="text-sm font-medium">
+              Only an administrator can open User Management
+            </p>
+            <p className="max-w-md text-sm text-muted-foreground">
+              You are signed in as {user.name}
+              {myRoles.length > 0 && (
+                <>
+                  {' '}
+                  with the{' '}
+                  {myRoles.map((r, i) => (
+                    <span key={r.id}>
+                      {i > 0 && ', '}
+                      <span className="font-medium text-foreground">
+                        {r.name}
+                      </span>
+                    </span>
+                  ))}{' '}
+                  role{myRoles.length === 1 ? '' : 's'}
+                </>
+              )}
+              . Ask an administrator to change groups, roles or users for you.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -1558,7 +1900,7 @@ export function UserManagementPage() {
 
         {/* Permission sets — Acme-managed, read only */}
         <TabsContent value="sets" className="mt-4">
-          <PermissionSetsTable roles={roles} />
+          <PermissionSetsTable roles={roles} onOpen={setOpenSet} />
           <p className="mt-3 text-xs text-muted-foreground">
             Permission sets are defined by Acme. Clients compose roles from them
             rather than composing their own sets.
@@ -1566,16 +1908,9 @@ export function UserManagementPage() {
         </TabsContent>
 
         <TabsContent value="users" className="mt-4">
-          <UsersTable groups={groups} />
+          <UsersTable groups={groups} onOpen={setOpenUser} />
         </TabsContent>
       </Tabs>
-
-      <div className="rounded-md border border-dashed bg-muted/20 px-4 py-3 text-xs text-muted-foreground">
-        <span className="font-medium text-foreground">How access resolves:</span>{' '}
-        Permission → Permission Set → Role → Group → User, with the Group also
-        carrying the account scope. A user's effective access is the union of
-        every group they belong to.
-      </div>
 
       <CreateGroupDialog open={createGroup} onOpenChange={setCreateGroup} />
       <CreateRoleDialog open={createRole} onOpenChange={setCreateRole} />
@@ -1588,6 +1923,16 @@ export function UserManagementPage() {
         key={openRoleLive?.id ?? 'none-role'}
         role={openRoleLive}
         onClose={() => setOpenRole(null)}
+      />
+      <PermissionSetSheet
+        set={openSet}
+        roles={roles}
+        onClose={() => setOpenSet(null)}
+      />
+      <UserSheet
+        user={openUser}
+        groups={groups}
+        onClose={() => setOpenUser(null)}
       />
     </div>
   )
