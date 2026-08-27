@@ -360,21 +360,77 @@ export function accountLabel(a: Account): string {
 // from the sets, because each organization narrows them differently, and grants
 // roles to a group. Account access is defined by the group (ACME-2178).
 
+// A permission is a feature and an action on it — `feature` is what the
+// permission is about (transactions, payments), `action` is what may be done
+// (view, create, edit, approve, export, manage). The key is derived from the
+// pair and is never hand-written, per the Dashboard User Management database
+// schema. Acme owns this catalogue; clients never add to it.
 export type Permission = {
   key: string
-  allows: string
+  feature: string
+  featureName: string
+  action: string
 }
 
-export const PERMISSION_CATALOGUE: Permission[] = [
-  { key: 'All', allows: 'Every permission in the catalogue' },
-  { key: 'Transactions', allows: 'View transactions and balances' },
-  { key: 'Payment Orders', allows: 'Create and submit payment orders' },
-  { key: 'Payment Orders Edit', allows: 'Edit a payment order raised by someone else' },
-  { key: 'Payment Approvals', allows: 'Approve or reject a payment order' },
+export type PermissionFeature = {
+  feature: string
+  featureName: string
+  actions: string[]
+}
+
+export const PERMISSION_FEATURES: PermissionFeature[] = [
+  {
+    feature: 'transactions',
+    featureName: 'Transactions',
+    actions: ['view', 'export'],
+  },
+  {
+    feature: 'payments',
+    featureName: 'Payments',
+    actions: ['view', 'create', 'edit', 'approve', 'export'],
+  },
+  { feature: 'api_keys', featureName: 'API Keys', actions: ['view', 'manage'] },
+  { feature: 'webhooks', featureName: 'Webhooks', actions: ['view', 'manage'] },
+  {
+    feature: 'user_management',
+    featureName: 'User Management',
+    actions: ['view', 'manage'],
+  },
 ]
+
+export const PERMISSION_CATALOGUE: Permission[] = PERMISSION_FEATURES.flatMap(
+  (f) =>
+    f.actions.map((action) => ({
+      key: `${f.feature}.${action}`,
+      feature: f.feature,
+      featureName: f.featureName,
+      action,
+    })),
+)
 
 export function permission(key: string): Permission | undefined {
   return PERMISSION_CATALOGUE.find((p) => p.key === key)
+}
+
+/** Every key for a feature — `permissionKeys('payments', 'view', 'export')`. */
+function permissionKeys(feature: string, ...actions: string[]): string[] {
+  return actions.map((a) => `${feature}.${a}`)
+}
+
+/**
+ * Permission keys folded back into the feature — action shape the Dashboard
+ * reads them in: "Payments — view, create, edit, export". Feature order and
+ * action order follow the catalogue, not the order the keys were granted.
+ */
+export function permissionsByFeature(
+  keys: ReadonlyArray<string>,
+): { feature: string; featureName: string; actions: string[] }[] {
+  const held = new Set(keys)
+  return PERMISSION_FEATURES.map((f) => ({
+    feature: f.feature,
+    featureName: f.featureName,
+    actions: f.actions.filter((a) => held.has(`${f.feature}.${a}`)),
+  })).filter((f) => f.actions.length > 0)
 }
 
 // Permission sets are managed by Acme. Clients do not author their own.
@@ -392,35 +448,47 @@ export const PERMISSION_SETS: PermissionSet[] = [
     name: 'Administrator',
     description: 'This is a managed permission set created by Acme',
     managed: true,
-    permissions: ['All'],
+    permissions: [
+      ...permissionKeys('transactions', 'view', 'export'),
+      ...permissionKeys('payments', 'view', 'create', 'edit', 'export'),
+      ...permissionKeys('api_keys', 'view', 'manage'),
+      ...permissionKeys('webhooks', 'view', 'manage'),
+      ...permissionKeys('user_management', 'view', 'manage'),
+    ],
   },
   {
     id: 'ps_recon_operations',
     name: 'Recon Operations',
     description: 'This is a managed permission set created by Acme',
     managed: true,
-    permissions: ['Transactions'],
+    permissions: permissionKeys('transactions', 'view', 'export'),
   },
   {
     id: 'ps_payments',
     name: 'Payments',
     description: 'This is a managed permission set created by Acme',
     managed: true,
-    permissions: ['Transactions', 'Payment Orders'],
+    permissions: [
+      ...permissionKeys('transactions', 'view', 'export'),
+      ...permissionKeys('payments', 'view', 'create', 'edit', 'export'),
+    ],
   },
   {
     id: 'ps_finance',
     name: 'Finance',
     description: 'This is a managed permission set created by Acme',
     managed: true,
-    permissions: ['Transactions', 'Payment Approvals'],
+    permissions: [
+      ...permissionKeys('transactions', 'view', 'export'),
+      ...permissionKeys('payments', 'view', 'approve', 'export'),
+    ],
   },
   {
     id: 'ps_reviewer',
     name: 'Reviewer',
     description: 'This is a managed permission set created by Acme',
     managed: true,
-    permissions: ['Payment Orders Edit'],
+    permissions: permissionKeys('payments', 'view', 'edit'),
   },
   {
     id: 'ps_engineer',
@@ -495,7 +563,6 @@ export function permissionsForRole(role: Role): Permission[] {
   const keys = new Set(
     role.permissionSetIds.flatMap((id) => getPermissionSet(id)?.permissions ?? []),
   )
-  if (keys.has('All')) return PERMISSION_CATALOGUE
   return PERMISSION_CATALOGUE.filter((p) => keys.has(p.key))
 }
 
@@ -725,7 +792,6 @@ export function permissionsForUser(
       for (const p of permissionsForRole(role)) keys.add(p.key)
     }
   }
-  if (keys.has('All')) return PERMISSION_CATALOGUE
   return PERMISSION_CATALOGUE.filter((p) => keys.has(p.key))
 }
 

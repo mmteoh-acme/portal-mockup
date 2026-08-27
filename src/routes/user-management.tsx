@@ -10,6 +10,7 @@ import {
   UsersRoundIcon,
   XIcon,
 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -48,6 +49,7 @@ import {
   getPermissionSet,
   getPortalUser,
   legalEntityName,
+  permissionsByFeature,
   permissionsForRole,
   permissionsForUser,
   portalUsers,
@@ -104,11 +106,38 @@ function Pill({
   )
 }
 
-function PermissionKeyPill({ k }: { k: string }) {
+/**
+ * "Payments — view, create, edit, export". An Acme permission is a feature and
+ * an action on it, so the feature names the line and the actions it grants
+ * follow, rather than a wall of raw keys.
+ */
+function PermissionList({
+  keys,
+  className,
+}: {
+  keys: ReadonlyArray<string>
+  className?: string
+}) {
+  const features = permissionsByFeature(keys)
+  if (features.length === 0) {
+    return (
+      <span className="text-sm text-muted-foreground">
+        Permissions not yet specified
+      </span>
+    )
+  }
   return (
-    <span className="inline-flex items-center rounded border bg-muted px-1.5 py-0.5 font-mono text-[0.6rem] uppercase tracking-wider text-muted-foreground">
-      {k}
-    </span>
+    <div className={cn('flex flex-col gap-0.5', className)}>
+      {features.map((f) => (
+        <div key={f.feature} className="text-sm">
+          <span className="font-medium">{f.featureName}</span>
+          <span className="text-muted-foreground">
+            {' '}
+            — {f.actions.join(', ')}
+          </span>
+        </div>
+      ))}
+    </div>
   )
 }
 
@@ -524,7 +553,8 @@ function CreateRoleDialog({
     [...setIds].flatMap((id) => getPermissionSet(id)?.permissions ?? []),
   )
   const conflict =
-    keys.has('payment.create_edit') && keys.has('payment.approve_reject')
+    (keys.has('payments.create') || keys.has('payments.edit')) &&
+    keys.has('payments.approve')
 
   const submit = () => {
     addRole({
@@ -608,11 +638,7 @@ function CreateRoleDialog({
                         </Pill>
                       )}
                     </div>
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {ps.permissions.map((k) => (
-                        <PermissionKeyPill key={k} k={k} />
-                      ))}
-                    </div>
+                    <PermissionList keys={ps.permissions} className="mt-1" />
                   </div>
                 </label>
               ))}
@@ -1065,11 +1091,7 @@ function RoleSheet({
                         </Pill>
                       )}
                     </div>
-                    <div className="flex flex-wrap gap-1 p-3">
-                      {ps.permissions.map((k) => (
-                        <PermissionKeyPill key={k} k={k} />
-                      ))}
-                    </div>
+                    <PermissionList keys={ps.permissions} className="p-3" />
                   </div>
                 )
               })}
@@ -1409,11 +1431,7 @@ export function UserManagementPage() {
                             {ps.description}
                           </TableCell>
                           <TableCell>
-                            <div className="flex flex-wrap gap-1">
-                              {ps.permissions.map((k) => (
-                                <PermissionKeyPill key={k} k={k} />
-                              ))}
-                            </div>
+                            <PermissionList keys={ps.permissions} />
                           </TableCell>
                         </TableRow>
                       )
