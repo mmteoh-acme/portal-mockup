@@ -1,9 +1,9 @@
 import * as React from 'react'
 import { toast } from 'sonner'
 import {
-  ChevronDownIcon,
   LayersIcon,
   LockIcon,
+  PlusIcon,
   TagIcon,
   TriangleAlertIcon,
   UserRoundPlusIcon,
@@ -24,12 +24,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import {
   Sheet,
   SheetContent,
@@ -1144,30 +1138,13 @@ export function UserManagementPage() {
             grant is scoped to a set of accounts.
           </p>
         </div>
+        {/* Creating happens inside the tab that owns the thing being
+            created, so there is no cross-tab Create menu here. */}
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" className="gap-2">
             <UserRoundPlusIcon className="size-3.5" />
             Invite user
           </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="sm" className="gap-1.5">
-                Create
-                <ChevronDownIcon className="size-3.5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={() => setCreateGroup(true)}>
-                Group
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setCreateRole(true)}>
-                Role
-              </DropdownMenuItem>
-              <DropdownMenuItem disabled>
-                Permission set (Acme-managed)
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
       </div>
 
@@ -1196,7 +1173,21 @@ export function UserManagementPage() {
         </TabsList>
 
         {/* Groups */}
-        <TabsContent value="groups" className="mt-4">
+        <TabsContent value="groups" className="mt-4 space-y-4">
+          <div className="flex items-start justify-between gap-6">
+            <p className="min-w-0 max-w-3xl text-sm text-muted-foreground">
+              Groups let you assign accounts under a meaningful group name. The
+              default group assigned to Administrators includes all accounts.
+            </p>
+            <Button
+              size="sm"
+              className="shrink-0 gap-1.5"
+              onClick={() => setCreateGroup(true)}
+            >
+              <PlusIcon className="size-4" />
+              Create new group
+            </Button>
+          </div>
           <Card>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
@@ -1315,7 +1306,22 @@ export function UserManagementPage() {
         </TabsContent>
 
         {/* Roles */}
-        <TabsContent value="roles" className="mt-4">
+        <TabsContent value="roles" className="mt-4 space-y-4">
+          <div className="flex items-start justify-between gap-6">
+            <p className="min-w-0 max-w-3xl text-sm text-muted-foreground">
+              A user's role does not automatically give them access to every
+              account in the organisation. Account access is granted by the
+              group they belong to.
+            </p>
+            <Button
+              size="sm"
+              className="shrink-0 gap-1.5"
+              onClick={() => setCreateRole(true)}
+            >
+              <PlusIcon className="size-4" />
+              Create new role
+            </Button>
+          </div>
           <Card>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
@@ -1331,16 +1337,10 @@ export function UserManagementPage() {
                       <TableHead>
                         Permission sets
                       </TableHead>
-                      <TableHead>
-                        Granted by
-                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {roles.map((r) => {
-                      const usedBy = groups.filter((g) =>
-                        g.roleIds.includes(r.id),
-                      )
                       return (
                         <TableRow
                           key={r.id}
@@ -1362,19 +1362,6 @@ export function UserManagementPage() {
                               ))}
                             </div>
                           </TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap gap-1">
-                              {usedBy.length === 0 ? (
-                                <span className="text-xs text-muted-foreground">
-                                  Not granted
-                                </span>
-                              ) : (
-                                usedBy.map((g) => (
-                                  <Pill key={g.id}>{g.name}</Pill>
-                                ))
-                              )}
-                            </div>
-                          </TableCell>
                         </TableRow>
                       )
                     })}
@@ -1386,7 +1373,11 @@ export function UserManagementPage() {
         </TabsContent>
 
         {/* Permission sets — Acme-managed, read only */}
-        <TabsContent value="sets" className="mt-4">
+        <TabsContent value="sets" className="mt-4 space-y-4">
+          <p className="max-w-3xl text-sm text-muted-foreground">
+            Permission sets are defined by Acme. Clients compose roles from them
+            rather than composing their own sets.
+          </p>
           <Card>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
@@ -1402,16 +1393,10 @@ export function UserManagementPage() {
                       <TableHead>
                         Permissions
                       </TableHead>
-                      <TableHead>
-                        Used by roles
-                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {PERMISSION_SETS.map((ps: PermissionSet) => {
-                      const usedBy = roles.filter((r) =>
-                        r.permissionSetIds.includes(ps.id),
-                      )
                       return (
                         <TableRow key={ps.id}>
                           <TableCell className="whitespace-nowrap">
@@ -1430,13 +1415,6 @@ export function UserManagementPage() {
                               ))}
                             </div>
                           </TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap gap-1">
-                              {usedBy.map((r) => (
-                                <Pill key={r.id}>{r.name}</Pill>
-                              ))}
-                            </div>
-                          </TableCell>
                         </TableRow>
                       )
                     })}
@@ -1445,10 +1423,6 @@ export function UserManagementPage() {
               </div>
             </CardContent>
           </Card>
-          <p className="mt-3 text-xs text-muted-foreground">
-            Permission sets are defined by Acme. Clients compose roles from them
-            rather than composing their own sets.
-          </p>
         </TabsContent>
 
         {/* Users */}
@@ -1539,13 +1513,6 @@ export function UserManagementPage() {
           </Card>
         </TabsContent>
       </Tabs>
-
-      <div className="rounded-md border border-dashed bg-muted/20 px-4 py-3 text-xs text-muted-foreground">
-        <span className="font-medium text-foreground">How access resolves:</span>{' '}
-        Permission → Permission Set → Role → Group → User, with the Group also
-        carrying the account scope. A user's effective access is the union of
-        every group they belong to.
-      </div>
 
       <CreateGroupDialog open={createGroup} onOpenChange={setCreateGroup} />
       <CreateRoleDialog open={createRole} onOpenChange={setCreateRole} />
