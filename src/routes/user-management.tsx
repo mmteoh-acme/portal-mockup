@@ -55,7 +55,6 @@ import {
   portalUsers,
   rolesForUserGroup,
   userGroupsForUser,
-  type PermissionSet,
   type Role,
   type UserGroup,
   type UserGroupScope,
@@ -175,63 +174,6 @@ function PermissionTable({ keys }: { keys: ReadonlyArray<string> }) {
         ))}
       </TableBody>
     </Table>
-  )
-}
-
-/** Detail sheet for an Acme-managed permission set. */
-function PermissionSetSheet({
-  set,
-  onClose,
-}: {
-  set: PermissionSet | null
-  onClose: () => void
-}) {
-  return (
-    <Sheet open={!!set} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="overflow-y-auto data-[side=right]:w-full data-[side=right]:sm:max-w-xl">
-        {set && (
-          <>
-            <SheetHeader className="border-b">
-              <SheetTitle className="flex items-center gap-2 text-xl leading-tight font-bold">
-                {set.name}
-                {set.managed && (
-                  <Pill title="Managed by Acme. Clients compose roles from these sets rather than authoring their own.">
-                    <LockIcon className="size-2.5" /> managed
-                  </Pill>
-                )}
-              </SheetTitle>
-              <p className="text-sm text-muted-foreground">{set.description}</p>
-            </SheetHeader>
-
-            <div className="flex flex-col gap-6 px-4 pb-6">
-              <div className="divide-y rounded-lg border bg-card">
-                <SummaryRow label="ID">
-                  <span className="font-mono text-xs text-muted-foreground">
-                    {set.id}
-                  </span>
-                </SummaryRow>
-                <SummaryRow label="Permissions">
-                  {set.permissions.length}
-                </SummaryRow>
-              </div>
-
-              <section className="rounded-lg border bg-card">
-                <header className="border-b px-4 py-2.5">
-                  <h3 className="text-sm font-semibold text-foreground">
-                    Permissions
-                  </h3>
-                  <p className="text-xs text-muted-foreground">
-                    What this set grants, by feature and the actions allowed on
-                    it.
-                  </p>
-                </header>
-                <PermissionTable keys={set.permissions} />
-              </section>
-            </div>
-          </>
-        )}
-      </SheetContent>
-    </Sheet>
   )
 }
 
@@ -1229,7 +1171,6 @@ export function UserManagementPage() {
   const roles = useRoles()
   const [openGroup, setOpenGroup] = React.useState<UserGroup | null>(null)
   const [openRole, setOpenRole] = React.useState<Role | null>(null)
-  const [openSet, setOpenSet] = React.useState<PermissionSet | null>(null)
   const [createGroup, setCreateGroup] = React.useState(false)
   const [createRole, setCreateRole] = React.useState(false)
 
@@ -1283,9 +1224,6 @@ export function UserManagementPage() {
         <TabsList>
           <TabsTrigger value="groups">Groups ({groups.length})</TabsTrigger>
           <TabsTrigger value="roles">Roles ({roles.length})</TabsTrigger>
-          <TabsTrigger value="sets">
-            Permission Sets ({PERMISSION_SETS.length})
-          </TabsTrigger>
           <TabsTrigger value="users">Users ({portalUsers.length})</TabsTrigger>
         </TabsList>
 
@@ -1489,53 +1427,6 @@ export function UserManagementPage() {
           </Card>
         </TabsContent>
 
-        {/* Permission sets — Acme-managed, read only */}
-        <TabsContent value="sets" className="mt-4 space-y-4">
-          <p className="max-w-3xl text-sm text-muted-foreground">
-            Permission sets are defined by Acme. Clients compose roles from them
-            rather than composing their own sets.
-          </p>
-          <Card>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>
-                        Name
-                      </TableHead>
-                      <TableHead>
-                        Description
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {PERMISSION_SETS.map((ps: PermissionSet) => {
-                      return (
-                        <TableRow
-                          key={ps.id}
-                          className="cursor-pointer"
-                          onClick={() => setOpenSet(ps)}
-                        >
-                          <TableCell className="whitespace-nowrap">
-                            <div className="flex items-center gap-1.5 font-medium">
-                              <LockIcon className="size-3 text-muted-foreground" />
-                              {ps.name}
-                            </div>
-                          </TableCell>
-                          <TableCell className="max-w-xs text-xs text-muted-foreground">
-                            {ps.description}
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
         {/* Users */}
         <TabsContent value="users" className="mt-4">
           <Card>
@@ -1590,13 +1481,24 @@ export function UserManagementPage() {
                           </TableCell>
                           <TableCell>
                             {memberOf.length === 0 ? (
-                              <span className="text-xs text-amber-700">
+                              <span className="text-xs text-muted-foreground">
                                 No group
                               </span>
                             ) : (
                               <div className="flex flex-wrap gap-1">
+                                {/* The group carries the roles and the account
+                                    scope, so it is the thing worth opening from
+                                    a user's row. */}
                                 {memberOf.map((g) => (
-                                  <Pill key={g.id}>{g.name}</Pill>
+                                  <button
+                                    key={g.id}
+                                    type="button"
+                                    onClick={() => setOpenGroup(g)}
+                                    title={`Open ${g.name}`}
+                                    className="rounded-sm hover:opacity-80 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                                  >
+                                    <Pill>{g.name}</Pill>
+                                  </button>
                                 ))}
                               </div>
                             )}
@@ -1637,7 +1539,6 @@ export function UserManagementPage() {
         role={openRoleLive}
         onClose={() => setOpenRole(null)}
       />
-      <PermissionSetSheet set={openSet} onClose={() => setOpenSet(null)} />
     </div>
   )
 }
