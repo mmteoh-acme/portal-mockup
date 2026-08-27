@@ -141,6 +141,100 @@ function PermissionList({
   )
 }
 
+/**
+ * Permission | Actions, the shape a permission reads in on a detail page: the
+ * feature names the row, the actions it grants fill the second column.
+ */
+function PermissionTable({ keys }: { keys: ReadonlyArray<string> }) {
+  const features = permissionsByFeature(keys)
+  if (features.length === 0) {
+    return (
+      <p className="px-4 py-6 text-center text-sm text-muted-foreground">
+        Permissions not yet specified.
+      </p>
+    )
+  }
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Permission</TableHead>
+          <TableHead>Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {features.map((f) => (
+          <TableRow key={f.feature}>
+            <TableCell className="whitespace-nowrap font-medium">
+              {f.featureName}
+            </TableCell>
+            <TableCell className="text-muted-foreground">
+              {f.actions.join(', ')}
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  )
+}
+
+/** Detail sheet for an Acme-managed permission set. */
+function PermissionSetSheet({
+  set,
+  onClose,
+}: {
+  set: PermissionSet | null
+  onClose: () => void
+}) {
+  return (
+    <Sheet open={!!set} onOpenChange={(o) => !o && onClose()}>
+      <SheetContent className="overflow-y-auto data-[side=right]:w-full data-[side=right]:sm:max-w-xl">
+        {set && (
+          <>
+            <SheetHeader className="border-b">
+              <SheetTitle className="flex items-center gap-2 text-xl leading-tight font-bold">
+                {set.name}
+                {set.managed && (
+                  <Pill title="Managed by Acme. Clients compose roles from these sets rather than authoring their own.">
+                    <LockIcon className="size-2.5" /> managed
+                  </Pill>
+                )}
+              </SheetTitle>
+              <p className="text-sm text-muted-foreground">{set.description}</p>
+            </SheetHeader>
+
+            <div className="flex flex-col gap-6 px-4 pb-6">
+              <div className="divide-y rounded-lg border bg-card">
+                <SummaryRow label="ID">
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {set.id}
+                  </span>
+                </SummaryRow>
+                <SummaryRow label="Permissions">
+                  {set.permissions.length}
+                </SummaryRow>
+              </div>
+
+              <section className="rounded-lg border bg-card">
+                <header className="border-b px-4 py-2.5">
+                  <h3 className="text-sm font-semibold text-foreground">
+                    Permissions
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    What this set grants, by feature and the actions allowed on
+                    it.
+                  </p>
+                </header>
+                <PermissionTable keys={set.permissions} />
+              </section>
+            </div>
+          </>
+        )}
+      </SheetContent>
+    </Sheet>
+  )
+}
+
 function initials(name: string): string {
   return name
     .split(' ')
@@ -1091,7 +1185,7 @@ function RoleSheet({
                         </Pill>
                       )}
                     </div>
-                    <PermissionList keys={ps.permissions} className="p-3" />
+                    <PermissionTable keys={ps.permissions} />
                   </div>
                 )
               })}
@@ -1135,6 +1229,7 @@ export function UserManagementPage() {
   const roles = useRoles()
   const [openGroup, setOpenGroup] = React.useState<UserGroup | null>(null)
   const [openRole, setOpenRole] = React.useState<Role | null>(null)
+  const [openSet, setOpenSet] = React.useState<PermissionSet | null>(null)
   const [createGroup, setCreateGroup] = React.useState(false)
   const [createRole, setCreateRole] = React.useState(false)
 
@@ -1412,15 +1507,16 @@ export function UserManagementPage() {
                       <TableHead>
                         Description
                       </TableHead>
-                      <TableHead>
-                        Permissions
-                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {PERMISSION_SETS.map((ps: PermissionSet) => {
                       return (
-                        <TableRow key={ps.id}>
+                        <TableRow
+                          key={ps.id}
+                          className="cursor-pointer"
+                          onClick={() => setOpenSet(ps)}
+                        >
                           <TableCell className="whitespace-nowrap">
                             <div className="flex items-center gap-1.5 font-medium">
                               <LockIcon className="size-3 text-muted-foreground" />
@@ -1429,9 +1525,6 @@ export function UserManagementPage() {
                           </TableCell>
                           <TableCell className="max-w-xs text-xs text-muted-foreground">
                             {ps.description}
-                          </TableCell>
-                          <TableCell>
-                            <PermissionList keys={ps.permissions} />
                           </TableCell>
                         </TableRow>
                       )
@@ -1544,6 +1637,7 @@ export function UserManagementPage() {
         role={openRoleLive}
         onClose={() => setOpenRole(null)}
       />
+      <PermissionSetSheet set={openSet} onClose={() => setOpenSet(null)} />
     </div>
   )
 }
