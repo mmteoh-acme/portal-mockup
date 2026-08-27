@@ -1,6 +1,7 @@
 import * as React from 'react'
-import { LandmarkIcon, PlusIcon, XIcon, SearchIcon, TriangleAlertIcon } from 'lucide-react'
+import { LandmarkIcon, TriangleAlertIcon } from 'lucide-react'
 import { Link } from '@tanstack/react-router'
+import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import {
   Table,
@@ -12,136 +13,44 @@ import {
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import {
+  Alert,
+  AlertAction,
+  AlertDescription,
+  AlertTitle,
+} from '@/components/ui/alert'
+import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
+import { CopyButton } from '@/components/copy-button'
+import {
+  PageHeader,
+  PageHeaderDescription,
+  PageHeaderTitle,
+} from '@/components/page-header'
+import { FieldGrid, FieldRow, FormSection } from '@/components/form-section'
 import {
   ACCOUNTS,
-  LEGAL_ENTITIES,
   groupsSeeingAccount,
-  bankNames,
   formatMoney,
   getConnection,
   getLegalEntity,
-  legalEntityName,
   type Account,
 } from '@/data/fixtures'
 import { useUserGroups } from '@/lib/admin-store'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Input } from '@/components/ui/input'
 
+/** "14 Jun 2023 02:08 PM" — the stamp format the production tables use. */
 function formatCreated(iso: string): string {
   if (!iso) return '—'
   const d = new Date(iso)
   if (isNaN(d.getTime())) return iso
   const month = d.toLocaleString('en-US', { month: 'short' })
-  const day = d.getDate()
-  const year = d.getFullYear()
-  const hour12 = ((d.getHours() + 11) % 12) + 1
+  const hour12 = String(((d.getHours() + 11) % 12) + 1).padStart(2, '0')
   const minute = String(d.getMinutes()).padStart(2, '0')
   const ampm = d.getHours() >= 12 ? 'PM' : 'AM'
-  return `${month} ${day}, ${year} at ${String(hour12).padStart(2, '0')}:${minute} ${ampm}`
-}
-
-function ModePill({ mode }: { mode: 'LIVE' | 'TEST' }) {
-  const cls =
-    mode === 'LIVE'
-      ? 'bg-emerald-100 text-emerald-700 ring-emerald-200'
-      : 'bg-amber-100 text-amber-700 ring-amber-200'
-  return (
-    <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[0.65rem] font-medium uppercase tracking-wide ring-1 ring-inset ${cls}`}
-    >
-      {mode}
-    </span>
-  )
-}
-
-function CurrencyPill({ code }: { code: string }) {
-  return (
-    <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 font-mono text-[0.7rem] font-medium text-foreground/80 ring-1 ring-inset ring-border">
-      {code}
-    </span>
-  )
-}
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  // Production labels fields in sentence-case sans (FieldLabel), not mono caps.
-  return (
-    <div className="text-sm font-medium text-muted-foreground">{children}</div>
-  )
-}
-
-function DetailField({
-  label,
-  children,
-}: {
-  label: string
-  children: React.ReactNode
-}) {
-  return (
-    <div className="space-y-1">
-      <SectionLabel>{label}</SectionLabel>
-      <div>{children}</div>
-    </div>
-  )
-}
-
-function SectionCard({
-  title,
-  description,
-  children,
-}: {
-  title: string
-  description?: string
-  children: React.ReactNode
-}) {
-  return (
-    <div className="rounded-lg border bg-card">
-      <div className="border-b px-4 py-3">
-        <div className="text-sm font-semibold">{title}</div>
-        {description && (
-          <div className="mt-0.5 text-xs text-muted-foreground">
-            {description}
-          </div>
-        )}
-      </div>
-      <div className="p-4">{children}</div>
-    </div>
-  )
-}
-
-function TagPill({
-  children,
-  title,
-  tone = 'default',
-}: {
-  children: React.ReactNode
-  title?: string
-  tone?: 'default' | 'entity' | 'warning'
-}) {
-  const cls =
-    tone === 'entity'
-      ? 'border-violet-300 bg-violet-50 text-violet-700'
-      : tone === 'warning'
-        ? 'border-amber-300 bg-amber-50 text-amber-700'
-        : 'border-border bg-muted text-muted-foreground'
-  return (
-    <span
-      title={title}
-      className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[0.65rem] font-medium ${cls}`}
-    >
-      {children}
-    </span>
-  )
+  return `${d.getDate()} ${month} ${d.getFullYear()} ${hour12}:${minute} ${ampm}`
 }
 
 function AccountDetailSheet({
@@ -158,129 +67,148 @@ function AccountDetailSheet({
 
   return (
     <Sheet open={!!account} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="w-full overflow-y-auto p-0 sm:max-w-xl">
+      <SheetContent className="overflow-y-auto data-[side=right]:w-full data-[side=right]:sm:max-w-xl">
         {account && (
-          <div className="flex h-full flex-col">
-            <SheetHeader className="border-b px-6 py-5">
-              <SheetTitle className="text-lg font-semibold">
+          <>
+            {/* Name over the internal account id, as the production sheet
+                opens. Everything below is the same section stack. */}
+            <SheetHeader className="border-b">
+              <SheetTitle className="text-xl leading-tight font-bold">
                 {account.name}
               </SheetTitle>
-              <div className="font-mono text-xs text-muted-foreground">
-                {account.id}
-              </div>
-              <div className="mt-2 flex flex-wrap gap-1">
-                <TagPill title="Bank — an attribute, not a layer">
-                  {account.bank}
-                </TagPill>
-                <TagPill
-                  tone="entity"
-                  title="Legal entity — a tag on the account"
-                >
-                  {account.legalEntity} · {legalEntityName(account.legalEntity)}
-                </TagPill>
-                <TagPill title="Country">{account.country}</TagPill>
-                <TagPill title="Currency">{account.currency}</TagPill>
+              <div className="group inline-flex items-center gap-1.5">
+                <span className="font-mono text-xs text-muted-foreground">
+                  {account.id}
+                </span>
+                <CopyButton
+                  value={account.id}
+                  className="opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                />
               </div>
             </SheetHeader>
-            <div className="flex-1 space-y-4 p-6">
-              <SectionCard
-                title="Grouping & access"
-                description="Who can see this account is decided by the account groups it belongs to."
+
+            <div className="flex flex-col gap-6 px-4 pb-6">
+              <FormSection
+                title="Banking"
+                description="Account routing details. Hover a value to copy."
               >
-                <div className="grid grid-cols-2 gap-x-6 gap-y-5">
-                  <DetailField label="Legal entity (tag)">
-                    <div className="text-sm">
-                      {entity ? `${entity.name} · ${entity.countryName}` : '—'}
+                <FieldGrid>
+                  <FieldRow
+                    label="Account Number"
+                    value={account.number}
+                    mono
+                    copyValue={account.number}
+                  />
+                  <FieldRow
+                    label="SWIFT/BIC"
+                    value={account.swiftBic}
+                    mono
+                    copyValue={account.swiftBic || undefined}
+                  />
+                  <FieldRow
+                    label="IBAN"
+                    value={account.iban}
+                    mono
+                    copyValue={account.iban || undefined}
+                    className="sm:col-span-2"
+                  />
+                </FieldGrid>
+              </FormSection>
+
+              <FormSection
+                title="Currencies"
+                description="Currencies this account supports."
+              >
+                <Badge variant="secondary">{account.currency}</Badge>
+              </FormSection>
+
+              <FormSection title="Metadata">
+                <FieldGrid>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs font-medium tracking-wide uppercase text-muted-foreground">
+                      Mode
+                    </span>
+                    <div className="flex min-h-6 items-center">
+                      <Badge
+                        variant={
+                          account.mode === 'LIVE' ? 'default' : 'secondary'
+                        }
+                      >
+                        {account.mode}
+                      </Badge>
                     </div>
-                  </DetailField>
-                  <DetailField label="Bank">
-                    <div className="text-sm">{account.bank}</div>
-                  </DetailField>
-                  <DetailField label="Connection profile">
-                    <div className="font-mono text-xs text-muted-foreground">
-                      {connection ? connection.name : account.connectionId}
-                    </div>
-                  </DetailField>
-                  <DetailField label="Country">
-                    <div className="text-sm">{account.country}</div>
-                  </DetailField>
-                  <div className="col-span-2 space-y-1">
-                    <SectionLabel>Visible to groups</SectionLabel>
+                  </div>
+                  <FieldRow
+                    label="Created"
+                    value={formatCreated(account.createdAt)}
+                  />
+                </FieldGrid>
+              </FormSection>
+
+              {/* Balances and the access model are this mockup's own, so they
+                  sit after the sections production ships. */}
+              <FormSection
+                title="Balances"
+                description="Last figures Acme retrieved from the bank."
+              >
+                <FieldGrid>
+                  <FieldRow
+                    label="Available balance"
+                    value={formatMoney(account.currency, account.lastBalance)}
+                  />
+                  <FieldRow
+                    label="Prior-day balance"
+                    value={formatMoney(
+                      account.currency,
+                      account.priorDayBalance,
+                    )}
+                  />
+                </FieldGrid>
+              </FormSection>
+
+              <FormSection
+                title="Grouping & access"
+                description="Bank, legal entity and country are attributes on the account. Who can see it is decided by the groups whose scope covers it."
+              >
+                <FieldGrid>
+                  <FieldRow label="Bank" value={account.bank} />
+                  <FieldRow
+                    label="Legal entity"
+                    value={
+                      entity
+                        ? `${entity.code} · ${entity.name}`
+                        : account.legalEntity
+                    }
+                  />
+                  <FieldRow label="Country" value={account.country} />
+                  <FieldRow
+                    label="Connection profile"
+                    value={connection?.name ?? account.connectionId}
+                    mono
+                  />
+                  <div className="flex flex-col gap-2 sm:col-span-2">
+                    <span className="text-sm font-medium">
+                      Visible to groups
+                    </span>
                     {groups.length === 0 ? (
-                      <div className="flex items-center gap-1.5">
-                        <TriangleAlertIcon className="size-3.5 text-amber-600" />
-                        <span className="text-sm text-amber-700">
-                          No group — invisible to everyone
-                        </span>
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <TriangleAlertIcon className="size-4" />
+                        No group — invisible to everyone
                       </div>
                     ) : (
                       <div className="flex flex-wrap gap-1">
                         {groups.map((g) => (
-                          <TagPill key={g.id}>{g.name}</TagPill>
+                          <Badge key={g.id} variant="secondary">
+                            {g.name}
+                          </Badge>
                         ))}
                       </div>
                     )}
                   </div>
-                </div>
-              </SectionCard>
-
-              <SectionCard
-                title="Banking"
-                description="Account routing details. Hover a value to copy."
-              >
-                <div className="grid grid-cols-2 gap-x-6 gap-y-5">
-                  <DetailField label="Account number">
-                    <div className="font-mono text-sm">{account.number}</div>
-                  </DetailField>
-                  <DetailField label="SWIFT/BIC">
-                    <div className="font-mono text-sm">
-                      {account.swiftBic || '—'}
-                    </div>
-                  </DetailField>
-                  <DetailField label="IBAN">
-                    <div className="font-mono text-sm">
-                      {account.iban || '—'}
-                    </div>
-                  </DetailField>
-                  <DetailField label="Available balance">
-                    <div className="text-sm font-medium tabular-nums">
-                      {formatMoney(account.currency, account.lastBalance)}
-                    </div>
-                  </DetailField>
-                  <DetailField label="Prior-day balance">
-                    <div className="text-sm tabular-nums text-muted-foreground">
-                      {formatMoney(account.currency, account.priorDayBalance)}
-                    </div>
-                  </DetailField>
-                </div>
-              </SectionCard>
-
-              <SectionCard
-                title="Currencies"
-                description="Currencies this account supports."
-              >
-                <CurrencyPill code={account.currency} />
-              </SectionCard>
-
-              <SectionCard title="Metadata">
-                <div className="grid grid-cols-2 gap-x-6 gap-y-5">
-                  <DetailField label="Mode">
-                    <ModePill mode={account.mode} />
-                  </DetailField>
-                  <DetailField label="Created">
-                    <div className="text-sm">
-                      {formatCreated(account.createdAt)}
-                    </div>
-                  </DetailField>
-                </div>
-              </SectionCard>
+                </FieldGrid>
+              </FormSection>
             </div>
-            <div className="border-t px-6 py-4 text-right">
-              <Button variant="outline" onClick={onClose}>
-                <XIcon className="size-3.5" /> Close
-              </Button>
-            </div>
-          </div>
+          </>
         )}
       </SheetContent>
     </Sheet>
@@ -289,22 +217,7 @@ function AccountDetailSheet({
 
 export function InternalAccountsPage() {
   const [openAccount, setOpenAccount] = React.useState<Account | null>(null)
-  const [q, setQ] = React.useState('')
-  const [bank, setBank] = React.useState('all')
-  const [legalEntity, setLegalEntity] = React.useState('all')
-  const [country, setCountry] = React.useState('all')
-  const [currency, setCurrency] = React.useState('all')
   const userGroups = useUserGroups()
-
-  const banks = React.useMemo(() => bankNames(ACCOUNTS), [])
-  const countries = React.useMemo(
-    () => [...new Set(ACCOUNTS.map((a) => a.country))].sort(),
-    [],
-  )
-  const currencies = React.useMemo(
-    () => [...new Set(ACCOUNTS.map((a) => a.currency))].sort(),
-    [],
-  )
 
   const groupsByAccount = React.useMemo(() => {
     const map = new Map<string, string[]>()
@@ -317,138 +230,40 @@ export function InternalAccountsPage() {
     return map
   }, [userGroups])
 
-  const accounts = React.useMemo(() => {
-    const needle = q.trim().toLowerCase()
-    return ACCOUNTS.filter((a) => {
-      if (bank !== 'all' && a.bank !== bank) return false
-      if (legalEntity !== 'all' && a.legalEntity !== legalEntity) return false
-      if (country !== 'all' && a.country !== country) return false
-      if (currency !== 'all' && a.currency !== currency) return false
-      if (!needle) return true
-      return [a.name, a.id, a.number, a.bank, a.legalEntity, a.swiftBic]
-        .join(' ')
-        .toLowerCase()
-        .includes(needle)
-    })
-  }, [q, bank, legalEntity, country, currency])
-
   const unassignedCount = ACCOUNTS.filter(
     (a) => (groupsByAccount.get(a.id) ?? []).length === 0,
   ).length
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">
-          Internal Accounts
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          One flat list of accounts under {' '}
-          <span className="font-medium text-foreground">Acme Group</span>. Bank,
-          legal entity, country and currency are attributes on the account, so
-          use them as filters. Internal accounts can only be created by Acme
-          Ops.
-        </p>
-      </div>
+      <PageHeader>
+        <PageHeaderTitle>Internal Accounts</PageHeaderTitle>
+        <PageHeaderDescription>
+          View bank accounts configured for your client group. Internal accounts
+          can only be created by Acme Ops — contact Acme Ops to add or modify
+          accounts.
+        </PageHeaderDescription>
+      </PageHeader>
 
+      {/* Mockup-only: an account inside no group's scope is invisible to
+          everyone, so it must not go unnoticed. */}
       {unassignedCount > 0 && (
-        <div className="flex flex-wrap items-center gap-3 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          <TriangleAlertIcon className="size-4 shrink-0" />
-          <span className="flex-1">
-            <span className="font-medium">
-              {unassignedCount} account{unassignedCount === 1 ? '' : 's'} outside every group.
-            </span>{' '}
-An account inside no group's scope is invisible to everyone.
-          </span>
-          <Button asChild variant="outline" size="sm" className="h-7 bg-white">
-            <Link to="/user-management">Review groups</Link>
-          </Button>
-        </div>
+        <Alert>
+          <TriangleAlertIcon />
+          <AlertTitle>
+            {unassignedCount} account{unassignedCount === 1 ? '' : 's'} outside
+            every group
+          </AlertTitle>
+          <AlertDescription>
+            An account inside no group's scope is invisible to everyone.
+          </AlertDescription>
+          <AlertAction>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/user-management">Review groups</Link>
+            </Button>
+          </AlertAction>
+        </Alert>
       )}
-
-      {/* Filters — the flat model's replacement for tree navigation */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative w-full sm:w-72">
-          <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search name, ID, account #, BIC"
-            className="h-8 pl-8"
-          />
-        </div>
-        <Select value={bank} onValueChange={setBank}>
-          <SelectTrigger size="sm" className="h-8 font-normal">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All banks</SelectItem>
-            {banks.map((b) => (
-              <SelectItem key={b} value={b}>
-                {b}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={legalEntity} onValueChange={setLegalEntity}>
-          <SelectTrigger size="sm" className="h-8 font-normal">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All legal entities</SelectItem>
-            {LEGAL_ENTITIES.map((e) => (
-              <SelectItem key={e.code} value={e.code}>
-                {e.code} · {e.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={country} onValueChange={setCountry}>
-          <SelectTrigger size="sm" className="h-8 font-normal">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All countries</SelectItem>
-            {countries.map((c) => (
-              <SelectItem key={c} value={c}>
-                {c}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={currency} onValueChange={setCurrency}>
-          <SelectTrigger size="sm" className="h-8 font-normal">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All currencies</SelectItem>
-            {currencies.map((c) => (
-              <SelectItem key={c} value={c}>
-                {c}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {(q || bank !== 'all' || legalEntity !== 'all' || country !== 'all' || currency !== 'all') && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8"
-            onClick={() => {
-              setQ('')
-              setBank('all')
-              setLegalEntity('all')
-              setCountry('all')
-              setCurrency('all')
-            }}
-          >
-            Clear
-          </Button>
-        )}
-        <span className="ml-auto text-xs text-muted-foreground">
-          {accounts.length} of {ACCOUNTS.length} accounts
-        </span>
-      </div>
 
       {ACCOUNTS.length === 0 ? (
         <Card>
@@ -457,113 +272,72 @@ An account inside no group's scope is invisible to everyone.
               <LandmarkIcon className="size-5 text-muted-foreground" />
             </div>
             <div>
-              <p className="text-base font-medium">No banks connected yet</p>
+              <p className="text-base font-medium">No accounts yet</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Connect a bank to start tracking balances and transactions.
+                Contact Acme Ops to have your bank accounts configured.
               </p>
             </div>
-            <Button>
-              <PlusIcon /> Connect a bank
-            </Button>
           </CardContent>
         </Card>
       ) : (
-        <Card>
-          <CardContent className="p-0">
-            <div className="w-full overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Bank</TableHead>
-                    <TableHead>Legal entity</TableHead>
-                    <TableHead>Country</TableHead>
-                    <TableHead>Currency</TableHead>
-                    <TableHead>Visible to groups</TableHead>
-                    <TableHead>Internal account ID</TableHead>
-                    <TableHead>Connection</TableHead>
-                    <TableHead>Mode</TableHead>
-                    <TableHead>Account #</TableHead>
-                    <TableHead>Created</TableHead>
+        <div className="rounded-lg border bg-card">
+          <div className="w-full overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Mode</TableHead>
+                  <TableHead>Account #</TableHead>
+                  <TableHead>SWIFT/BIC</TableHead>
+                  <TableHead>IBAN</TableHead>
+                  <TableHead>Currencies</TableHead>
+                  <TableHead>Created</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {ACCOUNTS.map((a) => (
+                  <TableRow
+                    key={a.id}
+                    className="cursor-pointer"
+                    onClick={() => setOpenAccount(a)}
+                  >
+                    <TableCell className="whitespace-nowrap">{a.name}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={a.mode === 'LIVE' ? 'default' : 'secondary'}
+                      >
+                        {a.mode}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="font-mono whitespace-nowrap">
+                      {a.number}
+                    </TableCell>
+                    <TableCell className="font-mono whitespace-nowrap">
+                      {a.swiftBic || (
+                        <span className="font-sans text-muted-foreground">
+                          —
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="font-mono whitespace-nowrap">
+                      {a.iban || (
+                        <span className="font-sans text-muted-foreground">
+                          —
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{a.currency}</Badge>
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-muted-foreground">
+                      {formatCreated(a.createdAt)}
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {accounts.length === 0 && (
-                    <TableRow>
-                      <TableCell
-                        colSpan={11}
-                        className="py-10 text-center text-sm text-muted-foreground"
-                      >
-                        No accounts match these filters.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  {accounts.map((a) => {
-                    const groupNames = groupsByAccount.get(a.id) ?? []
-                    return (
-                      <TableRow
-                        key={a.id}
-                        className="cursor-pointer"
-                        onClick={() => setOpenAccount(a)}
-                      >
-                        <TableCell className="font-medium whitespace-nowrap">
-                          {a.name}
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap text-sm">
-                          {a.bank}
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          <TagPill
-                            tone="entity"
-                            title={legalEntityName(a.legalEntity)}
-                          >
-                            {a.legalEntity}
-                          </TagPill>
-                        </TableCell>
-                        <TableCell className="font-mono text-xs text-muted-foreground">
-                          {a.country}
-                        </TableCell>
-                        <TableCell>
-                          <CurrencyPill code={a.currency} />
-                        </TableCell>
-                        <TableCell>
-                          {groupNames.length === 0 ? (
-                            <TagPill tone="warning" title="Inside no group's scope">
-                              No group
-                            </TagPill>
-                          ) : (
-                            <div className="flex flex-wrap gap-1">
-                              {groupNames.map((n) => (
-                                <TagPill key={n}>{n}</TagPill>
-                              ))}
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <span className="font-mono text-xs text-muted-foreground">
-                            {a.id}
-                          </span>
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap font-mono text-xs text-muted-foreground">
-                          {getConnection(a.connectionId)?.name ?? a.connectionId}
-                        </TableCell>
-                        <TableCell>
-                          <ModePill mode={a.mode} />
-                        </TableCell>
-                        <TableCell className="font-mono text-xs text-muted-foreground">
-                          {a.number}
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
-                          {formatCreated(a.createdAt)}
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
       )}
 
       <AccountDetailSheet

@@ -1,4 +1,5 @@
 import type * as React from 'react'
+import { CopyButton } from '@/components/copy-button'
 import { Field, FieldLabel } from '@/components/ui/field'
 import { cn } from '@/lib/utils'
 
@@ -65,12 +66,15 @@ export function FieldRow({
   label,
   value,
   mono,
+  copyValue,
   className,
 }: {
   label: React.ReactNode
   value: React.ReactNode
   /** Render the value in the mono face — IDs, account numbers, references. */
   mono?: boolean
+  /** Reveals a copy button on hover, as production's copyable FieldRow does. */
+  copyValue?: string
   className?: string
 }) {
   const isEmpty = value == null || value === ''
@@ -81,9 +85,17 @@ export function FieldRow({
         {isEmpty ? (
           <span className="text-sm text-muted-foreground">—</span>
         ) : (
-          <span className={mono ? 'font-mono text-sm break-all' : 'text-sm'}>
-            {value}
-          </span>
+          <>
+            <span className={mono ? 'font-mono text-sm break-all' : 'text-sm'}>
+              {value}
+            </span>
+            {copyValue && (
+              <CopyButton
+                value={copyValue}
+                className="opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+              />
+            )}
+          </>
         )}
       </div>
     </Field>
