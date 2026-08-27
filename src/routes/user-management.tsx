@@ -819,10 +819,10 @@ function GroupSheet({
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                            <TableHead>
                               Role
                             </TableHead>
-                            <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                            <TableHead>
                               Permission sets
                             </TableHead>
                           </TableRow>
@@ -891,16 +891,16 @@ function GroupSheet({
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                        <TableHead>
                           Account
                         </TableHead>
-                        <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                        <TableHead>
                           Bank
                         </TableHead>
-                        <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                        <TableHead>
                           Entity
                         </TableHead>
-                        <TableHead className="text-right text-[0.7rem] uppercase tracking-wider">
+                        <TableHead className="text-right">
                           Available
                         </TableHead>
                       </TableRow>
@@ -943,10 +943,10 @@ function GroupSheet({
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                        <TableHead>
                           User
                         </TableHead>
-                        <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                        <TableHead>
                           Status
                         </TableHead>
                       </TableRow>
@@ -1203,25 +1203,25 @@ export function UserManagementPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                      <TableHead>
                         Name
                       </TableHead>
-                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                      <TableHead>
                         Roles
                       </TableHead>
-                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                      <TableHead>
                         Permission sets
                       </TableHead>
-                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                      <TableHead>
                         Account scope
                       </TableHead>
-                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                      <TableHead>
                         Accounts
                       </TableHead>
-                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                      <TableHead>
                         Members
                       </TableHead>
-                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                      <TableHead>
                         Updated
                       </TableHead>
                     </TableRow>
@@ -1257,9 +1257,6 @@ export function UserManagementPage() {
                         >
                           <TableCell className="whitespace-nowrap">
                             <div className="font-medium">{g.name}</div>
-                            <div className="max-w-xs truncate text-[0.65rem] text-muted-foreground">
-                              {g.description}
-                            </div>
                           </TableCell>
                           <TableCell>
                             <div className="flex flex-wrap gap-1">
@@ -1325,16 +1322,16 @@ export function UserManagementPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                      <TableHead>
                         Name
                       </TableHead>
-                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                      <TableHead>
                         Description
                       </TableHead>
-                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                      <TableHead>
                         Permission sets
                       </TableHead>
-                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                      <TableHead>
                         Granted by
                       </TableHead>
                     </TableRow>
@@ -1396,16 +1393,16 @@ export function UserManagementPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                      <TableHead>
                         Name
                       </TableHead>
-                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                      <TableHead>
                         Description
                       </TableHead>
-                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                      <TableHead>
                         Permissions
                       </TableHead>
-                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                      <TableHead>
                         Used by roles
                       </TableHead>
                     </TableRow>
@@ -1462,19 +1459,19 @@ export function UserManagementPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                      <TableHead>
                         User
                       </TableHead>
-                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                      <TableHead>
                         Groups
                       </TableHead>
-                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                      <TableHead>
                         Effective permissions
                       </TableHead>
-                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                      <TableHead>
                         Status
                       </TableHead>
-                      <TableHead className="text-[0.7rem] uppercase tracking-wider">
+                      <TableHead>
                         Last active
                       </TableHead>
                     </TableRow>

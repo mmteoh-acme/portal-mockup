@@ -682,7 +682,7 @@ export function TransactionsPage() {
 
           <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
             <div className="space-y-1.5">
-              <Label className="text-[0.7rem] uppercase tracking-wider text-muted-foreground">
+              <Label className="text-xs font-medium text-muted-foreground">
                 Transaction date
               </Label>
               <Popover>
@@ -821,7 +821,7 @@ export function TransactionsPage() {
                     const label = header.isPlaceholder ? null : canSort ? (
                       <button
                         type="button"
-                        className={`inline-flex items-center gap-1 uppercase tracking-wider ${
+                        className={`inline-flex items-center gap-1 ${
                           sorted
                             ? 'text-brand'
                             : 'text-foreground hover:text-foreground'
@@ -850,7 +850,7 @@ export function TransactionsPage() {
                     return (
                       <TableHead
                         key={header.id}
-                        className="relative h-10 select-none text-[0.7rem] uppercase tracking-wider"
+                        className="relative select-none"
                         style={
                           header.column.columnDef.size
                             ? { width: header.column.columnDef.size }
@@ -923,7 +923,7 @@ export function TransactionsPage() {
 
         {filteredRows.length > 0 && (
           <div className="flex items-center justify-between border-t px-4 py-3">
-            <div className="text-[0.7rem] uppercase tracking-wider text-muted-foreground">
+            <div className="text-sm text-muted-foreground">
               Showing {pageStart}–{pageEnd} of {filteredRows.length}
             </div>
             <Pagination className="mx-0 w-auto justify-end">
@@ -1012,8 +1012,8 @@ export function TransactionsPage() {
                     <span
                       className={
                         openTxn.direction === 'CREDIT'
-                          ? 'inline-flex items-center rounded border border-emerald-300 bg-emerald-50 px-1.5 py-0.5 text-[0.65rem] font-medium uppercase tracking-wider text-emerald-700'
-                          : 'inline-flex items-center rounded border border-zinc-300 bg-zinc-100 px-1.5 py-0.5 text-[0.65rem] font-medium uppercase tracking-wider text-zinc-700'
+                          ? 'inline-flex h-5 items-center rounded-4xl border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700'
+                          : 'inline-flex h-5 items-center rounded-4xl border border-zinc-300 bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-700'
                       }
                     >
                       {openTxn.direction}
@@ -1099,7 +1099,7 @@ function DetailSection({
 }) {
   return (
     <div>
-      <h3 className="text-[0.7rem] font-semibold uppercase tracking-wider text-foreground/70">
+      <h3 className="text-sm font-semibold text-foreground">
         {title}
       </h3>
       <dl className="mt-2 divide-y border-t">{children}</dl>

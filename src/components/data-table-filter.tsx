@@ -69,7 +69,7 @@ export function DataTableFilter<TData>({
     const range = columnFilterValue as [number | undefined, number | undefined]
     return (
       <div className="space-y-1.5">
-        <Label className="text-[0.7rem] uppercase tracking-wider text-muted-foreground">
+        <Label className="text-xs font-medium text-muted-foreground">
           {columnHeader}
         </Label>
         <div className="flex">
@@ -121,7 +121,7 @@ export function DataTableFilter<TData>({
       <div className="space-y-1.5">
         <Label
           htmlFor={`${id}-select`}
-          className="text-[0.7rem] uppercase tracking-wider text-muted-foreground"
+          className="text-xs font-medium text-muted-foreground"
         >
           {columnHeader}
         </Label>
@@ -155,7 +155,7 @@ export function DataTableFilter<TData>({
     <div className="space-y-1.5">
       <Label
         htmlFor={`${id}-input`}
-        className="text-[0.7rem] uppercase tracking-wider text-muted-foreground"
+        className="text-xs font-medium text-muted-foreground"
       >
         {columnHeader}
       </Label>

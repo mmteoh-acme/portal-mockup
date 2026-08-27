@@ -29,7 +29,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
 import { useUser } from '@/lib/user-context'
 import {
@@ -48,10 +48,10 @@ type NavItem = {
 const OPERATIONS: ReadonlyArray<NavItem> = [
   { title: 'Transactions', icon: ArrowLeftRightIcon, to: '/transactions' },
   { title: 'Payments', icon: WalletIcon, to: '/payments' },
+  { title: 'Internal Accounts', icon: LandmarkIcon, to: '/internal-accounts' },
 ]
 
 const ADMIN: ReadonlyArray<NavItem> = [
-  { title: 'Internal Accounts', icon: LandmarkIcon, to: '/internal-accounts' },
   { title: 'User Management', icon: UsersRoundIcon, to: '/user-management' },
 ]
 
@@ -93,7 +93,10 @@ export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const navigate = useNavigate()
   const { user, roles, setUserId, demoUsers } = useUser()
-  const accountCount = ACCOUNTS.length
+  // Production shows the client group's handle in mono under its name; this
+  // mockup has no slug field on the fixture, so it comes off the id.
+  const groupSlug = CLIENT_GROUP.id.replace(/^cg_/, '')
+  const groupInitial = CLIENT_GROUP.name.charAt(0).toUpperCase()
   const entityCount = (code: LegalEntity['code']) =>
     ACCOUNTS.filter((a) => a.legalEntity === code).length
   const initials = user.name
@@ -106,6 +109,20 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b">
+        {/* Wordmark row, then the client-group switcher — the production
+            dashboard's sidebar header. Production ships an SVG logo; this
+            mockup has no brand asset, so the wordmark is set in type. */}
+        <SidebarMenu className="group-data-[collapsible=icon]:hidden">
+          <SidebarMenuItem>
+            <Link
+              to="/transactions"
+              aria-label="Acme"
+              className="px-2 py-1 text-2xl leading-none font-bold tracking-tight text-primary lowercase"
+            >
+              acme
+            </Link>
+          </SidebarMenuItem>
+        </SidebarMenu>
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
@@ -114,15 +131,15 @@ export function AppSidebar() {
                   size="lg"
                   className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                 >
-                  <div className="flex aspect-square size-8 items-center justify-center rounded-md bg-primary font-mono text-sm font-semibold text-primary-foreground">
-                    A
+                  <div className="flex aspect-square size-8 items-center justify-center rounded-md bg-primary text-sm font-semibold text-primary-foreground">
+                    {groupInitial}
                   </div>
                   <div className="grid flex-1 text-left text-sm leading-tight">
                     <span className="truncate font-semibold">
                       {CLIENT_GROUP.name}
                     </span>
-                    <span className="truncate text-[0.65rem] uppercase tracking-wider text-muted-foreground">
-                      {accountCount} accounts
+                    <span className="truncate font-mono text-xs text-muted-foreground">
+                      {groupSlug}
                     </span>
                   </div>
                   <ChevronsUpDownIcon className="ml-auto size-4 opacity-60" />
@@ -138,7 +155,7 @@ export function AppSidebar() {
                 </DropdownMenuLabel>
                 <DropdownMenuItem disabled className="opacity-100">
                   <div className="flex aspect-square size-6 items-center justify-center rounded-sm bg-primary text-[10px] font-semibold text-primary-foreground">
-                    A
+                    {groupInitial}
                   </div>
                   <div className="flex-1 truncate font-medium">
                     {CLIENT_GROUP.name}
@@ -213,17 +230,16 @@ export function AppSidebar() {
                   className="data-[state=open]:bg-sidebar-accent"
                 >
                   <Avatar className="h-8 w-8 rounded-md">
-                    <AvatarImage
-                      src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.name)}`}
-                      alt={user.name}
-                    />
-                    <AvatarFallback>{initials}</AvatarFallback>
+                    <AvatarFallback className="rounded-md text-xs font-semibold">
+                      {initials}
+                    </AvatarFallback>
                   </Avatar>
+                  {/* Production labels this with the signed-in email. The role
+                      line stays because switching maker/checker is the whole
+                      point of the demo. */}
                   <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-medium">
-                      {user.name}
-                    </span>
-                    <span className="truncate text-[0.65rem] uppercase tracking-wider text-muted-foreground">
+                    <span className="truncate">{user.email}</span>
+                    <span className="truncate text-xs text-muted-foreground">
                       {roles[0]?.name ?? 'No role'}
                     </span>
                   </div>

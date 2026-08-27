@@ -634,8 +634,8 @@ export const userGroupsSeed: UserGroup[] = [
   },
   {
     id: 'ug_rma_signers',
-    name: 'RMA Signers',
-    description: 'Approves payment orders on Acme Markets APAC accounts.',
+    name: 'Acme SG Signers',
+    description: "Approves payment orders on the accounts in this group's scope.",
     roleIds: ['role_finance_treasury'],
     scope: 'LEGAL_ENTITY',
     legalEntityCodes: ['AMA'],
@@ -647,8 +647,8 @@ export const userGroupsSeed: UserGroup[] = [
   },
   {
     id: 'ug_rlky_signers',
-    name: 'RLKY Signers',
-    description: 'Approves payment orders on Acme Labs Cayman accounts.',
+    name: 'Acme US Signers',
+    description: "Approves payment orders on the accounts in this group's scope.",
     roleIds: ['role_finance_treasury'],
     scope: 'LEGAL_ENTITY',
     legalEntityCodes: ['ALKY'],

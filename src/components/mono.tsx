@@ -7,13 +7,11 @@ export function Mono({
   className?: string
   children: React.ReactNode
 }) {
+  // Production renders IDs, references and bank rails as plain mono text
+  // rather than a chip (see the internal-accounts and api-keys tables in
+  // apps/dashboard) — matching that keeps dense tables reading the same.
   return (
-    <code
-      className={cn(
-        'rounded bg-muted px-1.5 py-0.5 font-mono text-[0.78rem] text-foreground/90',
-        className,
-      )}
-    >
+    <code className={cn('font-mono text-[0.8rem] break-all', className)}>
       {children}
     </code>
   )
@@ -28,10 +26,8 @@ export function MonoLabel({
 }) {
   return (
     <span
-      className={cn(
-        'text-[0.7rem] uppercase tracking-wider text-muted-foreground',
-        className,
-      )}
+      // Production labels metadata in sentence-case sans, not mono caps.
+      className={cn('text-sm font-medium text-muted-foreground', className)}
     >
       {children}
     </span>
@@ -48,8 +44,11 @@ export function StatusPill({
   const tone = pillTone(status)
   return (
     <span
+      // Badge geometry from the production shadcn Badge — h-5, pill radius,
+      // text-xs, no letterspacing. The semantic tones are this mockup's
+      // extension of it, since production only ships default/secondary.
       className={cn(
-        'inline-flex items-center rounded border px-1.5 py-0.5 text-[0.65rem] font-medium uppercase tracking-wider',
+        'inline-flex h-5 w-fit shrink-0 items-center justify-center gap-1 rounded-4xl border px-2 py-0.5 text-xs font-medium whitespace-nowrap',
         tone,
         className,
       )}

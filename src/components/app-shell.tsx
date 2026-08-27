@@ -1,4 +1,4 @@
-import { Outlet, useRouterState } from '@tanstack/react-router'
+import { Outlet } from '@tanstack/react-router'
 import { BellIcon, WrenchIcon, LayersIcon } from 'lucide-react'
 import { AppSidebar } from './app-sidebar'
 import {
@@ -13,14 +13,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb'
 import { Link } from '@tanstack/react-router'
 import { CLIENT_GROUP, accountsOutsideEveryGroup } from '@/data/fixtures'
 import { useUserGroups } from '@/lib/admin-store'
@@ -132,46 +124,31 @@ function NotificationBell() {
   )
 }
 
-const PAGE_TITLES: Record<string, string> = {
-  '/dashboard': 'Home',
-  '/transactions': 'Transactions',
-  '/payments': 'Payments',
-  '/internal-accounts': 'Internal Accounts',
-  '/account-groups': 'Account Groups',
-  '/user-management': 'User Management',
-}
-
 export function AppShell() {
-  const pathname = useRouterState({ select: (s) => s.location.pathname })
-  const title = PAGE_TITLES[pathname] ?? 'Acme'
-
   return (
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background px-4">
+        {/* Production's shell: h-16 bar, trigger + rule + the active client
+            group in plain muted text (apps/dashboard/src/routes/(app)/route.tsx).
+            The page name is kept as a second crumb since this mockup has no
+            client-group switcher in the sidebar to carry it. */}
+        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b bg-background px-4">
           <SidebarTrigger className="-ml-1" />
-          <Separator orientation="vertical" className="mr-2 h-4" />
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem className="hidden md:block">
-                <BreadcrumbLink className="text-xs uppercase tracking-wider">
-                  {CLIENT_GROUP.name}
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator className="hidden md:block" />
-              <BreadcrumbItem>
-                <BreadcrumbPage className="text-xs uppercase tracking-wider">
-                  {title}
-                </BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
+          <Separator
+            orientation="vertical"
+            className="mr-2 data-[orientation=vertical]:h-4"
+          />
+          {/* Production's bar carries the active client group and nothing
+              else — the page's own h1 names the page. */}
+          <span className="truncate text-sm text-muted-foreground">
+            {CLIENT_GROUP.name}
+          </span>
           <div className="ml-auto">
             <NotificationBell />
           </div>
         </header>
-        <main className="min-w-0 flex-1 px-6 py-6">
+        <main className="flex min-w-0 flex-1 flex-col gap-6 px-4 py-6">
           <Outlet />
         </main>
       </SidebarInset>

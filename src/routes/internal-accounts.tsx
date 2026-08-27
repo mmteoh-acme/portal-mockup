@@ -74,10 +74,9 @@ function CurrencyPill({ code }: { code: string }) {
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
+  // Production labels fields in sentence-case sans (FieldLabel), not mono caps.
   return (
-    <div className="text-[0.7rem] font-medium uppercase tracking-wider text-muted-foreground">
-      {children}
-    </div>
+    <div className="text-sm font-medium text-muted-foreground">{children}</div>
   )
 }
 
