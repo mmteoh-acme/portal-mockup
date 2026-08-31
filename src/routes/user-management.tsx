@@ -1198,12 +1198,6 @@ export function UserManagementPage() {
         </div>
         {/* Creating happens inside the tab that owns the thing being
             created, so there is no cross-tab Create menu here. */}
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-2">
-            <UserRoundPlusIcon className="size-3.5" />
-            Invite user
-          </Button>
-        </div>
       </div>
 
       {ungrouped.length > 0 && (
@@ -1428,7 +1422,17 @@ export function UserManagementPage() {
         </TabsContent>
 
         {/* Users */}
-        <TabsContent value="users" className="mt-4">
+        <TabsContent value="users" className="mt-4 space-y-4">
+          <div className="flex items-start justify-between gap-6">
+            <p className="min-w-0 max-w-3xl text-sm text-muted-foreground">
+              A user only holds permissions once they belong to a group.
+              Inviting someone here does not grant them access on its own.
+            </p>
+            <Button variant="outline" size="sm" className="shrink-0 gap-1.5">
+              <UserRoundPlusIcon className="size-3.5" />
+              Invite user
+            </Button>
+          </div>
           <Card>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
