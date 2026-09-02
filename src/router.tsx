@@ -9,6 +9,7 @@ import { AppShell } from '@/components/app-shell'
 import { LoginPage } from '@/routes/login'
 import { TransactionsPage } from '@/routes/transactions'
 import { PaymentsPage } from '@/routes/payments'
+import { BalancesPage } from '@/routes/balances'
 import { AccountsPage } from '@/routes/accounts'
 import { UserManagementPage } from '@/routes/user-management'
 
@@ -48,6 +49,12 @@ const paymentsRoute = createRoute({
   component: PaymentsPage,
 })
 
+const balancesRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: '/balances',
+  component: BalancesPage,
+})
+
 const accountsRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: '/accounts',
@@ -66,6 +73,7 @@ const routeTree = rootRoute.addChildren([
   appLayoutRoute.addChildren([
     transactionsRoute,
     paymentsRoute,
+    balancesRoute,
     accountsRoute,
     userManagementRoute,
   ]),

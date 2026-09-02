@@ -50,6 +50,7 @@ import {
   getConnection,
   getLegalEntity,
   groupsSeeingAccount,
+  ledgerBalanceFor,
   legalEntityName,
   type Account,
 } from '@/data/fixtures'
@@ -72,6 +73,7 @@ const CSV_HEADERS = [
   'Connection profile',
   'Mode',
   'Status',
+  'Ledger balance',
   'Available balance',
   'Prior-day balance',
   'Visible to groups',
@@ -113,6 +115,7 @@ function downloadAccountsCsv(rows: AccountRow[]): void {
       getConnection(a.connectionId)?.name ?? a.connectionId,
       a.mode,
       a.status,
+      formatMoney(a.currency, ledgerBalanceFor(a)),
       formatMoney(a.currency, a.lastBalance),
       formatMoney(a.currency, a.priorDayBalance),
       a.groupNames.join('; '),
@@ -493,8 +496,13 @@ function AccountDetailBody({ a }: { a: AccountRow }) {
             {entity ? `${a.country} · ${entity.countryName}` : a.country}
           </span>
         </Field>
-        <Field label="Available balance">
+        <Field label="Ledger balance">
           <span className="text-sm font-medium tabular-nums">
+            {formatMoney(a.currency, ledgerBalanceFor(a))}
+          </span>
+        </Field>
+        <Field label="Available balance">
+          <span className="text-sm tabular-nums text-muted-foreground">
             {formatMoney(a.currency, a.lastBalance)}
           </span>
         </Field>

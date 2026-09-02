@@ -2,6 +2,7 @@ import {
   LandmarkIcon,
   ArrowLeftRightIcon,
   WalletIcon,
+  BanknoteIcon,
   ChevronsUpDownIcon,
   LogOutIcon,
   CheckIcon,
@@ -50,6 +51,7 @@ type NavItem = {
 const OPERATIONS: ReadonlyArray<NavItem> = [
   { title: 'Transactions', icon: ArrowLeftRightIcon, to: '/transactions' },
   { title: 'Payments', icon: WalletIcon, to: '/payments' },
+  { title: 'Balances', icon: BanknoteIcon, to: '/balances' },
 ]
 
 const ADMIN: ReadonlyArray<NavItem> = [

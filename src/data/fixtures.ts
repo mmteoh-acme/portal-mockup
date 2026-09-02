@@ -897,6 +897,14 @@ export function formatMoney(currency: string, amount: number): string {
   })}`
 }
 
+// Ledger balance sits a hair above available (holds + uncleared items),
+// derived deterministically per account so it doesn't reshuffle on re-render.
+export function ledgerBalanceFor(a: Account): number {
+  const seed = a.id.split('').reduce((s, ch) => s + ch.charCodeAt(0), 0)
+  const lift = 0.006 + 0.01 * (0.5 + 0.5 * Math.sin(seed))
+  return Math.round(a.lastBalance * (1 + lift) * 100) / 100
+}
+
 // Balances grouped by currency -> bank -> accounts, with available (last)
 // and prior-day balances plus rollup totals at each level.
 export type BankBalanceGroup = {
